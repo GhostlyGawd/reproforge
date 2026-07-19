@@ -65,7 +65,7 @@ Milestone pull requests should state which tests were observed failing first. Ge
 
 ## 4. Test doubles
 
-- `TrustedFixtureRunner` is real execution limited to bundled fixture IDs and allowlisted commands.
+- `TrustedFixtureRunner` is a deterministic allowlisted boundary over bundled captured results; subprocess tests independently execute the exported one-command fixture.
 - `FakeRunner` deterministically produces run results for unit, property, and BDD tests.
 - `OfflineInvestigator` is a deterministic sample implementation, not a mock presented as live AI.
 - `RecordedOpenAITransport` replays sanitized API contract fixtures.
