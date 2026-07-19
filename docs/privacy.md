@@ -2,7 +2,9 @@
 
 ## Offline trusted sample
 
-The default sample uses synthetic issue text and a bundled fixture. It requires no account, API key, telemetry service, database, or third-party request. REST v2 case/job state is held in memory for one server process and disappears on restart. A downloaded bundle is written only where the browser user chooses to save it.
+The default sample uses synthetic issue text and a bundled fixture. It requires no account, API key, telemetry service, database, or third-party request. REST v2 and MCP case/job state is held in memory for one server process and disappears on restart. A downloaded bundle is written only where the browser or MCP App user chooses to save it.
+
+In the subscription-first path, ChatGPT calls ReproForge with a fixed sample ID, bounded budget, idempotency key, or case ID. ReproForge does not accept the user's ChatGPT credential or OpenAI API key, and the tools do not accept free-form conversation text, repository contents, or customer data. The embedded widget has no allowed external network or asset domains. ChatGPT itself processes the conversation under the user's plan and applicable OpenAI controls; that host processing is separate from ReproForge's synthetic tool payload.
 
 ## Optional live investigator
 
@@ -18,4 +20,4 @@ The application defines no first-party analytics or advertising integration. Hos
 
 ## Evidence assets
 
-Committed screenshots contain only the synthetic trusted sample and local application chrome. Evidence manifests document capture time, source commit, viewport, sanitization, and provenance.
+Committed screenshots contain only the synthetic trusted sample and local application chrome, including the actual MCP App proof resource rendered by its preview harness. Evidence manifests document capture time, source commit, viewport, sanitization, and provenance. No screenshot is represented as a real ChatGPT-host session unless it was captured in that host.

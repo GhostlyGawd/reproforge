@@ -26,6 +26,7 @@ Use fast-check for invariants with large input spaces:
 - terminal jobs never return to active states;
 - schema-valid case snapshots survive JSON round trips;
 - the requested clean-run policy is preserved in the proof;
+- arbitrary widget/tool text survives JSON embedding without creating an executable script boundary;
 - accepted minimization never converts a passing control into a matching failure; and
 - verification status agrees with candidate/control run counts.
 
@@ -43,8 +44,11 @@ Use Gherkin and Cucumber for user-observable behavior. Scenarios cover:
 - an over-reduced reproduction is rejected;
 - a verified case exports a complete, independently valid bundle;
 - a subscription-first trusted start succeeds without an OpenAI API key and reuses retries;
-- another caller cannot read a case it does not own; and
-- changed input under the same idempotency key is rejected.
+- another caller cannot read a case it does not own;
+- changed input under the same idempotency key is rejected;
+- ChatGPT discovers exactly three bounded MCP tools with no repository, command, or API-key input;
+- an MCP retry executes the trusted fixture once and returns the same case/job proof; and
+- the MCP App resource uses the required HTML profile with no external network domains.
 
 Step definitions invoke application services, not browser selectors. Browser journeys separately prove the UI.
 
@@ -58,6 +62,8 @@ Use Playwright for the critical sample journey at desktop and mobile sizes. Asse
 - reaching the verified result;
 - accessing the one-command reproduction and bundle contents;
 - starting, retrying, polling, reading, and exporting through REST v2;
+- initializing, discovering, and calling through the live Next.js `/mcp` route;
+- rendering the actual MCP App resource at desktop and narrow ChatGPT-style widths;
 - keyboard navigation and focus visibility; and
 - zero critical automated accessibility violations.
 

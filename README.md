@@ -6,7 +6,9 @@
 
 ReproForge turns an incomplete bug report into a verified, portable reproduction. It keeps reported facts separate from observations and inferences, tests falsifiable hypotheses within a bounded budget, verifies a machine-readable failure oracle against a negative control and three clean runs, then exports an independently validatable Repro Bundle.
 
-The approved v2 direction is an API-first ReproForge service with plugin-first distribution: ChatGPT supplies the conversational surface under the user's subscription, while ReproForge supplies MCP tools, deterministic verification, artifacts, and isolated execution. The primary ChatGPT path will not require a user-provided OpenAI API key; the Responses API remains an optional standalone adapter. See the [v2 product specification](docs/product-spec-v2.md) and [architecture decision](docs/adr/0001-api-first-plugin-first.md).
+The implemented v2 slice is API-first internally and plugin-first for distribution: ChatGPT supplies the conversational surface under the user's subscription, while ReproForge supplies MCP tools, deterministic verification, and artifacts. The trusted ChatGPT path requires no user-provided OpenAI API key; the Responses API remains an optional standalone adapter. See the [v2 product specification](docs/product-spec-v2.md) and [architecture decision](docs/adr/0001-api-first-plugin-first.md).
+
+![The ReproForge MCP App proof card showing a verified case, 100 percent repeatability, three of three matching candidates, a clear negative control, evidence lanes, hypotheses, clean-room runs, and the portable bundle.](docs/evidence/milestone-7/chatgpt-widget-desktop.png)
 
 ![ReproForge showing a verified CLI reproduction, evidence board, prioritized hypothesis ledger, run history, oracle, and bundle preview](docs/evidence/milestone-4/final-desktop.png)
 
@@ -30,6 +32,27 @@ npm run dev
 ```
 
 Open [http://localhost:3000](http://localhost:3000), select **Run trusted sample**, and follow the issue-to-bundle timeline. The sample is deterministic and always identifies itself as offline.
+
+## ChatGPT/MCP trusted demo
+
+With the same development server running, ReproForge exposes a stateless
+Streamable HTTP endpoint at `http://127.0.0.1:3000/mcp` and the exact embedded
+resource at [http://127.0.0.1:3000/widget-preview](http://127.0.0.1:3000/widget-preview).
+Run the deterministic protocol journey with:
+
+```bash
+npm run mcp:smoke
+```
+
+It discovers exactly `start_reproduction`, `get_reproduction`, and
+`export_repro_bundle`, then starts, retries, reads, and exports the trusted
+fixture with `OPENAI_API_KEY` absent. The MCP tools do not accept a repository
+URL, arbitrary command, customer code, ChatGPT credential, or OpenAI key.
+
+ChatGPT developer mode requires a reachable HTTPS endpoint and a real
+account-created app ID; neither is faked in this repository. See the
+[ChatGPT app and plugin guide](docs/chatgpt-plugin.md) for MCP Inspector,
+developer-mode, local packaging, and public-submission steps.
 
 ## Headless REST v2 sample
 
@@ -87,12 +110,13 @@ The committed four-case suite covers a verified positive, a negative no-match, a
 
 ## How it works
 
-1. A transport-neutral case service creates caller-scoped, idempotent jobs and records ingestion, inspection, hypothesis, experiment, verification, minimization, and packaging phases.
-2. An offline or GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
-3. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
-4. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
-5. The minimizer accepts only a proposed reduction that preserves the same verification result on fresh runs.
-6. The bundle builder redacts, hashes, serializes, and validates the artifact contract.
+1. ChatGPT/MCP, browser, and REST adapters translate requests into the same transport-neutral `CaseService` commands.
+2. The service creates caller-scoped, idempotent jobs and records ingestion, inspection, hypothesis, experiment, verification, minimization, and packaging phases.
+3. An offline or optional GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
+4. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
+5. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
+6. The minimizer accepts only a proposed reduction that preserves the same verification result on fresh runs.
+7. The bundle builder redacts, hashes, serializes, and validates the artifact contract; the MCP App renders but never decides the outcome.
 
 ![ReproForge trust architecture: the investigator proposes work while deterministic code owns execution, verification, minimization, and packaging](docs/architecture.svg)
 
@@ -130,6 +154,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Approved v2 product and platform specification](docs/product-spec-v2.md)
 - [V2 delivery roadmap and GitHub milestones](docs/roadmap-v2.md)
 - [API-first/plugin-first architecture decision](docs/adr/0001-api-first-plugin-first.md)
+- [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
@@ -139,11 +164,12 @@ This key is required only for the current optional standalone Responses route. I
 - [Release status](docs/release-status.md)
 - [Completion audit](docs/completion-audit.md)
 - [Headless case/job service evidence](docs/evidence/milestone-6/README.md)
+- [ChatGPT MCP app evidence](docs/evidence/milestone-7/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
 
-ReproForge is a pre-alpha Build Week prototype. The complete bundled JavaScript/TypeScript fixture journey works through the browser and REST v2 with an in-memory case/job service. Durable persistence, external repository execution, private-repository access, authentication, and autonomous publishing are intentionally unavailable. The synthetic four-case eval is a contract check, not a claim of real-world benchmark performance.
+ReproForge is a pre-alpha Build Week prototype. The complete bundled JavaScript/TypeScript fixture journey works through the browser, REST v2, Streamable HTTP MCP, and the embedded proof widget with one in-memory case/job service. Durable persistence, external repository execution, private-repository access, tenant authentication, stable hosting, and plugin publication are intentionally unavailable. The synthetic four-case eval is a contract check, not a claim of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

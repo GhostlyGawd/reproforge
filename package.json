@@ -1,6 +1,6 @@
 {
   "name": "reproforge",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "private": true,
   "scripts": {
     "dev": "next dev",
@@ -13,9 +13,10 @@
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
+    "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build",
-    "verify": "npm run check && npm run eval && npm run test:browser"
+    "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser"
   },
   "engines": {
     "node": ">=20.9"
@@ -24,6 +25,8 @@
     "postcss": "8.5.20"
   },
   "dependencies": {
+    "@modelcontextprotocol/ext-apps": "^1.7.4",
+    "@modelcontextprotocol/sdk": "^1.29.0",
     "lucide-react": "^1.25.0",
     "next": "16.2.10",
     "openai": "^6.48.0",

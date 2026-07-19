@@ -1,0 +1,97 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-19T19:35:55.8849343Z",
+  "sourceCommit": "643da49c4480de80f2f78c1143ac1628097f21d6",
+  "transport": {
+    "kind": "Streamable HTTP",
+    "route": "POST /mcp",
+    "sessionMode": "stateless",
+    "jsonResponses": true
+  },
+  "auth": {
+    "scheme": "noauth",
+    "scope": "trusted synthetic fixture only",
+    "openAiApiKeyPresent": false,
+    "openAiApiKeyRequired": false
+  },
+  "tools": [
+    {
+      "name": "start_reproduction",
+      "inputProperties": ["budget", "idempotencyKey", "sampleId"],
+      "annotations": {
+        "readOnlyHint": false,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "get_reproduction",
+      "inputProperties": ["caseId"],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    },
+    {
+      "name": "export_repro_bundle",
+      "inputProperties": ["caseId"],
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      }
+    }
+  ],
+  "journey": {
+    "start": {
+      "caseId": "smoke-case-1",
+      "jobId": "smoke-job-1",
+      "caseState": "VERIFIED",
+      "jobState": "SUCCEEDED",
+      "candidateMatches": 3,
+      "requiredRuns": 3,
+      "controlMatched": false,
+      "repeatability": 1,
+      "bundleReady": true
+    },
+    "idempotentRetry": {
+      "executions": 1,
+      "sameCase": true,
+      "sameJob": true
+    },
+    "get": {
+      "caseState": "VERIFIED",
+      "proofStatus": "VERIFIED"
+    },
+    "export": {
+      "status": "VERIFIED",
+      "bundleSchemaVersion": "1.1",
+      "bundleHash": "349bd04cb6fa2d09534d9e75c3f12163294dccf12b3e2f5b42a874ad8460d359",
+      "fileCount": 8
+    }
+  },
+  "widget": {
+    "uri": "ui://reproforge/proof-v1.html",
+    "mimeType": "text/html;profile=mcp-app",
+    "connectDomains": [],
+    "resourceDomains": [],
+    "externalAssets": false
+  },
+  "independentClients": {
+    "officialInspector": {
+      "packageVersion": "1.0.0",
+      "method": "tools/list",
+      "result": "passed with exit 0 and discovered exactly three tools"
+    },
+    "officialTypeScriptSdk": {
+      "inMemoryContract": "passed",
+      "liveNextRoute": "passed",
+      "startReadExport": "passed"
+    }
+  },
+  "sanitization": "Synthetic fixture only; no credentials, private source, personal data, or user-provided content."
+}

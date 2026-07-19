@@ -1,0 +1,88 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-7",
+  "capturedAt": "2026-07-19T19:35:55.8849343Z",
+  "sourceCommit": "643da49c4480de80f2f78c1143ac1628097f21d6",
+  "routes": [
+    "http://127.0.0.1:3000/mcp",
+    "http://127.0.0.1:3000/widget-preview"
+  ],
+  "captureMethod": {
+    "applicationCommand": "npm run start -- --hostname 127.0.0.1",
+    "browserTool": "agent-browser 0.32.2",
+    "browser": "headless Chromium",
+    "mode": "Next.js production build"
+  },
+  "state": {
+    "scenario": "keyless ChatGPT MCP trusted reproduction",
+    "sampleId": "cli-spaces",
+    "expectedCaseState": "VERIFIED",
+    "expectedJobState": "SUCCEEDED",
+    "candidateMatches": 3,
+    "requiredRuns": 3,
+    "controlMatched": false,
+    "externalExecution": false,
+    "openAiApiKeyRequired": false
+  },
+  "verification": {
+    "redCommand": "npm test -- --run tests/mcp-server.test.ts tests/mcp-http.test.ts tests/widget.property.test.ts",
+    "redResult": "3 suites failed because the MCP server, HTTP adapter, and widget modules did not exist",
+    "focusedGreen": "9 tests across 3 files",
+    "checkCommand": "npm run check",
+    "finalCommand": "npm run verify",
+    "vitest": {
+      "filesPassed": 22,
+      "testsPassed": 70,
+      "widgetHostilePayloadPropertyRuns": 100
+    },
+    "bdd": {
+      "scenariosPassed": 13,
+      "stepsPassed": 73
+    },
+    "browserTestsPassed": 16,
+    "evalCasesPassed": 4,
+    "widgetAxeViolations": 0,
+    "productionBuild": "passed",
+    "mcpSmoke": "start, retry, get, and export passed without OPENAI_API_KEY",
+    "officialInspector": "@modelcontextprotocol/inspector 1.0.0 tools/list passed with exit 0",
+    "browserPage": "HAS_CONTENT",
+    "browserErrorOverlay": "OK",
+    "browserPageErrors": 0,
+    "desktopHorizontalOverflow": false,
+    "mobileHorizontalOverflow": false,
+    "protocolTranscript": "protocol-transcript.json"
+  },
+  "captures": [
+    {
+      "file": "chatgpt-widget-desktop.png",
+      "capturedAt": "2026-07-19T19:35:10.0336323Z",
+      "viewport": { "width": 1440, "height": 1000 },
+      "image": {
+        "width": 1440,
+        "height": 1024,
+        "bytes": 69089,
+        "sha256": "70c5df043901983b31b66a7a3115a3353b5909705e8eb22426453e36398959ed"
+      },
+      "theme": "dark",
+      "alt": "The ReproForge MCP App proof card in a dark desktop viewport showing VERIFIED, 100 percent repeatability, three of three candidate matches, a clear control, evidence lanes, two hypotheses, four runs, eight bundle files, and refresh and export controls.",
+      "caption": "Actual self-contained widget HTML returned by the MCP resource and rendered through the production Next.js preview route."
+    },
+    {
+      "file": "chatgpt-widget-mobile.png",
+      "capturedAt": "2026-07-19T19:35:23.9785415Z",
+      "viewport": { "width": 390, "height": 844 },
+      "image": {
+        "width": 390,
+        "height": 1353,
+        "bytes": 61010,
+        "sha256": "1b5c5ab80117b1c43125abc832bd83ddeb8c90377094955af77f06962d151aa5"
+      },
+      "theme": "light",
+      "alt": "The ReproForge MCP App proof card in a narrow light viewport with the same verified evidence, runs, bundle files, and controls arranged without horizontal overflow.",
+      "caption": "The actual widget at a 390 pixel ChatGPT-style width; the full-page capture is 1,353 pixels tall."
+    }
+  ],
+  "accountGate": "No reachable HTTPS URL or real plugin_asdk_app ID was available, so no ChatGPT-host screenshot or local plugin wrapper is claimed.",
+  "sanitization": "Synthetic bundled fixture only; no API key, credentials, private repositories, personal data, or user-provided content.",
+  "provenance": "Real ReproForge MCP App resource rendered locally from the recorded implementation commit and captured with agent-browser; not concept art or generated imagery."
+}

@@ -34,17 +34,17 @@ Tracking: [#11](https://github.com/GhostlyGawd/reproforge/issues/11)
 
 Tracking: [#12](https://github.com/GhostlyGawd/reproforge/issues/12)
 
-- [ ] `RF-7001` Register the widget resource and three narrow MCP tools.
-- [ ] `RF-7002` Add Streamable HTTP at `/mcp` with protocol-safe error handling.
-- [ ] `RF-7003` Add accurate schemas, safety annotations, status metadata, and idempotent handlers.
-- [ ] `RF-7004` Build the accessible, responsive evidence/proof widget using the MCP Apps bridge.
-- [ ] `RF-7005` Prove the complete MCP journey succeeds with `OPENAI_API_KEY` absent.
-- [ ] `RF-7006` Add initialize/discovery/resource/call/retry protocol tests.
-- [ ] `RF-7007` Add widget BDD/browser/accessibility coverage and sanitized visual evidence.
-- [ ] `RF-7008` Document local MCP inspection, reachable-HTTPS developer mode, and plugin packaging.
+- [x] `RF-7001` Register the widget resource and three narrow MCP tools.
+- [x] `RF-7002` Add Streamable HTTP at `/mcp` with protocol-safe error handling.
+- [x] `RF-7003` Add accurate schemas, safety annotations, status metadata, and idempotent handlers.
+- [x] `RF-7004` Build the accessible, responsive evidence/proof widget using the MCP Apps bridge.
+- [x] `RF-7005` Prove the complete MCP journey succeeds with `OPENAI_API_KEY` absent.
+- [x] `RF-7006` Add initialize/discovery/resource/call/retry protocol tests.
+- [x] `RF-7007` Add widget BDD/browser/accessibility coverage and sanitized visual evidence.
+- [x] `RF-7008` Document local MCP inspection, reachable-HTTPS developer mode, and plugin packaging.
 - [ ] `RF-7009` After the user creates a developer-mode app, scaffold and validate the local plugin using its real `plugin_asdk_app...` ID.
 
-**Exit evidence:** MCP protocol transcript, no-key contract proof, browser screenshots/manifests, automated checks, CI, and—when account-side prerequisites exist—a real ChatGPT developer-mode smoke.
+**Exit evidence:** the [Milestone 7 record](evidence/milestone-7/README.md) contains the protocol transcript, no-key contract proof, independent Inspector discovery, browser screenshots/manifest, accessibility checks, and test results. CI must pass on the pull request. `RF-7009` and a real ChatGPT-host smoke remain explicitly account-gated until a reachable HTTPS URL and real app ID exist.
 
 ## Milestone 8 — Persistence, authentication, and isolated execution
 

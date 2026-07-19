@@ -28,7 +28,7 @@ describe("trusted sample vertical slice", () => {
     expect(result.bundle.lock).toMatchObject({
       oracleId: result.oracle.id,
       oracleVersion: result.oracle.version,
-      reproForgeVersion: "0.1.0",
+      reproForgeVersion: "0.2.0",
     });
     expect(validateMaterializedBundle(result.files)).toEqual({
       success: true,

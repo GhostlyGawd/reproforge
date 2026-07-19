@@ -212,7 +212,7 @@ export async function runTrustedSample(
       packageManager: "npm@11",
       repository: "fixture://cli-spaces",
       repositoryTreeHash: await hashCanonical({ fixture: "cli-spaces", revision: "fixture-v1" }),
-      reproForgeVersion: "0.1.0",
+      reproForgeVersion: "0.2.0",
       revision: "fixture-v1",
       runner: "trusted-fixture-v1",
       runtime: "node@24",

@@ -9,6 +9,10 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 ## Controls implemented
 
 - External execution fails closed when no isolated backend exists.
+- The MCP surface exposes exactly three schema-closed tools; none accepts a repository URL, command, source payload, ChatGPT credential, or OpenAI API key.
+- Every MCP tool is closed-world and non-destructive; start is additive and idempotent, while read/export are read-only.
+- The MCP App resource has an empty external connect/resource/frame allowlist and loads no third-party assets.
+- `/mcp` uses no auth and wildcard CORS only for the public synthetic fixture. It must not be expanded to customer data or arbitrary execution under that policy.
 - Investigator tools are strict data contracts, not shell or filesystem tools.
 - The OpenAI client is initialized only for an explicit live request with a configured key.
 - Live Responses requests use `store: false`.
@@ -24,6 +28,8 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 - Attaching to a production environment.
 - Supplying production credentials, customer datasets, or private source code.
 - Multi-user or internet-facing operation without authentication, rate limiting, storage controls, and a deployment review.
+- Treating the anonymous trusted-sample caller scope as tenant isolation.
+- Treating a development tunnel, developer-mode app, or local plugin wrapper as a production security boundary.
 - Treating redaction as a substitute for excluding secrets at input time.
 
 ## Requirements for a future external runner

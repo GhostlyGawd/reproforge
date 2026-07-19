@@ -4,7 +4,7 @@
 
 ReproForge deliberately separates the trusted sample from the optional live investigator.
 
-The v2 REST service and planned ChatGPT/MCP adapter do not call the Responses API and do not accept a user OpenAI API key. In the subscription-first flow, ChatGPT chooses ReproForge MCP tools under the user's ChatGPT plan while ReproForge's deterministic server performs the work. This document describes only the separate optional standalone investigator.
+The implemented v2 REST service and ChatGPT/MCP adapter do not call the Responses API and do not accept a user OpenAI API key. In the subscription-first flow, ChatGPT chooses ReproForge MCP tools under the user's ChatGPT plan while ReproForge's deterministic server performs the work. This document describes only the separate optional standalone investigator.
 
 | Mode | Selection | Credentials | Behavior |
 | --- | --- | --- | --- |
