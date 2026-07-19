@@ -27,12 +27,16 @@ import { InvestigationTimeline } from "./investigation-timeline";
 import { OutcomeResult } from "./outcome-result";
 
 type ReproForgeAppProps = {
+  liveInvestigatorAvailable: boolean;
   sample: SampleCaseResult;
 };
 
 const stages = ["Inspect", "Hypothesize", "Experiment", "Verify", "Package"] as const;
 
-export function ReproForgeApp({ sample }: ReproForgeAppProps) {
+export function ReproForgeApp({
+  liveInvestigatorAvailable,
+  sample,
+}: ReproForgeAppProps) {
   const [started, setStarted] = useState(false);
   const [activeStep, setActiveStep] = useState(0);
   const [cancelled, setCancelled] = useState(false);
@@ -196,7 +200,9 @@ export function ReproForgeApp({ sample }: ReproForgeAppProps) {
                     <Bot size={15} aria-hidden="true" />
                     <span>Investigator</span>
                   </dt>
-                  <dd>Deterministic offline mode</dd>
+                  <dd>
+                    Offline sample · GPT-5.6 {liveInvestigatorAvailable ? "available" : "not configured"}
+                  </dd>
                 </div>
               </dl>
             </aside>

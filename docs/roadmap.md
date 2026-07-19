@@ -39,13 +39,13 @@ Tasks are grouped into independently reviewable and mergeable milestones. A mile
 
 ## Milestone 3 — GPT-5.6 investigation boundary
 
-- [ ] `RF-3001` Define the investigator interface and deterministic offline implementation.
-- [ ] `RF-3002` Implement lazy OpenAI client initialization.
-- [ ] `RF-3003` Integrate `gpt-5.6-sol` through Responses with explicit medium reasoning.
-- [ ] `RF-3004` Add strict evidence/hypothesis/tool schemas and continuation handling.
-- [ ] `RF-3005` Add prompt contract and permission-boundary tests.
-- [ ] `RF-3006` Add recorded contract fixtures that require no network or API key.
-- [ ] `RF-3007` Surface offline/live mode truthfully in the UI and documentation.
+- [x] `RF-3001` Define the investigator interface and deterministic offline implementation.
+- [x] `RF-3002` Implement lazy OpenAI client initialization.
+- [x] `RF-3003` Integrate `gpt-5.6-sol` through Responses with explicit medium reasoning.
+- [x] `RF-3004` Add strict evidence/hypothesis/tool schemas and continuation handling.
+- [x] `RF-3005` Add prompt contract and permission-boundary tests.
+- [x] `RF-3006` Add recorded contract fixtures that require no network or API key.
+- [x] `RF-3007` Surface offline/live mode truthfully in the UI and documentation.
 
 **Exit evidence:** contract tests, offline golden path, type/lint/build, and optional live smoke test when a key is available.
 

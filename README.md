@@ -21,21 +21,32 @@ ReproForge is under active development for the OpenAI Build Week Developer Tools
 - [Product and technical specification](docs/product-spec.md)
 - [Milestone roadmap and task breakdown](docs/roadmap.md)
 - [Test and evidence strategy](docs/test-strategy.md)
+- [GPT-5.6 and offline investigator contract](docs/openai-integration.md)
 
 ## Intended MVP
 
 The first complete slice supports a bundled, trusted JavaScript/TypeScript fixture. External repository execution remains disabled until the Docker-compatible isolated-runner adapter can be exercised. GPT-5.6 Sol is integrated through the OpenAI Responses API behind typed boundaries, with a deterministic offline investigator for local development and judge testing without credentials.
 
-## Verify the deterministic core
+## Run the trusted demo
 
 Requires Node.js 20.9 or newer.
 
 ```bash
 npm install
-npm run check
+npm run dev
 ```
 
-The check runs linting, strict type-checking, unit and property tests, BDD scenarios, and a production build. No OpenAI API key is required.
+Open [http://localhost:3000](http://localhost:3000) and choose **Run trusted sample**. The complete issue-to-bundle journey is deterministic and requires no OpenAI API key.
+
+To verify every local contract, including browser accessibility and responsive journeys:
+
+```bash
+npm run verify
+```
+
+## Optional GPT-5.6 mode
+
+The sample always identifies itself as offline. To make the separate live investigator endpoint available, copy `.env.example` to `.env.local`, set `OPENAI_API_KEY`, and restart the application. Live mode uses `gpt-5.6-sol` through the Responses API; it is never selected implicitly.
 
 ## License
 
