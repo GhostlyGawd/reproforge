@@ -24,6 +24,11 @@ import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
 import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
+import { createRuntimeHealthService } from "@/infrastructure/operations/runtime-health";
+import {
+  InMemoryOperationalMetrics,
+  JsonOperationalLogger,
+} from "@/infrastructure/operations/observability";
 import type { ReproForgeWorld } from "../support/world";
 
 const AT = "2026-07-19T20:00:00.000Z";
@@ -683,5 +688,58 @@ Then(
   "the cross-tenant durable read returns not found",
   function (this: ReproForgeWorld) {
     assert.equal(this.durableRead, null);
+  },
+);
+
+Given(
+  "a hosted runtime with incomplete production configuration",
+  function (this: ReproForgeWorld) {
+    this.runtimeHealthService = createRuntimeHealthService({
+      clock: { now: () => new Date(AT) },
+      environment: {
+        REPROFORGE_RUNTIME_MODE: "production",
+        REPROFORGE_BASE_URL: "https://reproforge.example",
+      },
+      logger: new JsonOperationalLogger({
+        sink: { error: () => undefined, info: () => undefined },
+      }),
+      metrics: new InMemoryOperationalMetrics(),
+    });
+  },
+);
+
+When(
+  "dependency readiness is checked",
+  async function (this: ReproForgeWorld) {
+    assert(this.runtimeHealthService);
+    this.runtimeHealthReport = await this.runtimeHealthService.readiness();
+  },
+);
+
+Then(
+  "readiness fails with {string}",
+  function (this: ReproForgeWorld, code: string) {
+    assert(this.runtimeHealthReport);
+    assert.equal(this.runtimeHealthReport.status, "unavailable");
+    assert.equal(this.runtimeHealthReport.checks.length, 1);
+    const [check] = this.runtimeHealthReport.checks;
+    assert(check);
+    assert.equal(check.code, code);
+    assert.equal(check.component, "configuration");
+    assert.equal(check.status, "unavailable");
+    assert(check.durationMs >= 0);
+  },
+);
+
+Then(
+  "no local provider fallback is reported",
+  function (this: ReproForgeWorld) {
+    assert(this.runtimeHealthReport);
+    assert.equal(
+      this.runtimeHealthReport.checks.some(({ code }) =>
+        code.startsWith("LOCAL_"),
+      ),
+      false,
+    );
   },
 );

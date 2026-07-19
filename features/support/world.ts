@@ -27,6 +27,7 @@ import type {
   RetentionDeletionResult,
 } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import type { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
+import type { HealthReport, HealthService } from "@/application/health";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -65,6 +66,8 @@ export class ReproForgeWorld extends World {
   durableRecoverySummaries: LeaseRecoverySummary[] = [];
   durableRetention?: PostgresTenantDataRetention;
   durableRetentionResult?: RetentionDeletionResult | null;
+  runtimeHealthService?: HealthService;
+  runtimeHealthReport?: HealthReport;
 }
 
 setWorldConstructor(ReproForgeWorld);

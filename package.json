@@ -15,6 +15,7 @@
     "test:artifacts": "vitest run tests/artifact-store.test.ts tests/artifact-store.property.test.ts tests/vercel-private-blob-client.test.ts tests/runtime-config.test.ts tests/runtime-config.property.test.ts",
     "test:queue": "vitest run tests/postgres-migrations.test.ts tests/postgres-migrations.property.test.ts tests/outbox-publisher.test.ts tests/job-lease-recovery.test.ts tests/durable-queue-consumer.property.test.ts tests/vercel-job-queue.test.ts tests/runtime-config.test.ts tests/runtime-config.property.test.ts",
     "test:governance": "vitest run tests/quota-ledger.test.ts tests/quota-ledger.property.test.ts tests/durable-cancellation.test.ts tests/retention-deletion.test.ts tests/retention-deletion.property.test.ts tests/postgres-migrations.test.ts",
+    "test:operations": "vitest run tests/health-service.test.ts tests/observability.property.test.ts tests/health-route.test.ts tests/runtime-health.test.ts",
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",

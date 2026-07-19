@@ -65,3 +65,9 @@ Feature: Durable reproduction state
     When the retention deletion worker runs
     Then all retained customer data is removed
     And exactly one sanitized deletion audit tombstone remains
+
+  Scenario: Missing production configuration fails readiness without falling back
+    Given a hosted runtime with incomplete production configuration
+    When dependency readiness is checked
+    Then readiness fails with "INVALID_RUNTIME_CONFIGURATION"
+    And no local provider fallback is reported
