@@ -26,6 +26,17 @@ ReproForge is under active development for the OpenAI Build Week Developer Tools
 
 The first complete slice supports a bundled, trusted JavaScript/TypeScript fixture. External repository execution remains disabled until the Docker-compatible isolated-runner adapter can be exercised. GPT-5.6 Sol is integrated through the OpenAI Responses API behind typed boundaries, with a deterministic offline investigator for local development and judge testing without credentials.
 
+## Verify the deterministic core
+
+Requires Node.js 20.9 or newer.
+
+```bash
+npm install
+npm run check
+```
+
+The check runs linting, strict type-checking, unit and property tests, BDD scenarios, and a production build. No OpenAI API key is required.
+
 ## License
 
 No license has been selected yet. All rights are reserved until the repository owner explicitly chooses one.
