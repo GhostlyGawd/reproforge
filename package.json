@@ -12,7 +12,8 @@
     "test:watch": "vitest",
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build"
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build",
+    "verify": "npm run check && npm run test:browser"
   },
   "engines": {
     "node": ">=20.9"

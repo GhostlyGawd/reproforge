@@ -90,3 +90,13 @@ test("starts the investigation using only the keyboard with visible focus", asyn
   await page.keyboard.press("Enter");
   await expect(page.getByRole("heading", { name: "Verified reproduction" })).toBeVisible();
 });
+
+test("completes without animated delay when reduced motion is requested", async ({ page }) => {
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await page.goto("/");
+
+  await page.getByRole("button", { name: "Run trusted sample" }).click();
+  await expect(page.getByRole("heading", { name: "Verified reproduction" })).toBeVisible({
+    timeout: 1_000,
+  });
+});

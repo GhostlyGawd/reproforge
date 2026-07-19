@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-2",
+  "capturedAt": "2026-07-19T17:01:38Z",
+  "sourceCommit": "d15d0c953d9087d63923db28afc8600a65ce6772",
+  "route": "http://127.0.0.1:3000/",
+  "captureMethod": {
+    "applicationCommand": "npm run start -- --hostname 127.0.0.1",
+    "browserTool": "agent-browser 0.32.2",
+    "browser": "Chrome 151.0.7922.34",
+    "mode": "Next.js production build"
+  },
+  "state": {
+    "scenario": "turns the trusted issue into a verified reproduction",
+    "testFile": "e2e/golden-path.spec.ts",
+    "expectedStatus": "VERIFIED",
+    "candidateMatches": 3,
+    "candidateRuns": 3,
+    "controlMatched": false
+  },
+  "verification": {
+    "command": "npm run verify",
+    "vitest": {
+      "filesPassed": 8,
+      "testsPassed": 27
+    },
+    "bdd": {
+      "scenariosPassed": 6,
+      "stepsPassed": 28
+    },
+    "browserTestsPassed": 7,
+    "axeViolations": 0,
+    "dependencyVulnerabilities": 0,
+    "productionBuild": "passed"
+  },
+  "captures": [
+    {
+      "file": "golden-path-desktop.png",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "image": {
+        "width": 1440,
+        "height": 1986,
+        "bytes": 396895,
+        "sha256": "9a4996eefb23a1239dad37a7014ab0a152bd5bbb6f4f1d9809215b519ab21245"
+      },
+      "alt": "The ReproForge desktop application showing a preloaded bug report, evidence board, hypothesis ledger, four verification runs, verified result, and downloadable bundle.",
+      "caption": "Complete verified proof at the 1440 by 1000 desktop viewport."
+    },
+    {
+      "file": "golden-path-mobile.png",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "image": {
+        "width": 390,
+        "height": 3652,
+        "bytes": 303403,
+        "sha256": "9f42897808b473545d0821b5a354f47960e1057b58c0ad9b2651dc14f258cac9"
+      },
+      "alt": "The ReproForge mobile application showing the same verified investigation and bundle in a responsive single-column layout.",
+      "caption": "Complete verified proof at the 390 by 844 mobile viewport."
+    }
+  ],
+  "sanitization": "Synthetic bundled fixture only; no credentials, private repositories, personal data, or user-provided content.",
+  "provenance": "Real ReproForge application state rendered locally from the recorded source commit and captured by agent-browser; not concept art or generated imagery."
+}
