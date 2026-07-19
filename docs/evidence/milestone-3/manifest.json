@@ -1,0 +1,54 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-3",
+  "capturedAt": "2026-07-19T17:19:31Z",
+  "sourceCommit": "00f19f55d0ff641dc8dd3875258a2653ede2e80c",
+  "route": "http://127.0.0.1:3000/",
+  "captureMethod": {
+    "applicationCommand": "npm run start -- --hostname 127.0.0.1",
+    "browserTool": "agent-browser 0.32.2",
+    "browser": "Chrome 151.0.7922.34",
+    "mode": "Next.js production build",
+    "selector": ".intake"
+  },
+  "state": {
+    "sampleMode": "offline",
+    "liveModel": "gpt-5.6-sol",
+    "liveAvailable": false,
+    "externalExecution": false,
+    "networkUsedBySample": false
+  },
+  "verification": {
+    "command": "npm run verify",
+    "vitest": {
+      "filesPassed": 12,
+      "testsPassed": 38,
+      "offlinePropertyRuns": 150
+    },
+    "bdd": {
+      "scenariosPassed": 6,
+      "stepsPassed": 28
+    },
+    "browserTestsPassed": 8,
+    "dependencyVulnerabilities": 0,
+    "productionBuild": "passed",
+    "liveSmoke": "skipped-no-api-key"
+  },
+  "capture": {
+    "file": "offline-mode.png",
+    "viewport": {
+      "width": 1440,
+      "height": 1000
+    },
+    "image": {
+      "width": 1398,
+      "height": 341,
+      "bytes": 53018,
+      "sha256": "501cdc7a158e94b4479858f07ea0293b8ffaed02a42a3e28b0290c76c2d8f203"
+    },
+    "alt": "The ReproForge issue intake showing the trusted sample, allowlisted no-network fixture, and an investigator label reading Offline sample and GPT-5.6 not configured.",
+    "caption": "The production UI distinguishes its offline trusted sample from the unconfigured live GPT-5.6 adapter."
+  },
+  "sanitization": "Synthetic bundled fixture only; no API key, credentials, private repositories, personal data, or user-provided content.",
+  "provenance": "Real ReproForge application state rendered locally from the recorded source commit and captured by agent-browser; not concept art or generated imagery."
+}
