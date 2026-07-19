@@ -139,3 +139,5 @@ real account-side evidence at their point in the sequence:
 Until exercised, each remains unchecked and the full product goal remains
 active.
 
+The planning milestone's non-visual verification record is in
+[remaining-plan evidence](../evidence/remaining-plan/README.md).

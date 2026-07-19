@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-19T20:08:25.9665695Z",
+  "specificationCommit": "3bb136086e9651c90f7f7438857810182bf83c55",
+  "scope": ["8A", "8B", "8C", "8D", "9A", "9B"],
+  "taskInventory": {
+    "total": 61,
+    "unique": 61,
+    "milestone8": 45,
+    "milestone9": 16
+  },
+  "verification": {
+    "command": "npm run check",
+    "eslint": "passed",
+    "typecheck": "passed",
+    "vitestFilesPassed": 22,
+    "vitestTestsPassed": 70,
+    "bddScenariosPassed": 13,
+    "bddStepsPassed": 73,
+    "productionBuild": "passed",
+    "markdownLinks": "all local links resolve",
+    "diffCheck": "passed"
+  },
+  "visualEvidence": {
+    "applicable": false,
+    "reason": "The milestone changes planning and documentation only."
+  },
+  "sanitization": "No credentials, private repository names or contents, personal data, customer data, provider resource IDs, or fabricated app IDs.",
+  "provenance": "Repository-authored planning evidence derived from live project state and linked primary documentation; no generated visual media."
+}
