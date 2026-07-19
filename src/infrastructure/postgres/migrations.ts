@@ -1,23 +1,16 @@
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
 
-export type PostgresQueryResult<Row extends Record<string, unknown>> = {
-  rows: Row[];
-};
+import type {
+  PostgresDatabase,
+  PostgresExecutor,
+  PostgresQueryResult as DatabaseQueryResult,
+} from "./database";
 
-export interface PostgresMigrationTransaction {
-  execute(sql: string): Promise<void>;
-  query<Row extends Record<string, unknown>>(
-    sql: string,
-    parameters?: readonly unknown[],
-  ): Promise<PostgresQueryResult<Row>>;
-}
-
-export interface PostgresMigrationClient extends PostgresMigrationTransaction {
-  transaction<T>(
-    operation: (transaction: PostgresMigrationTransaction) => Promise<T>,
-  ): Promise<T>;
-}
+export type PostgresQueryResult<Row extends Record<string, unknown>> =
+  DatabaseQueryResult<Row>;
+export type PostgresMigrationTransaction = PostgresExecutor;
+export type PostgresMigrationClient = PostgresDatabase;
 
 export type PostgresMigration = Readonly<{
   checksum: string;

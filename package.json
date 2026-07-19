@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:migrations": "vitest run tests/postgres-migrations.test.ts tests/postgres-migrations.property.test.ts",
+    "test:persistence": "vitest run tests/postgres-repository.test.ts tests/postgres-repository.property.test.ts tests/neon-database.test.ts",
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
@@ -28,11 +29,13 @@
   "dependencies": {
     "@modelcontextprotocol/ext-apps": "^1.7.4",
     "@modelcontextprotocol/sdk": "^1.29.0",
+    "@neondatabase/serverless": "^1.1.0",
     "lucide-react": "^1.25.0",
     "next": "16.2.10",
     "openai": "^6.48.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "ws": "^8.21.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
@@ -44,6 +47,7 @@
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "@vitest/coverage-v8": "^4.1.10",
     "agent-browser": "^0.32.2",
     "eslint": "^9",

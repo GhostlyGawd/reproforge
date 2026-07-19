@@ -227,14 +227,26 @@ export interface JobQueue {
 export interface Outbox {
   append(message: QueueMessage): Promise<void>;
   listPending(limit: number, at: string): Promise<QueueMessage[]>;
-  markDelivered(eventId: string, deliveredAt: string): Promise<void>;
-  recordFailure(eventId: string, nextAttemptAt: string): Promise<void>;
+  markDelivered(
+    tenantId: string,
+    eventId: string,
+    deliveredAt: string,
+  ): Promise<void>;
+  recordFailure(
+    tenantId: string,
+    eventId: string,
+    nextAttemptAt: string,
+  ): Promise<void>;
 }
 
 export interface QuotaLedger {
   reserve(reservation: QuotaReservation): Promise<boolean>;
-  commit(reservationId: string, actualAmount: number): Promise<void>;
-  release(reservationId: string): Promise<void>;
+  commit(
+    tenantId: string,
+    reservationId: string,
+    actualAmount: number,
+  ): Promise<void>;
+  release(tenantId: string, reservationId: string): Promise<void>;
 }
 
 export interface AuditSink {

@@ -9,6 +9,16 @@ import type { CaseService } from "@/application/case-service";
 import type { StartResult } from "@/application/reproduction-contracts";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+import type { PGlite } from "@electric-sql/pglite";
+import type {
+  DurableReproductionRecord,
+  DurableReservationResult,
+} from "@/application/ports/production";
+import type { PostgresDatabase } from "@/infrastructure/postgres/database";
+import type {
+  PostgresDurableReproductionRepository,
+  PostgresUnitOfWork,
+} from "@/infrastructure/postgres/repositories";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -30,6 +40,14 @@ export class ReproForgeWorld extends World {
   mcpStarts: Array<Record<string, unknown>> = [];
   mcpTools: Array<Record<string, unknown>> = [];
   mcpWidget?: Record<string, unknown>;
+  durableDatabase?: PGlite;
+  durablePostgres?: PostgresDatabase;
+  durableRepository?: PostgresDurableReproductionRepository;
+  durableUnitOfWork?: PostgresUnitOfWork;
+  durableRecord?: DurableReproductionRecord;
+  durableRead?: DurableReproductionRecord | null;
+  durableStarts: DurableReservationResult[] = [];
+  durableErrorCode?: string;
 }
 
 setWorldConstructor(ReproForgeWorld);
