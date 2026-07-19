@@ -1,10 +1,11 @@
 # ReproForge v2 product and platform specification
 
 - **Status:** Approved for implementation
-- **Version:** 2.0-draft.2
+- **Version:** 2.0-draft.3
 - **Date:** 2026-07-19
 - **Decision:** [API-first core with plugin-first distribution](adr/0001-api-first-plugin-first.md)
 - **Delivery plan:** [v2 roadmap](roadmap-v2.md)
+- **Remaining execution specs:** [ordered delivery plan](specs/README.md)
 - **Implementation:** trusted REST and MCP slices complete through Milestone 7; account-side developer-mode smoke and production boundaries remain gated
 
 ## 1. Product promise
@@ -294,7 +295,23 @@ Real-world reproduction accuracy and latency targets require a representative, l
 - Claiming globally minimal reproductions.
 - Publishing a plugin, changing repository settings, or provisioning paid production infrastructure without the corresponding explicit gate.
 
-## 14. Completeness statement
+## 14. Remaining implementation specifications
 
-The plan is complete as a delivery sequence: it covers product surface, transport contracts, jobs, persistence, authentication, authorization, execution isolation, privacy, operations, verification, deployment, and submission. It is not yet a completed production product. Provider selection, credentials, domain/identity ownership, hosting spend, and public publication are decision gates, not details that can be truthfully completed in source code alone.
+The production work is decomposed into gated specifications for
+[durability](specs/milestone-8a-durable-foundation.md),
+[identity and GitHub authorization](specs/milestone-8b-identity-and-github.md),
+[isolated execution](specs/milestone-8c-isolated-execution.md),
+[private-beta verification](specs/milestone-8d-private-beta.md), and
+[hosted launch readiness](specs/milestone-9-hosted-launch.md). The managed
+provider baseline and replacement boundaries are recorded in
+[ADR 0002](adr/0002-managed-production-stack.md).
+
+Each specification has ordered task identifiers, failing-first test
+requirements, generated properties, executable BDD, provider-backed evidence,
+and a merge gate. Later work cannot use a mock or local-only check to claim an
+earlier external boundary is complete.
+
+## 15. Completeness statement
+
+The plan is complete as a delivery sequence: it covers product surface, transport contracts, jobs, persistence, authentication, authorization, execution isolation, privacy, operations, verification, deployment, and submission. It is not yet a completed production product. Provider credentials, domain/identity ownership, hosting spend, account-side ChatGPT access, and public publication require real external evidence and cannot be truthfully completed in source code alone.
 
