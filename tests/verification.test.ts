@@ -62,4 +62,3 @@ describe("reproduction verification", () => {
     expect(result.status).toBe("NOT_REPRODUCED");
   });
 });
-

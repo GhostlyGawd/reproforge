@@ -27,4 +27,3 @@ describe("trusted sample vertical slice", () => {
     });
   });
 });
-

@@ -101,7 +101,6 @@ const transitionPath: Array<{ state: CaseState; reason: string }> = [
 function at(index: number): Date {
   return new Date(Date.UTC(2026, 6, 19, 16, 0, 0, index));
 }
-
 export async function runTrustedSample(): Promise<SampleCaseResult> {
   const runner = new TrustedFixtureRunner();
   const control = {
@@ -161,4 +160,3 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
     summary,
   };
 }
-

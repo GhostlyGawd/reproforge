@@ -34,4 +34,3 @@ describe("runner boundary", () => {
     ).rejects.toThrow("not allowlisted");
   });
 });
-

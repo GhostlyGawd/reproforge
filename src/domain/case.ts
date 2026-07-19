@@ -87,7 +87,6 @@ export class InvalidCaseTransitionError extends Error {
     this.name = "InvalidCaseTransitionError";
   }
 }
-
 export function createCase(id: string, at = new Date()): ReproCase {
   const timestamp = at.toISOString();
   return reproCaseSchema.parse({
@@ -124,4 +123,3 @@ export function transitionCase(
     updatedAt: timestamp,
   });
 }
-

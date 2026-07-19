@@ -79,4 +79,3 @@ describe("case state machine", () => {
     );
   });
 });
-

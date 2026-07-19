@@ -81,7 +81,6 @@ export type OracleEvaluation = {
 function streamValue(run: RunResult, stream: StreamName): string {
   return stream === "stdout" ? run.stdout : run.stderr;
 }
-
 function jsonAtPath(value: unknown, path: string[]): unknown {
   return path.reduce<unknown>((current, segment) => {
     if (typeof current !== "object" || current === null) {
@@ -172,4 +171,3 @@ export function evaluateOracle(
   const parsed = failureOracleSchema.parse(oracle);
   return evaluateExpression(parsed.root, run);
 }
-

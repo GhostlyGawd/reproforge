@@ -37,4 +37,3 @@ export const hypothesisSchema = z
   .strict();
 
 export type Hypothesis = z.infer<typeof hypothesisSchema>;
-
