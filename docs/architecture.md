@@ -1,5 +1,7 @@
 # Architecture and trust boundaries
 
+> This page documents the implemented v1 MVP. The approved v2 adapter and service architecture is defined in [ADR 0001](adr/0001-api-first-plugin-first.md) and the [v2 specification](product-spec-v2.md).
+
 ![ReproForge architecture showing proposal, execution, deterministic proof, audit, and bundle boundaries](architecture.svg)
 
 ## Design rule

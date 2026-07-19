@@ -1,9 +1,11 @@
 # ReproForge product and technical specification
 
-- **Status:** Implemented for the trusted-fixture MVP
+- **Status:** Implemented for the trusted-fixture MVP; retained as the v1 baseline
 - **Version:** 1.1
 - **Date:** 2026-07-19
 - **Track:** OpenAI Build Week — Developer Tools
+
+The approved productization direction is defined in the [ReproForge v2 specification](product-spec-v2.md). This document remains the acceptance record for the merged local MVP.
 
 ## 1. Product contract
 

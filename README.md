@@ -6,6 +6,8 @@
 
 ReproForge turns an incomplete bug report into a verified, portable reproduction. It keeps reported facts separate from observations and inferences, tests falsifiable hypotheses within a bounded budget, verifies a machine-readable failure oracle against a negative control and three clean runs, then exports an independently validatable Repro Bundle.
 
+The approved v2 direction is an API-first ReproForge service with plugin-first distribution: ChatGPT supplies the conversational surface under the user's subscription, while ReproForge supplies MCP tools, deterministic verification, artifacts, and isolated execution. The primary ChatGPT path will not require a user-provided OpenAI API key; the Responses API remains an optional standalone adapter. See the [v2 product specification](docs/product-spec-v2.md) and [architecture decision](docs/adr/0001-api-first-plugin-first.md).
+
 ![ReproForge showing a verified CLI reproduction, evidence board, prioritized hypothesis ledger, run history, oracle, and bundle preview](docs/evidence/milestone-4/final-desktop.png)
 
 ## Why ReproForge
@@ -98,10 +100,15 @@ The deterministic sample does not silently switch modes. To enable the separate 
 
 The model structures evidence and proposes experiments; it cannot execute commands, weaken the oracle, or declare verification. See the [OpenAI integration contract](docs/openai-integration.md). A live smoke test is optional and was not used for the committed offline evidence.
 
+This key is required only for the current optional standalone Responses route. It is not a product invariant and will not be required by the subscription-first ChatGPT/MCP journey.
+
 ## Documentation
 
 - [Product and technical specification](docs/product-spec.md)
 - [Milestone roadmap and task breakdown](docs/roadmap.md)
+- [Approved v2 product and platform specification](docs/product-spec-v2.md)
+- [V2 delivery roadmap and GitHub milestones](docs/roadmap-v2.md)
+- [API-first/plugin-first architecture decision](docs/adr/0001-api-first-plugin-first.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
