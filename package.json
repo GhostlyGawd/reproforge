@@ -11,6 +11,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
+    "test:browser": "playwright test",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build"
   },
   "engines": {
@@ -20,18 +21,22 @@
     "postcss": "8.5.20"
   },
   "dependencies": {
+    "lucide-react": "^1.25.0",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@axe-core/playwright": "^4.12.1",
     "@cucumber/cucumber": "^13.1.1",
+    "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.10",
+    "agent-browser": "^0.32.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.10",
     "fast-check": "^4.9.0",
