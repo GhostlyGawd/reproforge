@@ -84,6 +84,12 @@ describe("runtime configuration", () => {
       ...productionEnvironment,
       REPROFORGE_JOB_LEASE_SECONDS: "120",
       REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT: "3",
+      REPROFORGE_MAX_DELIVERY_ATTEMPTS: "7",
+      REPROFORGE_OUTBOX_BATCH_SIZE: "50",
+      REPROFORGE_OUTBOX_CLAIM_SECONDS: "45",
+      REPROFORGE_QUEUE_REGION: "sfo1",
+      REPROFORGE_QUEUE_RETENTION_SECONDS: "86400",
+      REPROFORGE_QUEUE_TOPIC: "reproforge-preview-v1",
       REPROFORGE_RETENTION_DAYS: "14",
     });
 
@@ -91,11 +97,17 @@ describe("runtime configuration", () => {
       baseUrl: "https://reproforge.example/",
       jobLeaseSeconds: 120,
       maxActiveJobsPerTenant: 3,
+      maxDeliveryAttempts: 7,
+      outboxBatchSize: 50,
+      outboxClaimSeconds: 45,
       providers: {
         artifactStore: "vercel-blob",
         database: "neon",
         queue: "vercel",
       },
+      queueRegion: "sfo1",
+      queueRetentionSeconds: 86_400,
+      queueTopic: "reproforge-preview-v1",
       retentionDays: 14,
     });
     const summary = JSON.stringify(summarizeRuntimeConfig(parsed));

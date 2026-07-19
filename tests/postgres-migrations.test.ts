@@ -190,7 +190,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(3);
+    expect(migrations).toHaveLength(4);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`
@@ -228,6 +228,65 @@ describe("Postgres durable-foundation migrations", () => {
         job_id: "job_seeded",
         tenant_id: "tenant_seeded",
       },
+    ]);
+  });
+
+  it("upgrades a seeded pre-queue-lifecycle event without losing its intent", async () => {
+    const database = createDatabase();
+    const client = pgliteMigrationClient(database);
+    const migrations = loadPostgresMigrations();
+    await applyPostgresMigrations(client, migrations.slice(0, 3));
+    const payload = {
+      caseId: "case_queue_upgrade",
+      eventId: "event_queue_upgrade",
+      jobId: "job_queue_upgrade",
+      kind: "reproduction.requested",
+      schemaVersion: "1.0",
+      tenantId: "tenant_queue_upgrade",
+    };
+    await database.exec(`
+      INSERT INTO tenants (id) VALUES ('tenant_queue_upgrade');
+      INSERT INTO cases (tenant_id, id, source_kind, source_descriptor)
+      VALUES (
+        'tenant_queue_upgrade', 'case_queue_upgrade',
+        'trusted-sample', '{}'::jsonb
+      );
+      INSERT INTO jobs (tenant_id, id, case_id)
+      VALUES ('tenant_queue_upgrade', 'job_queue_upgrade', 'case_queue_upgrade');
+    `);
+    await database.query(
+      `INSERT INTO outbox_events (
+         tenant_id, id, case_id, job_id, kind, payload
+       ) VALUES ($1, $2, $3, $4, $5, $6::jsonb)`,
+      [
+        payload.tenantId,
+        payload.eventId,
+        payload.caseId,
+        payload.jobId,
+        payload.kind,
+        JSON.stringify(payload),
+      ],
+    );
+
+    const result = await applyPostgresMigrations(client, migrations);
+    const event = await database.query<{
+      payload: unknown;
+      status: string;
+      updated: boolean;
+      version: string;
+    }>(
+      `SELECT status, version::text,
+              updated_at IS NOT NULL AS updated, payload
+         FROM outbox_events
+        WHERE tenant_id = 'tenant_queue_upgrade'`,
+    );
+
+    expect(result).toEqual({
+      applied: [migrations[3]?.id],
+      skipped: migrations.slice(0, 3).map(({ id }) => id),
+    });
+    expect(event.rows).toEqual([
+      { payload, status: "PENDING", updated: true, version: "1" },
     ]);
   });
 
@@ -286,6 +345,13 @@ describe("Postgres durable-foundation migrations", () => {
         "UPDATE cases SET version = 3 WHERE tenant_id = 'tenant_a' AND id = 'case_a'",
       ),
     ).rejects.toThrow(/version/i);
+    await expect(
+      database.query(
+        `UPDATE jobs
+            SET state = 'SUCCEEDED', attempt = 1, version = 2
+          WHERE tenant_id = 'tenant_a' AND id = 'job_a'`,
+      ),
+    ).rejects.toThrow(/transition/i);
 
     await database.query(
       "UPDATE cases SET version = 2 WHERE tenant_id = 'tenant_a' AND id = 'case_a'",
@@ -303,14 +369,20 @@ describe("Postgres durable-foundation migrations", () => {
       INSERT INTO tenants (id) VALUES ('tenant_a');
       INSERT INTO cases (tenant_id, id, source_kind, source_descriptor)
       VALUES ('tenant_a', 'case_a', 'trusted-sample', '{}'::jsonb);
-      INSERT INTO jobs (tenant_id, id, case_id)
-      VALUES ('tenant_a', 'job_a', 'case_a');
+      INSERT INTO jobs (
+        tenant_id, id, case_id, state, attempt,
+        lease_owner, lease_acquired_at, lease_expires_at
+      ) VALUES (
+        'tenant_a', 'job_a', 'case_a', 'RUNNING', 1,
+        'worker_a', CURRENT_TIMESTAMP - interval '1 minute',
+        CURRENT_TIMESTAMP + interval '1 hour'
+      );
       INSERT INTO run_evidence (
         tenant_id, case_id, job_id, attempt, sequence, kind,
-        environment, evidence
+        environment, evidence, lease_owner
       ) VALUES (
         'tenant_a', 'case_a', 'job_a', 1, 1, 'positive-control',
-        '{}'::jsonb, '{}'::jsonb
+        '{}'::jsonb, '{}'::jsonb, 'worker_a'
       );
       INSERT INTO audit_events (
         tenant_id, id, actor_id, action, target_type, target_id, outcome, metadata
@@ -325,6 +397,17 @@ describe("Postgres durable-foundation migrations", () => {
         "UPDATE run_evidence SET evidence = '{\"changed\":true}'::jsonb WHERE tenant_id = 'tenant_a'",
       ),
     ).rejects.toThrow(/append-only/i);
+    await expect(
+      database.query(
+        `INSERT INTO run_evidence (
+           tenant_id, case_id, job_id, attempt, sequence, kind,
+           environment, evidence, lease_owner
+         ) VALUES (
+           'tenant_a', 'case_a', 'job_a', 1, 2, 'positive-control',
+           '{}'::jsonb, '{}'::jsonb, 'worker_intruder'
+         )`,
+      ),
+    ).rejects.toThrow(/lease owner/i);
     await expect(
       database.query(
         "DELETE FROM audit_events WHERE tenant_id = 'tenant_a' AND id = 'audit_a'",

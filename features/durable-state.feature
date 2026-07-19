@@ -40,3 +40,15 @@ Feature: Durable reproduction state
     And a private bundle artifact for the durable case
     When the owner deletes the private artifact
     Then the private artifact is no longer readable
+
+  Scenario: A duplicate queue delivery performs no duplicate work
+    Given an empty durable Postgres store for a tenant
+    When the caller reserves a durable reproduction
+    And the same queued job is delivered twice
+    Then exactly one durable attempt completes
+
+  Scenario: An expired worker lease is recovered once
+    Given an empty durable Postgres store for a tenant
+    When the caller reserves a durable reproduction
+    And a worker lease expires and recovery runs twice
+    Then exactly one recovery intent requeues the durable job

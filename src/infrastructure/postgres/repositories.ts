@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import {
   auditEventSchema,
   jobLeaseSchema,
@@ -10,7 +12,12 @@ import {
   type DurableReproductionRepository,
   type DurableReservationResult,
   type JobLease,
+  type LeaseFailure,
+  type LeaseFailureDisposition,
+  type LeaseRecoverySummary,
   type Outbox,
+  type OutboxClaim,
+  type OutboxFailureDisposition,
   type QuotaLedger,
   type QueueMessage,
   type QuotaReservation,
@@ -19,6 +26,7 @@ import {
   type UnitOfWork,
 } from "@/application/ports/production";
 import { reproductionSnapshotSchema } from "@/application/reproduction-contracts";
+import { JOB_TERMINAL_STATES } from "@/domain/job";
 
 import {
   runSerializableTransaction,
@@ -142,6 +150,24 @@ function integer(value: string | number): number {
   return parsed;
 }
 
+function canonicalTimestamp(value: string): string | null {
+  const parsed = new Date(value);
+  return Number.isNaN(parsed.getTime()) || parsed.toISOString() !== value
+    ? null
+    : parsed.toISOString();
+}
+
+function recoveryEventId(
+  tenantId: string,
+  jobId: string,
+  attempt: number,
+): string {
+  return `recovery_${createHash("sha256")
+    .update(`${tenantId}:${jobId}:${attempt}`)
+    .digest("hex")
+    .slice(0, 40)}`;
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
     try {
@@ -167,6 +193,7 @@ function validateRecord(
       tenantId: record.tenantId,
     });
     reproductionSnapshotSchema.parse(record.snapshot);
+    const failure = record.snapshot.job.failure;
     if (
       !/^[a-f0-9]{64}$/.test(record.commandHash) ||
       record.idempotencyKey.length < 1 ||
@@ -180,6 +207,13 @@ function validateRecord(
       Date.parse(record.updatedAt) < Date.parse(record.createdAt) ||
       record.createdAt !== new Date(record.createdAt).toISOString() ||
       record.updatedAt !== new Date(record.updatedAt).toISOString()
+      || (failure !== null &&
+        (!/^[A-Z][A-Z0-9_]{0,95}$/.test(failure.code) ||
+          failure.message.length > 512 ||
+          /[\u0000-\u001f\u007f]/.test(failure.message) ||
+          /(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{16,}|bearer\s+\S{8,}|postgres(?:ql)?:\/\/[^@\s]+@)/i.test(
+            failure.message,
+          )))
     ) {
       throw new Error("invalid");
     }
@@ -297,6 +331,26 @@ export class PostgresDurableReproductionRepository
     );
   }
 
+  async findByLease(rawLease: JobLease): Promise<DurableReproductionRecord | null> {
+    const lease = jobLeaseSchema.parse(rawLease);
+    return this.find(
+      `${DURABLE_SELECT}
+       WHERE j.tenant_id = $1 AND j.id = $2
+         AND j.lease_owner = $3 AND j.attempt = $4
+         AND j.lease_acquired_at = $5 AND j.lease_expires_at = $6
+         AND j.state = 'RUNNING'
+       LIMIT 1`,
+      [
+        lease.tenantId,
+        lease.jobId,
+        lease.ownerId,
+        lease.attempt,
+        lease.acquiredAt,
+        lease.expiresAt,
+      ],
+    );
+  }
+
   async reserve(
     rawRecord: DurableReproductionRecord,
   ): Promise<DurableReservationResult> {
@@ -327,6 +381,7 @@ export class PostgresDurableReproductionRepository
     const acquiredAt = new Date(input.at);
     if (
       Number.isNaN(acquiredAt.getTime()) ||
+      acquiredAt.toISOString() !== input.at ||
       !Number.isInteger(input.leaseSeconds) ||
       input.leaseSeconds < 1 ||
       input.leaseSeconds > 3_600
@@ -339,6 +394,8 @@ export class PostgresDurableReproductionRepository
     return this.write(async (repository) => {
       const result = await repository.source.query<{
         attempt: number | string;
+        case_id: string;
+        version: number | string;
       }>(
         `UPDATE jobs
             SET state = 'RUNNING',
@@ -346,6 +403,7 @@ export class PostgresDurableReproductionRepository
                 lease_owner = $3,
                 lease_acquired_at = $4,
                 lease_expires_at = $5,
+                updated_at = $4,
                 version = version + 1
           WHERE tenant_id = $1
             AND id = $2
@@ -354,14 +412,20 @@ export class PostgresDurableReproductionRepository
               (state = 'QUEUED' AND next_attempt_at <= $4)
               OR (state = 'RUNNING' AND lease_expires_at <= $4)
             )
-          RETURNING attempt`,
+          RETURNING attempt, case_id, version`,
         [input.tenantId, input.jobId, input.ownerId, input.at, expiresAt],
       );
-      const attempt = result.rows[0]?.attempt;
-      if (attempt === undefined) return null;
+      const row = result.rows[0];
+      if (!row) return null;
+      await repository.advanceCaseVersion(
+        input.tenantId,
+        row.case_id,
+        integer(row.version) - 1,
+        input.at,
+      );
       return jobLeaseSchema.parse({
         acquiredAt: acquiredAt.toISOString(),
-        attempt: integer(attempt),
+        attempt: integer(row.attempt),
         expiresAt,
         jobId: input.jobId,
         ownerId: input.ownerId,
@@ -370,56 +434,340 @@ export class PostgresDurableReproductionRepository
     });
   }
 
-  async renewLease(rawLease: JobLease, expiresAt: string): Promise<JobLease> {
+  async renewLease(
+    rawLease: JobLease,
+    input: { at: string; expiresAt: string },
+  ): Promise<JobLease> {
     const lease = jobLeaseSchema.parse(rawLease);
-    if (Date.parse(expiresAt) <= Date.parse(lease.expiresAt)) {
+    const at = canonicalTimestamp(input.at);
+    const canonicalExpiresAt = canonicalTimestamp(input.expiresAt);
+    if (
+      !at ||
+      !canonicalExpiresAt ||
+      Date.parse(at) < Date.parse(lease.acquiredAt) ||
+      Date.parse(at) >= Date.parse(lease.expiresAt) ||
+      Date.parse(canonicalExpiresAt) <= Date.parse(lease.expiresAt)
+    ) {
       throw new LeaseOwnershipError();
     }
     return this.write(async (repository) => {
-      const result = await repository.source.query<{ id: string }>(
+      const result = await repository.source.query<{
+        case_id: string;
+        id: string;
+        version: number | string;
+      }>(
         `UPDATE jobs
             SET lease_expires_at = $5,
+                updated_at = $6,
                 version = version + 1
           WHERE tenant_id = $1 AND id = $2
             AND lease_owner = $3 AND attempt = $4
-            AND state = 'RUNNING' AND lease_expires_at = $6
-          RETURNING id`,
+            AND state = 'RUNNING' AND lease_expires_at = $7
+          RETURNING id, case_id, version`,
         [
           lease.tenantId,
           lease.jobId,
           lease.ownerId,
           lease.attempt,
-          expiresAt,
+          canonicalExpiresAt,
+          at,
           lease.expiresAt,
         ],
       );
-      if (!result.rows[0]) throw new LeaseOwnershipError();
-      return jobLeaseSchema.parse({ ...lease, expiresAt });
+      const row = result.rows[0];
+      if (!row) throw new LeaseOwnershipError();
+      await repository.advanceCaseVersion(
+        lease.tenantId,
+        row.case_id,
+        integer(row.version) - 1,
+        at,
+      );
+      return jobLeaseSchema.parse({ ...lease, expiresAt: canonicalExpiresAt });
     });
   }
 
-  async releaseLease(rawLease: JobLease): Promise<void> {
+  async releaseLease(
+    rawLease: JobLease,
+    input: { at: string; nextAttemptAt: string },
+  ): Promise<void> {
     const lease = jobLeaseSchema.parse(rawLease);
-    await this.write(async (repository) => {
-      const result = await repository.source.query<{ id: string }>(
+    await this.failLease(lease, {
+      at: input.at,
+      code: "LEASE_RELEASED",
+      nextAttemptAt: input.nextAttemptAt,
+      retryable: true,
+    });
+  }
+
+  async completeLease(
+    rawLease: JobLease,
+    rawRecord: DurableReproductionRecord,
+  ): Promise<DurableReproductionRecord> {
+    const lease = jobLeaseSchema.parse(rawLease);
+    const record = validateRecord(rawRecord);
+    if (
+      record.tenantId !== lease.tenantId ||
+      record.jobId !== lease.jobId ||
+      record.snapshot.job.attempt !== lease.attempt ||
+      !(JOB_TERMINAL_STATES as readonly string[]).includes(
+        record.snapshot.job.state,
+      )
+    ) {
+      throw new LeaseOwnershipError();
+    }
+    return this.write(async (repository) => {
+      if (record.snapshot.job.state === "SUCCEEDED") {
+        const artifact = await repository.source.query<{ found: boolean }>(
+          `SELECT true AS found
+             FROM artifacts
+            WHERE tenant_id = $1 AND case_id = $2
+              AND kind = 'bundle' AND status = 'AVAILABLE'
+            LIMIT 1`,
+          [record.tenantId, record.caseId],
+        );
+        if (!artifact.rows[0]?.found) throw new InvalidDurableRecordError();
+      }
+      const nextVersion = record.version + 1;
+      const savedCase = await repository.source.query<{ version: number | string }>(
+        `UPDATE cases
+            SET state = $4,
+                domain_state = $5::jsonb,
+                schema_version = $6,
+                updated_at = $7,
+                version = version + 1
+          WHERE tenant_id = $1 AND id = $2 AND version = $3
+          RETURNING version`,
+        [
+          record.tenantId,
+          record.caseId,
+          record.version,
+          record.snapshot.case.state,
+          serializeCaseDomain(record),
+          record.snapshot.schemaVersion,
+          record.updatedAt,
+        ],
+      );
+      if (integer(savedCase.rows[0]?.version ?? 0) !== nextVersion) {
+        throw new OptimisticConcurrencyError();
+      }
+      const failure = record.snapshot.job.failure;
+      const savedJob = await repository.source.query<{ version: number | string }>(
         `UPDATE jobs
-            SET lease_owner = NULL,
+            SET state = $10,
+                progress_phase = $11,
+                failure_code = $12,
+                failure_message = $13,
+                failure_retryable = $14,
+                lease_owner = NULL,
                 lease_acquired_at = NULL,
                 lease_expires_at = NULL,
+                updated_at = $15,
                 version = version + 1
-          WHERE tenant_id = $1 AND id = $2
+          WHERE tenant_id = $1 AND id = $2 AND version = $3
+            AND state = 'RUNNING' AND lease_owner = $4 AND attempt = $5
+            AND lease_acquired_at = $6 AND lease_expires_at = $7
+            AND case_id = $8 AND attempt = $9
+          RETURNING version`,
+        [
+          lease.tenantId,
+          lease.jobId,
+          record.version,
+          lease.ownerId,
+          lease.attempt,
+          lease.acquiredAt,
+          lease.expiresAt,
+          record.caseId,
+          record.snapshot.job.attempt,
+          record.snapshot.job.state,
+          record.snapshot.job.progressPhase,
+          failure?.code ?? null,
+          failure?.message ?? null,
+          failure?.retryable ?? null,
+          record.updatedAt,
+        ],
+      );
+      if (integer(savedJob.rows[0]?.version ?? 0) !== nextVersion) {
+        throw new LeaseOwnershipError();
+      }
+      return cloneRecord({ ...record, version: nextVersion });
+    });
+  }
+
+  async failLease(
+    rawLease: JobLease,
+    failure: LeaseFailure,
+  ): Promise<LeaseFailureDisposition> {
+    const lease = jobLeaseSchema.parse(rawLease);
+    const at = canonicalTimestamp(failure.at);
+    const nextAttemptAt = canonicalTimestamp(failure.nextAttemptAt);
+    if (
+      !at ||
+      !nextAttemptAt ||
+      Date.parse(at) < Date.parse(lease.acquiredAt) ||
+      Date.parse(nextAttemptAt) < Date.parse(at) ||
+      !/^[A-Z][A-Z0-9_]{0,95}$/.test(failure.code)
+    ) {
+      throw new LeaseOwnershipError();
+    }
+    return this.write(async (repository) => {
+      const current = await repository.source.query<{
+        attempt: number | string;
+        case_id: string;
+        max_attempts: number | string;
+        version: number | string;
+      }>(
+        `SELECT attempt, case_id, max_attempts, version
+           FROM jobs
+          WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
             AND lease_owner = $3 AND attempt = $4
-            AND state = 'RUNNING' AND lease_expires_at = $5
-          RETURNING id`,
+            AND lease_acquired_at = $5 AND lease_expires_at = $6
+          FOR UPDATE`,
         [
           lease.tenantId,
           lease.jobId,
           lease.ownerId,
           lease.attempt,
+          lease.acquiredAt,
           lease.expiresAt,
         ],
       );
-      if (!result.rows[0]) throw new LeaseOwnershipError();
+      const row = current.rows[0];
+      if (!row) throw new LeaseOwnershipError();
+      const attempt = integer(row.attempt);
+      const requeue = failure.retryable && attempt < integer(row.max_attempts);
+      const failureCode = requeue
+        ? null
+        : failure.retryable
+          ? "JOB_RETRY_EXHAUSTED"
+          : failure.code;
+      const failureMessage = requeue
+        ? null
+        : failure.retryable
+          ? "The durable worker exhausted its retry budget"
+          : "The durable worker failed safely";
+      const updated = await repository.source.query<{ version: number | string }>(
+        `UPDATE jobs
+            SET state = $7,
+                next_attempt_at = $8,
+                lease_owner = NULL,
+                lease_acquired_at = NULL,
+                lease_expires_at = NULL,
+                failure_code = $9,
+                failure_message = $10,
+                failure_retryable = $11,
+                updated_at = $12,
+                version = version + 1
+          WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
+            AND lease_owner = $3 AND attempt = $4
+            AND lease_acquired_at = $5 AND lease_expires_at = $6
+          RETURNING version`,
+        [
+          lease.tenantId,
+          lease.jobId,
+          lease.ownerId,
+          lease.attempt,
+          lease.acquiredAt,
+          lease.expiresAt,
+          requeue ? "QUEUED" : "FAILED",
+          nextAttemptAt,
+          failureCode,
+          failureMessage,
+          requeue ? null : false,
+          at,
+        ],
+      );
+      const version = integer(updated.rows[0]?.version ?? 0);
+      if (version !== integer(row.version) + 1) {
+        throw new LeaseOwnershipError();
+      }
+      await repository.advanceCaseVersion(
+        lease.tenantId,
+        row.case_id,
+        integer(row.version),
+        at,
+      );
+      if (requeue) {
+        const eventId = recoveryEventId(
+          lease.tenantId,
+          lease.jobId,
+          lease.attempt,
+        );
+        const message = queueMessageSchema.parse({
+          caseId: row.case_id,
+          eventId,
+          jobId: lease.jobId,
+          kind: "reproduction.recovery-requested",
+          schemaVersion: "1.0",
+          tenantId: lease.tenantId,
+        });
+        await repository.source.query(
+          `INSERT INTO outbox_events (
+             tenant_id, id, case_id, job_id, kind, schema_version, payload,
+             next_attempt_at, created_at, updated_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, $8, $9, $9)
+           ON CONFLICT (tenant_id, id) DO NOTHING`,
+          [
+            message.tenantId,
+            message.eventId,
+            message.caseId,
+            message.jobId,
+            message.kind,
+            message.schemaVersion,
+            JSON.stringify(message),
+            nextAttemptAt,
+            at,
+          ],
+        );
+      }
+      return requeue ? "requeued" : "exhausted";
+    });
+  }
+
+  async recoverExpiredLeases(input: {
+    at: string;
+    limit: number;
+  }): Promise<LeaseRecoverySummary> {
+    const at = canonicalTimestamp(input.at);
+    if (!at || !Number.isInteger(input.limit) || input.limit < 1 || input.limit > 1_000) {
+      throw new LeaseOwnershipError();
+    }
+    return this.write(async (repository) => {
+      const expired = await repository.source.query<{
+        attempt: number | string;
+        id: string;
+        lease_acquired_at: Date | string;
+        lease_expires_at: Date | string;
+        lease_owner: string;
+        tenant_id: string;
+      }>(
+        `SELECT tenant_id, id, attempt, lease_owner,
+                lease_acquired_at, lease_expires_at
+           FROM jobs
+          WHERE state = 'RUNNING' AND lease_expires_at <= $1
+          ORDER BY lease_expires_at, tenant_id, id
+          FOR UPDATE SKIP LOCKED
+          LIMIT $2`,
+        [at, input.limit],
+      );
+      const summary = { exhausted: 0, requeued: 0 };
+      for (const row of expired.rows) {
+        const lease = jobLeaseSchema.parse({
+          acquiredAt: timestamp(row.lease_acquired_at),
+          attempt: integer(row.attempt),
+          expiresAt: timestamp(row.lease_expires_at),
+          jobId: row.id,
+          ownerId: row.lease_owner,
+          tenantId: row.tenant_id,
+        });
+        const disposition = await repository.failLease(lease, {
+          at,
+          code: "LEASE_EXPIRED",
+          nextAttemptAt: at,
+          retryable: true,
+        });
+        summary[disposition] += 1;
+      }
+      return summary;
     });
   }
 
@@ -466,6 +814,24 @@ export class PostgresDurableReproductionRepository
     const result = await this.source.query<DurableRow>(sql, parameters);
     const row = result.rows[0];
     return row ? rowToRecord(row) : null;
+  }
+
+  private async advanceCaseVersion(
+    tenantId: string,
+    caseId: string,
+    expectedVersion: number,
+    updatedAt: string,
+  ): Promise<void> {
+    const result = await this.source.query<{ version: number | string }>(
+      `UPDATE cases
+          SET version = version + 1, updated_at = $4
+        WHERE tenant_id = $1 AND id = $2 AND version = $3
+        RETURNING version`,
+      [tenantId, caseId, expectedVersion, updatedAt],
+    );
+    if (integer(result.rows[0]?.version ?? 0) !== expectedVersion + 1) {
+      throw new OptimisticConcurrencyError();
+    }
   }
 
   private async write<T>(
@@ -556,6 +922,9 @@ export class PostgresDurableReproductionRepository
     record: DurableReproductionRecord,
     expectedVersion: number,
   ): Promise<DurableReproductionRecord> {
+    if (record.snapshot.job.state !== "QUEUED") {
+      throw new OptimisticConcurrencyError();
+    }
     const nextVersion = expectedVersion + 1;
     const savedCase = await this.source.query<{ version: number | string }>(
       `UPDATE cases
@@ -592,6 +961,8 @@ export class PostgresDurableReproductionRepository
               updated_at = $10,
               version = version + 1
         WHERE tenant_id = $1 AND id = $2 AND version = $3
+          AND state = $4 AND progress_phase = $5 AND attempt = $6
+          AND lease_owner IS NULL
         RETURNING version`,
       [
         record.tenantId,
@@ -614,14 +985,15 @@ export class PostgresDurableReproductionRepository
 }
 
 export class PostgresOutbox implements Outbox {
-  constructor(private readonly executor: PostgresExecutor) {}
+  constructor(private readonly source: PostgresDatabase | PostgresExecutor) {}
 
   async append(rawMessage: QueueMessage): Promise<void> {
     const message = queueMessageSchema.parse(rawMessage);
-    await this.executor.query(
+    await this.source.query(
       `INSERT INTO outbox_events (
-         tenant_id, id, case_id, job_id, kind, schema_version, payload
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb)`,
+         tenant_id, id, case_id, job_id, kind, schema_version, payload,
+         updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, CURRENT_TIMESTAMP)`,
       [
         message.tenantId,
         message.eventId,
@@ -634,45 +1006,165 @@ export class PostgresOutbox implements Outbox {
     );
   }
 
-  async listPending(limit: number, at: string): Promise<QueueMessage[]> {
-    if (!Number.isInteger(limit) || limit < 1 || limit > 1_000) return [];
-    const result = await this.executor.query<{ payload: unknown }>(
-      `SELECT payload
-         FROM outbox_events
-        WHERE status = 'PENDING' AND next_attempt_at <= $1
-        ORDER BY next_attempt_at, created_at
-        LIMIT $2`,
-      [at, limit],
-    );
-    return result.rows.map(({ payload }) => queueMessageSchema.parse(payload));
+  async claimPending(input: {
+    at: string;
+    claimSeconds: number;
+    limit: number;
+    ownerId: string;
+  }): Promise<OutboxClaim[]> {
+    const at = canonicalTimestamp(input.at);
+    if (
+      !at ||
+      !Number.isInteger(input.claimSeconds) ||
+      input.claimSeconds < 1 ||
+      input.claimSeconds > 3_600 ||
+      !Number.isInteger(input.limit) ||
+      input.limit < 1 ||
+      input.limit > 1_000 ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(input.ownerId)
+    ) {
+      return [];
+    }
+    const claimExpiresAt = new Date(
+      Date.parse(at) + input.claimSeconds * 1_000,
+    ).toISOString();
+    return this.write(async (outbox) => {
+      const result = await outbox.source.query<{
+        delivery_count: number | string;
+        payload: unknown;
+        version: number | string;
+      }>(
+        `WITH candidates AS (
+           SELECT tenant_id, id
+             FROM outbox_events
+            WHERE (status = 'PENDING' AND next_attempt_at <= $1)
+               OR (status = 'SENDING' AND claim_expires_at <= $1)
+            ORDER BY next_attempt_at, created_at, tenant_id, id
+            FOR UPDATE SKIP LOCKED
+            LIMIT $2
+         )
+         UPDATE outbox_events AS event
+            SET status = 'SENDING',
+                claim_owner = $3,
+                claim_expires_at = $4,
+                delivery_count = delivery_count + 1,
+                last_error_code = NULL,
+                updated_at = $1,
+                version = version + 1
+           FROM candidates
+          WHERE event.tenant_id = candidates.tenant_id
+            AND event.id = candidates.id
+         RETURNING event.payload, event.delivery_count, event.version`,
+        [at, input.limit, input.ownerId, claimExpiresAt],
+      );
+      return result.rows.map((row) => ({
+        claimedAt: at,
+        claimExpiresAt,
+        claimOwnerId: input.ownerId,
+        deliveryAttempt: integer(row.delivery_count),
+        message: queueMessageSchema.parse(row.payload),
+        version: integer(row.version),
+      }));
+    });
   }
 
   async markDelivered(
-    tenantId: string,
-    eventId: string,
-    deliveredAt: string,
-  ): Promise<void> {
-    await this.executor.query(
+    claim: OutboxClaim,
+    input: { deliveredAt: string; providerMessageId: string | null },
+  ): Promise<boolean> {
+    const deliveredAt = canonicalTimestamp(input.deliveredAt);
+    if (
+      !deliveredAt ||
+      Date.parse(deliveredAt) < Date.parse(claim.claimedAt) ||
+      (input.providerMessageId !== null &&
+        (input.providerMessageId.length < 1 ||
+          input.providerMessageId.length > 512))
+    ) {
+      return false;
+    }
+    const result = await this.source.query<{ id: string }>(
       `UPDATE outbox_events
-          SET status = 'DELIVERED', delivered_at = $3,
-              delivery_count = delivery_count + 1, last_error_code = NULL
-        WHERE tenant_id = $1 AND id = $2 AND status = 'PENDING'`,
-      [tenantId, eventId, deliveredAt],
+          SET status = 'DELIVERED', delivered_at = $7,
+              provider_message_id = $8,
+              claim_owner = NULL, claim_expires_at = NULL,
+              last_error_code = NULL, updated_at = $7,
+              version = version + 1
+        WHERE tenant_id = $1 AND id = $2 AND status = 'SENDING'
+          AND claim_owner = $3 AND claim_expires_at = $4
+          AND delivery_count = $5 AND version = $6
+        RETURNING id`,
+      [
+        claim.message.tenantId,
+        claim.message.eventId,
+        claim.claimOwnerId,
+        claim.claimExpiresAt,
+        claim.deliveryAttempt,
+        claim.version,
+        deliveredAt,
+        input.providerMessageId,
+      ],
     );
+    return result.rows.length === 1;
   }
 
   async recordFailure(
-    tenantId: string,
-    eventId: string,
-    nextAttemptAt: string,
-  ): Promise<void> {
-    await this.executor.query(
+    claim: OutboxClaim,
+    input: {
+      errorCode: string;
+      failedAt: string;
+      maxAttempts: number;
+      nextAttemptAt: string;
+    },
+  ): Promise<OutboxFailureDisposition> {
+    const failedAt = canonicalTimestamp(input.failedAt);
+    const nextAttemptAt = canonicalTimestamp(input.nextAttemptAt);
+    if (
+      !failedAt ||
+      !nextAttemptAt ||
+      Date.parse(failedAt) < Date.parse(claim.claimedAt) ||
+      Date.parse(nextAttemptAt) < Date.parse(failedAt) ||
+      !Number.isInteger(input.maxAttempts) ||
+      input.maxAttempts < 1 ||
+      input.maxAttempts > 32 ||
+      !/^[A-Z][A-Z0-9_]{0,95}$/.test(input.errorCode)
+    ) {
+      return "lost";
+    }
+    const result = await this.source.query<{ status: "DEAD" | "PENDING" }>(
       `UPDATE outbox_events
-          SET delivery_count = delivery_count + 1,
-              next_attempt_at = $3,
-              last_error_code = 'QUEUE_DELIVERY_FAILED'
-        WHERE tenant_id = $1 AND id = $2 AND status = 'PENDING'`,
-      [tenantId, eventId, nextAttemptAt],
+          SET status = CASE WHEN delivery_count >= $7 THEN 'DEAD' ELSE 'PENDING' END,
+              next_attempt_at = $8,
+              last_error_code = $9,
+              claim_owner = NULL, claim_expires_at = NULL,
+              updated_at = $10,
+              version = version + 1
+        WHERE tenant_id = $1 AND id = $2 AND status = 'SENDING'
+          AND claim_owner = $3 AND claim_expires_at = $4
+          AND delivery_count = $5 AND version = $6
+        RETURNING status`,
+      [
+        claim.message.tenantId,
+        claim.message.eventId,
+        claim.claimOwnerId,
+        claim.claimExpiresAt,
+        claim.deliveryAttempt,
+        claim.version,
+        input.maxAttempts,
+        nextAttemptAt,
+        input.errorCode,
+        failedAt,
+      ],
+    );
+    const status = result.rows[0]?.status;
+    return status === "DEAD" ? "dead" : status === "PENDING" ? "retry" : "lost";
+  }
+
+  private async write<T>(
+    operation: (outbox: PostgresOutbox) => Promise<T>,
+  ): Promise<T> {
+    if (!isDatabase(this.source)) return operation(this);
+    return runSerializableTransaction(this.source, (executor) =>
+      operation(new PostgresOutbox(executor)),
     );
   }
 }

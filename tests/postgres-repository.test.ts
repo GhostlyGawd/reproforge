@@ -11,7 +11,7 @@ import type {
   TenantScope,
 } from "@/application/ports/production";
 import { createCase } from "@/domain/case";
-import { createJob, transitionJob } from "@/domain/job";
+import { createJob } from "@/domain/job";
 import { pglitePostgresDatabase } from "./helpers/pglite-postgres-database";
 import { pgliteMigrationClient } from "./helpers/pglite-migration-client";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
@@ -283,10 +283,8 @@ describe("Postgres durable repositories", () => {
       ...initial,
       snapshot: {
         ...initial.snapshot,
-        job: transitionJob(initial.snapshot.job, "RUNNING", {
-          at: new Date(LATER),
-          progressPhase: "INGESTING",
-        }),
+        case: { ...initial.snapshot.case, updatedAt: LATER },
+        job: { ...initial.snapshot.job, updatedAt: LATER },
       },
       updatedAt: LATER,
     };
@@ -299,7 +297,7 @@ describe("Postgres durable repositories", () => {
     await expect(
       repository.findByJobId(scope(tenantId), initial.jobId),
     ).resolves.toMatchObject({
-      snapshot: { job: { state: "RUNNING" } },
+      snapshot: { job: { attempt: 0, state: "QUEUED" } },
       version: 2,
     });
   });

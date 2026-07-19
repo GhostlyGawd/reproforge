@@ -178,6 +178,31 @@ export type DurableReservationResult =
   | { created: true; record: DurableReproductionRecord }
   | { created: false; record: DurableReproductionRecord };
 
+export type LeaseFailure = Readonly<{
+  at: string;
+  code: string;
+  nextAttemptAt: string;
+  retryable: boolean;
+}>;
+
+export type LeaseFailureDisposition = "exhausted" | "requeued";
+
+export type LeaseRecoverySummary = Readonly<{
+  exhausted: number;
+  requeued: number;
+}>;
+
+export type OutboxClaim = Readonly<{
+  claimedAt: string;
+  claimExpiresAt: string;
+  claimOwnerId: string;
+  deliveryAttempt: number;
+  message: QueueMessage;
+  version: number;
+}>;
+
+export type OutboxFailureDisposition = "dead" | "lost" | "retry";
+
 export interface DurableReproductionRepository {
   findByCaseId(
     scope: TenantScope,
@@ -203,8 +228,27 @@ export interface DurableReproductionRepository {
     ownerId: string;
     tenantId: string;
   }): Promise<JobLease | null>;
-  renewLease(lease: JobLease, expiresAt: string): Promise<JobLease>;
-  releaseLease(lease: JobLease): Promise<void>;
+  renewLease(
+    lease: JobLease,
+    input: { at: string; expiresAt: string },
+  ): Promise<JobLease>;
+  releaseLease(
+    lease: JobLease,
+    input: { at: string; nextAttemptAt: string },
+  ): Promise<void>;
+  findByLease(lease: JobLease): Promise<DurableReproductionRecord | null>;
+  completeLease(
+    lease: JobLease,
+    record: DurableReproductionRecord,
+  ): Promise<DurableReproductionRecord>;
+  failLease(
+    lease: JobLease,
+    failure: LeaseFailure,
+  ): Promise<LeaseFailureDisposition>;
+  recoverExpiredLeases(input: {
+    at: string;
+    limit: number;
+  }): Promise<LeaseRecoverySummary>;
   requestCancellation(scope: TenantScope, jobId: string): Promise<boolean>;
 }
 
@@ -221,22 +265,30 @@ export interface ArtifactStore {
 }
 
 export interface JobQueue {
-  send(message: QueueMessage): Promise<{ messageId: string }>;
+  send(message: QueueMessage): Promise<{ messageId: string | null }>;
 }
 
 export interface Outbox {
   append(message: QueueMessage): Promise<void>;
-  listPending(limit: number, at: string): Promise<QueueMessage[]>;
+  claimPending(input: {
+    at: string;
+    claimSeconds: number;
+    limit: number;
+    ownerId: string;
+  }): Promise<OutboxClaim[]>;
   markDelivered(
-    tenantId: string,
-    eventId: string,
-    deliveredAt: string,
-  ): Promise<void>;
+    claim: OutboxClaim,
+    input: { deliveredAt: string; providerMessageId: string | null },
+  ): Promise<boolean>;
   recordFailure(
-    tenantId: string,
-    eventId: string,
-    nextAttemptAt: string,
-  ): Promise<void>;
+    claim: OutboxClaim,
+    input: {
+      errorCode: string;
+      failedAt: string;
+      maxAttempts: number;
+      nextAttemptAt: string;
+    },
+  ): Promise<OutboxFailureDisposition>;
 }
 
 export interface QuotaLedger {

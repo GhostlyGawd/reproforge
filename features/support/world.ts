@@ -14,6 +14,7 @@ import type {
   ArtifactDescriptor,
   DurableReproductionRecord,
   DurableReservationResult,
+  LeaseRecoverySummary,
 } from "@/application/ports/production";
 import type { PostgresDatabase } from "@/infrastructure/postgres/database";
 import type {
@@ -55,6 +56,9 @@ export class ReproForgeWorld extends World {
   durableBlobClient?: MemoryPrivateBlobClient;
   durableArtifactDescriptor?: ArtifactDescriptor;
   durableArtifactRead?: { bytes: Uint8Array; descriptor: ArtifactDescriptor } | null;
+  durableQueueExecutions = 0;
+  durableQueueOutcomes: string[] = [];
+  durableRecoverySummaries: LeaseRecoverySummary[] = [];
 }
 
 setWorldConstructor(ReproForgeWorld);

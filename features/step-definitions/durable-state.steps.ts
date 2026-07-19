@@ -9,9 +9,10 @@ import {
   reserveDurableStart,
   type DurableStartInput,
 } from "@/application/durable-start";
+import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
 import type { DurableReproductionRecord } from "@/application/ports/production";
-import { createCase } from "@/domain/case";
-import { createJob } from "@/domain/job";
+import { createCase, transitionCase } from "@/domain/case";
+import { createJob, transitionJob } from "@/domain/job";
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
@@ -104,6 +105,9 @@ Given(
     this.durableRecord = bddRecord();
     this.durableStarts = [];
     this.durableErrorCode = undefined;
+    this.durableQueueExecutions = 0;
+    this.durableQueueOutcomes = [];
+    this.durableRecoverySummaries = [];
     await this.durableDatabase.query("INSERT INTO tenants (id) VALUES ($1)", [
       this.durableRecord.tenantId,
     ]);
@@ -304,6 +308,118 @@ Then(
       ),
       false,
     );
+  },
+);
+
+When(
+  "the same queued job is delivered twice",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRepository);
+    assert(this.durableRecord);
+    const consumer = new DurableQueueConsumer({
+      clock: { now: () => new Date(AT) },
+      leaseSeconds: 60,
+      repository: this.durableRepository,
+      worker: {
+        execute: async ({ record }) => {
+          this.durableQueueExecutions += 1;
+          const completedAt = new Date("2026-07-19T20:00:01.000Z");
+          return {
+            ...record,
+            snapshot: {
+              ...record.snapshot,
+              case: transitionCase(
+                record.snapshot.case,
+                "CANCELLED",
+                "BDD terminal completion",
+                completedAt,
+              ),
+              job: transitionJob(record.snapshot.job, "CANCELLED", {
+                at: completedAt,
+                progressPhase: "CANCELLED",
+              }),
+            },
+            updatedAt: completedAt.toISOString(),
+          };
+        },
+      },
+    });
+    const message = bddStartInput(this.durableRecord).outboxMessage;
+    for (const ownerId of ["worker_bdd_first", "worker_bdd_duplicate"]) {
+      const result = await consumer.consume(message, ownerId);
+      this.durableQueueOutcomes.push(result.outcome);
+    }
+  },
+);
+
+Then(
+  "exactly one durable attempt completes",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRepository);
+    assert(this.durableRecord);
+    assert.equal(this.durableQueueExecutions, 1);
+    assert.deepEqual(this.durableQueueOutcomes, ["completed", "ignored"]);
+    const stored = await this.durableRepository.findByCaseId(
+      {
+        callerId: this.durableRecord.callerId,
+        principalId: this.durableRecord.callerId,
+        tenantId: this.durableRecord.tenantId,
+      },
+      this.durableRecord.caseId,
+    );
+    assert.equal(stored?.snapshot.job.attempt, 1);
+    assert.equal(stored?.snapshot.job.state, "CANCELLED");
+  },
+);
+
+When(
+  "a worker lease expires and recovery runs twice",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRepository);
+    assert(this.durableRecord);
+    const lease = await this.durableRepository.claimLease({
+      at: AT,
+      jobId: this.durableRecord.jobId,
+      leaseSeconds: 60,
+      ownerId: "worker_bdd_crashed",
+      tenantId: this.durableRecord.tenantId,
+    });
+    assert(lease);
+    for (let index = 0; index < 2; index += 1) {
+      this.durableRecoverySummaries.push(
+        await this.durableRepository.recoverExpiredLeases({
+          at: "2026-07-19T20:02:00.000Z",
+          limit: 10,
+        }),
+      );
+    }
+  },
+);
+
+Then(
+  "exactly one recovery intent requeues the durable job",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    assert(this.durableRecord);
+    assert.deepEqual(this.durableRecoverySummaries, [
+      { exhausted: 0, requeued: 1 },
+      { exhausted: 0, requeued: 0 },
+    ]);
+    const jobs = await this.durableDatabase.query<{
+      attempt: number;
+      state: string;
+    }>("SELECT state, attempt FROM jobs WHERE tenant_id = $1", [
+      this.durableRecord.tenantId,
+    ]);
+    const events = await this.durableDatabase.query<{ count: string }>(
+      `SELECT count(*)::text AS count
+         FROM outbox_events
+        WHERE tenant_id = $1
+          AND kind = 'reproduction.recovery-requested'`,
+      [this.durableRecord.tenantId],
+    );
+    assert.deepEqual(jobs.rows, [{ attempt: 1, state: "QUEUED" }]);
+    assert.equal(events.rows[0]?.count, "1");
   },
 );
 

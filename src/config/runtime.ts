@@ -8,6 +8,12 @@ const knownReproForgeVariables = new Set([
   "REPROFORGE_BASE_URL",
   "REPROFORGE_JOB_LEASE_SECONDS",
   "REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT",
+  "REPROFORGE_MAX_DELIVERY_ATTEMPTS",
+  "REPROFORGE_OUTBOX_BATCH_SIZE",
+  "REPROFORGE_OUTBOX_CLAIM_SECONDS",
+  "REPROFORGE_QUEUE_REGION",
+  "REPROFORGE_QUEUE_RETENTION_SECONDS",
+  "REPROFORGE_QUEUE_TOPIC",
   "REPROFORGE_RETENTION_DAYS",
   "REPROFORGE_RUNTIME_MODE",
 ]);
@@ -16,6 +22,27 @@ const policySchema = z
   .object({
     jobLeaseSeconds: z.coerce.number().int().min(30).max(3600).default(90),
     maxActiveJobsPerTenant: z.coerce.number().int().min(1).max(100).default(2),
+    maxDeliveryAttempts: z.coerce.number().int().min(1).max(32).default(5),
+    outboxBatchSize: z.coerce.number().int().min(1).max(1000).default(25),
+    outboxClaimSeconds: z.coerce.number().int().min(5).max(3600).default(30),
+    queueRegion: z
+      .string()
+      .min(1)
+      .max(32)
+      .regex(/^[a-z0-9-]+$/)
+      .default("iad1"),
+    queueRetentionSeconds: z.coerce
+      .number()
+      .int()
+      .min(60)
+      .max(604_800)
+      .default(604_800),
+    queueTopic: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .default("reproforge-jobs-v1"),
     retentionDays: z.coerce.number().int().min(1).max(365).default(30),
   })
   .strict();
@@ -143,6 +170,12 @@ export function parseRuntimeConfig(
     jobLeaseSeconds: environment.REPROFORGE_JOB_LEASE_SECONDS,
     maxActiveJobsPerTenant:
       environment.REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT,
+    maxDeliveryAttempts: environment.REPROFORGE_MAX_DELIVERY_ATTEMPTS,
+    outboxBatchSize: environment.REPROFORGE_OUTBOX_BATCH_SIZE,
+    outboxClaimSeconds: environment.REPROFORGE_OUTBOX_CLAIM_SECONDS,
+    queueRegion: environment.REPROFORGE_QUEUE_REGION,
+    queueRetentionSeconds: environment.REPROFORGE_QUEUE_RETENTION_SECONDS,
+    queueTopic: environment.REPROFORGE_QUEUE_TOPIC,
     retentionDays: environment.REPROFORGE_RETENTION_DAYS,
   });
   if (!policyResult.success) {
@@ -150,6 +183,12 @@ export function parseRuntimeConfig(
       issueFields(policyResult, {
         jobLeaseSeconds: "REPROFORGE_JOB_LEASE_SECONDS",
         maxActiveJobsPerTenant: "REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT",
+        maxDeliveryAttempts: "REPROFORGE_MAX_DELIVERY_ATTEMPTS",
+        outboxBatchSize: "REPROFORGE_OUTBOX_BATCH_SIZE",
+        outboxClaimSeconds: "REPROFORGE_OUTBOX_CLAIM_SECONDS",
+        queueRegion: "REPROFORGE_QUEUE_REGION",
+        queueRetentionSeconds: "REPROFORGE_QUEUE_RETENTION_SECONDS",
+        queueTopic: "REPROFORGE_QUEUE_TOPIC",
         retentionDays: "REPROFORGE_RETENTION_DAYS",
       }),
     );
@@ -211,8 +250,14 @@ export function summarizeRuntimeConfig(
     credentialsConfigured: config.mode === "preview" || config.mode === "production",
     jobLeaseSeconds: config.jobLeaseSeconds,
     maxActiveJobsPerTenant: config.maxActiveJobsPerTenant,
+    maxDeliveryAttempts: config.maxDeliveryAttempts,
     mode: config.mode,
+    outboxBatchSize: config.outboxBatchSize,
+    outboxClaimSeconds: config.outboxClaimSeconds,
     providers: config.providers,
+    queueRegion: config.queueRegion,
+    queueRetentionSeconds: config.queueRetentionSeconds,
+    queueTopic: config.queueTopic,
     retentionDays: config.retentionDays,
   };
 }
