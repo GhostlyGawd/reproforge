@@ -51,13 +51,13 @@ Tasks are grouped into independently reviewable and mergeable milestones. A mile
 
 ## Milestone 4 — Evaluation, CI, and productization
 
-- [ ] `RF-4001` Add a machine-readable evaluation fixture format and benchmark command.
-- [ ] `RF-4002` Include positive, negative, unstable, and misleading cases.
-- [ ] `RF-4003` Add GitHub Actions for all required checks.
-- [ ] `RF-4004` Complete five-minute setup, architecture, limitations, security, and privacy docs.
-- [ ] `RF-4005` Add real product screenshots and an architecture fallback image.
-- [ ] `RF-4006` Add provenance, contribution, support, and release-status guidance without inventing a license or release.
-- [ ] `RF-4007` Run the end-to-end completion audit against the spec and Build Week criteria.
+- [x] `RF-4001` Add a machine-readable evaluation fixture format and benchmark command.
+- [x] `RF-4002` Include positive, negative, unstable, and misleading cases.
+- [x] `RF-4003` Add GitHub Actions for all required checks.
+- [x] `RF-4004` Complete five-minute setup, architecture, limitations, security, and privacy docs.
+- [x] `RF-4005` Add real product screenshots and an architecture fallback image.
+- [x] `RF-4006` Add provenance, contribution, support, and release-status guidance without inventing a license or release.
+- [x] `RF-4007` Run the end-to-end completion audit against the spec and Build Week criteria.
 
 **Exit evidence:** CI results, benchmark report, final browser evidence, complete README, and merged pull request.
 

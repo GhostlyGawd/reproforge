@@ -1,0 +1,100 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-4",
+  "capturedAt": "2026-07-19T17:49:46Z",
+  "sourceCommit": "c5f1107ce31f0dfb6ed5910545204fc59e3bbed3",
+  "route": "http://127.0.0.1:3000/",
+  "captureMethod": {
+    "applicationCommand": "npm run start -- --hostname 127.0.0.1",
+    "browserTool": "agent-browser 0.32.2",
+    "browser": "Headless Chrome 151.0.0.0",
+    "mode": "Next.js production build"
+  },
+  "state": {
+    "scenario": "turns the trusted issue into a verified reproduction",
+    "expectedStatus": "VERIFIED",
+    "candidateMatches": 3,
+    "candidateRuns": 3,
+    "controlMatched": false,
+    "maxToolCalls": 6,
+    "oracle": "oracle-cli-spaces v1",
+    "bundleSchema": "1.1",
+    "bundleFiles": 8,
+    "externalExecution": false,
+    "liveModel": "gpt-5.6-sol",
+    "liveSmoke": "skipped-no-api-key"
+  },
+  "verification": {
+    "command": "npm run verify",
+    "vitest": {
+      "filesPassed": 16,
+      "testsPassed": 46,
+      "minimizationPropertyRuns": 250
+    },
+    "bdd": {
+      "scenariosPassed": 7,
+      "stepsPassed": 32
+    },
+    "browserTestsPassed": 8,
+    "axeViolations": 0,
+    "evaluation": {
+      "casesPassed": 4,
+      "casesTotal": 4,
+      "accuracy": 1,
+      "falsePositives": 0,
+      "falseNegatives": 0,
+      "bundleCompleteness": 1
+    },
+    "fixtureControlExitCode": 0,
+    "fixtureReproductionExitCode": 1,
+    "dependencyVulnerabilities": 0,
+    "productionBuild": "passed",
+    "browserPageErrors": 0,
+    "browserConsoleMessages": 0
+  },
+  "captures": [
+    {
+      "file": "final-desktop.png",
+      "capturedAt": "2026-07-19T17:48:43.055Z",
+      "viewport": {
+        "width": 1440,
+        "height": 1000
+      },
+      "image": {
+        "width": 1440,
+        "height": 2094,
+        "bytes": 412286,
+        "sha256": "187353c5eb9cb4ac5fb83ed1b3bc8fa36fc696de59f46a26f0731b07d094af4b"
+      },
+      "alt": "The ReproForge desktop application showing a synthetic CLI issue, bounded context, evidence classifications, prioritized hypothesis history, control and three candidate runs, verified outcome, and eight-file Bundle 1.1 preview.",
+      "caption": "Complete verified proof at the 1440 by 1000 desktop viewport."
+    },
+    {
+      "file": "final-mobile.png",
+      "capturedAt": "2026-07-19T17:49:46.827Z",
+      "viewport": {
+        "width": 390,
+        "height": 844
+      },
+      "image": {
+        "width": 390,
+        "height": 3895,
+        "bytes": 319010,
+        "sha256": "3349f8b5af594e0a555ef2208359f973013f4eeecd7d649a2f3d77a36ec1a3e6"
+      },
+      "alt": "The ReproForge mobile application showing the complete verified investigation in a responsive single-column layout without horizontal overflow.",
+      "caption": "Complete verified proof at the 390 by 844 mobile viewport."
+    }
+  ],
+  "architecture": {
+    "file": "docs/architecture.svg",
+    "viewport": {
+      "width": 1440,
+      "height": 900
+    },
+    "bytes": 7378,
+    "sha256": "f1a8458923f03b797f0e9e24ce88954bd60b0395f5d738ff709b6d917f1c7149"
+  },
+  "sanitization": "Synthetic bundled fixture only; no API key, credentials, private repositories, personal data, or user-provided content.",
+  "provenance": "Real ReproForge application state rendered locally from the recorded source commit and captured by agent-browser; not concept art or generated imagery."
+}

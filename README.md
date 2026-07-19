@@ -6,7 +6,7 @@
 
 ReproForge turns an incomplete bug report into a verified, portable reproduction. It keeps reported facts separate from observations and inferences, tests falsifiable hypotheses within a bounded budget, verifies a machine-readable failure oracle against a negative control and three clean runs, then exports an independently validatable Repro Bundle.
 
-![ReproForge showing a verified CLI reproduction, evidence board, hypothesis ledger, run history, and bundle preview](docs/evidence/milestone-2/golden-path-desktop.png)
+![ReproForge showing a verified CLI reproduction, evidence board, prioritized hypothesis ledger, run history, oracle, and bundle preview](docs/evidence/milestone-4/final-desktop.png)
 
 ## Why ReproForge
 
