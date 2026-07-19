@@ -14,6 +14,7 @@ is in progress. The final manifest and provider evidence are attached by
 | `RF-8106` | concurrent outbox publishers use expiring CAS claims; queue sends use durable event deduplication; stale claims lose; jobs start at attempt one; only active lease owners can transition or append evidence; retries requeue with deterministic intents; exhaustion fails safely; terminal jobs, credential-shaped failures, and bundle-less success fail closed | `npm run test:queue` (35 tests, including 250 generated duplicate/out-of-order delivery sequences, 250 generated invalid versions, and 900 configuration/redaction cases), two queue/recovery BDD scenarios, followed by the repository gate (134 Vitest tests, 21 BDD scenarios/137 steps, production build) |
 | `RF-8107` | job-linked quota reservations serialize against configured hard limits and release on terminal outcomes; queued cancellation is terminal without starting an attempt; running cancellation is lease-visible and cooperative; deletion requests have expiring claims; provider failure prevents database purge; due tenant deletion removes customer rows and private objects while retaining one sanitized append-only tombstone | `npm run test:governance` (23 tests, including 250 generated quota sequences and 250 generated isolated retention/deletion sequences), two cancellation/retention BDD scenarios, expired deletion-claim recovery, `npm audit` (zero vulnerabilities), followed by `npm run check` (148 Vitest tests, 23 BDD scenarios/150 steps, production build) |
 | `RF-8108` | process liveness is dependency-free; readiness is fail-closed across configuration, database, private artifact store, and queue checks; runner capability remains independently disableable; failures and timeouts expose stable codes only; allowlisted JSON logs redact secrets and credential shapes; bounded-cardinality metrics record health outcomes | `npm run test:operations` (10 tests, including 250 generated redaction events), missing-production-configuration BDD scenario, built-server smoke (`/health/live` 200, `/health/ready` 200 in explicit local mode, `/health/runner` 503 with retry hint), `npm audit` (zero vulnerabilities), followed by `npm run check` (158 Vitest tests, 24 BDD scenarios/156 steps, production build with all three health routes) |
+| `RF-8109` | a canonical SHA-256 manifest exports one active quiescent tenant's terminal case/job/idempotency metadata, ordered evidence, and private artifact descriptors while keeping object bodies separate; restore verifies every body before mutation, recreates relational state under a restore-only evidence gate, records digest identity, is idempotent, rejects occupied targets, re-exports and digest-compares the restored tenant, and proves the verified private bundle remains readable without body-bearing logs | `npm run test:backup` (13 tests, including six forward migrations and 250 generated private-body mutation sequences), verified-bundle restore BDD scenario, tenant-isolation/idempotent-retry/corruption-before-write checks, `npm audit` (zero vulnerabilities), followed by `npm run check` (162 Vitest tests, 25 BDD scenarios/162 steps, production build) |
 
 ## RF-8103 proof boundary
 
@@ -52,6 +53,14 @@ Health probes expose only stable component codes, timing, and status. The local
 built-server smoke proves the route and failure-separation contract; it does
 not claim live Neon, Vercel Blob, Vercel Queue, or runner availability. Those
 provider checks remain part of `RF-8110` and the hosted launch gate.
+
+Tenant restore is transactionally atomic for Postgres state and uploads only
+content-addressed objects that pass the manifest hashes before that transaction.
+The restore ledger distinguishes relational reconstruction from independent
+post-commit verification, and retries recover a matching restored manifest
+without duplication. The local private-blob double closes deterministic
+integrity and rollback behavior; a live provider backup/restore drill remains
+part of `RF-8110` and the hosted operations gate.
 
 No visual artifact applies to these backend foundation tasks; their observable
 results are the migration ledger, database catalog, provider contracts,

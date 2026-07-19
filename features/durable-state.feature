@@ -71,3 +71,9 @@ Feature: Durable reproduction state
     When dependency readiness is checked
     Then readiness fails with "INVALID_RUNTIME_CONFIGURATION"
     And no local provider fallback is reported
+
+  Scenario: A verified bundle is readable after restore
+    Given a verified tenant backup with a private bundle
+    When the tenant backup is restored into an empty durable store
+    Then the restored durable case and evidence match the backup
+    And the verified private bundle is readable after restore
