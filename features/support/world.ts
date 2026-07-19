@@ -28,6 +28,9 @@ import type {
 } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import type { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
 import type { HealthReport, HealthService } from "@/application/health";
+import type { TenantBackupArchive } from "@/application/tenant-backup";
+import type { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
+import type { VerifiedBackupFixture } from "../../tests/helpers/tenant-backup-fixture";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -68,6 +71,12 @@ export class ReproForgeWorld extends World {
   durableRetentionResult?: RetentionDeletionResult | null;
   runtimeHealthService?: HealthService;
   runtimeHealthReport?: HealthReport;
+  backupSourceDatabase?: PGlite;
+  backupDestinationDatabase?: PGlite;
+  backupDestinationBlobs?: MemoryPrivateBlobClient;
+  backupDestinationService?: PostgresTenantBackupService;
+  backupArchive?: TenantBackupArchive;
+  backupFixture?: VerifiedBackupFixture;
 }
 
 setWorldConstructor(ReproForgeWorld);

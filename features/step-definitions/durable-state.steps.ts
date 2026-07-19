@@ -29,6 +29,10 @@ import {
   InMemoryOperationalMetrics,
   JsonOperationalLogger,
 } from "@/infrastructure/operations/observability";
+import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
+import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
+import { durableScope } from "../../tests/helpers/durable-fixture";
+import { seedVerifiedBackupTenant } from "../../tests/helpers/tenant-backup-fixture";
 import type { ReproForgeWorld } from "../support/world";
 
 const AT = "2026-07-19T20:00:00.000Z";
@@ -96,6 +100,10 @@ function bddStartInput(record: DurableReproductionRecord): DurableStartInput {
 
 After(async function (this: ReproForgeWorld) {
   if (this.durableDatabase) await this.durableDatabase.close();
+  if (this.backupSourceDatabase) await this.backupSourceDatabase.close();
+  if (this.backupDestinationDatabase) {
+    await this.backupDestinationDatabase.close();
+  }
 });
 
 Given(
@@ -741,5 +749,107 @@ Then(
       ),
       false,
     );
+  },
+);
+
+Given(
+  "a verified tenant backup with a private bundle",
+  { timeout: 45_000 },
+  async function (this: ReproForgeWorld) {
+    this.backupSourceDatabase = new PGlite();
+    this.backupDestinationDatabase = new PGlite();
+    await applyPostgresMigrations(
+      pgliteMigrationClient(this.backupSourceDatabase),
+    );
+    await applyPostgresMigrations(
+      pgliteMigrationClient(this.backupDestinationDatabase),
+    );
+    const sourceBlobs = new MemoryPrivateBlobClient();
+    this.backupDestinationBlobs = new MemoryPrivateBlobClient();
+    this.backupFixture = await seedVerifiedBackupTenant(
+      this.backupSourceDatabase,
+      sourceBlobs,
+      "tenant_bdd_backup",
+    );
+    const silentLogger = new JsonTenantBackupLogger({
+      sink: { error: () => undefined, info: () => undefined },
+    });
+    const sourceService = new PostgresTenantBackupService(
+      pglitePostgresDatabase(this.backupSourceDatabase),
+      sourceBlobs,
+      { now: () => new Date("2026-07-19T21:00:00.000Z") },
+      silentLogger,
+    );
+    this.backupDestinationService = new PostgresTenantBackupService(
+      pglitePostgresDatabase(this.backupDestinationDatabase),
+      this.backupDestinationBlobs,
+      { now: () => new Date("2026-07-19T22:00:00.000Z") },
+      silentLogger,
+    );
+    this.backupArchive = await sourceService.exportTenant(
+      this.backupFixture.tenantId,
+    );
+  },
+);
+
+When(
+  "the tenant backup is restored into an empty durable store",
+  { timeout: 30_000 },
+  async function (this: ReproForgeWorld) {
+    assert(this.backupDestinationService);
+    assert(this.backupArchive);
+    const result = await this.backupDestinationService.restoreTenant({
+      archive: this.backupArchive,
+      requestedBy: "operator_bdd_backup",
+    });
+    assert.equal(result.restored, true);
+  },
+);
+
+Then(
+  "the restored durable case and evidence match the backup",
+  async function (this: ReproForgeWorld) {
+    assert(this.backupDestinationDatabase);
+    assert(this.backupFixture);
+    const postgres = pglitePostgresDatabase(this.backupDestinationDatabase);
+    const record = await new PostgresDurableReproductionRepository(
+      postgres,
+    ).findByCaseId(
+      durableScope(
+        this.backupFixture.tenantId,
+        this.backupFixture.callerId,
+      ),
+      this.backupFixture.caseId,
+    );
+    assert.equal(record?.snapshot.case.state, "VERIFIED");
+    assert.equal(record?.snapshot.job.state, "SUCCEEDED");
+    const evidence = await this.backupDestinationDatabase.query<{
+      count: string;
+    }>(
+      "SELECT count(*)::text AS count FROM run_evidence WHERE tenant_id = $1",
+      [this.backupFixture.tenantId],
+    );
+    assert.equal(evidence.rows[0]?.count, "1");
+  },
+);
+
+Then(
+  "the verified private bundle is readable after restore",
+  async function (this: ReproForgeWorld) {
+    assert(this.backupDestinationDatabase);
+    assert(this.backupDestinationBlobs);
+    assert(this.backupFixture);
+    const restored = await new ContentAddressedArtifactStore(
+      pglitePostgresDatabase(this.backupDestinationDatabase),
+      this.backupDestinationBlobs,
+      { now: () => new Date("2026-07-19T22:00:00.000Z") },
+    ).read(
+      durableScope(
+        this.backupFixture.tenantId,
+        this.backupFixture.callerId,
+      ),
+      this.backupFixture.artifact.artifactId,
+    );
+    assert.deepEqual(restored?.bytes, this.backupFixture.body);
   },
 );

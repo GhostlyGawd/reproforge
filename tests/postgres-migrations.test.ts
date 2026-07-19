@@ -24,6 +24,7 @@ const EXPECTED_TABLES = [
   "quota_ledger",
   "reproforge_schema_migrations",
   "run_evidence",
+  "tenant_restore_sessions",
   "tenants",
 ];
 
@@ -38,6 +39,7 @@ const EXPECTED_INDEXES = [
   "principals_external_subject_idx",
   "quota_tenant_window_idx",
   "run_evidence_job_idx",
+  "tenant_restore_sessions_state_idx",
 ];
 
 const databases: PGlite[] = [];
@@ -190,7 +192,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(5);
+    expect(migrations).toHaveLength(6);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`

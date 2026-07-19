@@ -85,7 +85,7 @@ codes rather than silently falling back to memory.
 - [x] `RF-8106` Implement the transactional outbox, queue publisher/consumer adapter, lease claim/renew/release, bounded retry, and expired-lease recovery sweep.
 - [x] `RF-8107` Implement durable quota reservations, cancellation flags, retention scheduling, deletion requests, and append-only audit events.
 - [x] `RF-8108` Add liveness, readiness, database, artifact, queue, and runner-capability health contracts with sanitized structured logs and metrics.
-- [ ] `RF-8109` Add backup/export and restore verification for one tenant's complete case/job/evidence/artifact manifest without exposing object bodies in logs.
+- [x] `RF-8109` Add backup/export and restore verification for one tenant's complete case/job/evidence/artifact manifest without exposing object bodies in logs.
 - [ ] `RF-8110` Route the trusted fixture through the durable adapters in provider integration tests while preserving its existing browser, REST, MCP, and bundle identity behavior.
 - [ ] `RF-8111` Update operational, security, privacy, architecture, limitation, and setup documentation; attach the milestone evidence manifest.
 
