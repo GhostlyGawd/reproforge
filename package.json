@@ -10,6 +10,7 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:migrations": "vitest run tests/postgres-migrations.test.ts tests/postgres-migrations.property.test.ts",
     "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
@@ -37,6 +38,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.12.1",
     "@cucumber/cucumber": "^13.1.1",
+    "@electric-sql/pglite": "^0.5.4",
     "@playwright/test": "^1.61.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
