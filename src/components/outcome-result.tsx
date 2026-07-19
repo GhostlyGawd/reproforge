@@ -75,7 +75,9 @@ export function OutcomeResult({ command, summary }: OutcomeResultProps) {
         </span>
         <span className="verification-metric">
           <Check size={14} aria-hidden="true" />
-          {verified ? "Oracle evaluated deterministically" : summary.reason}
+          {verified
+            ? `Oracle v${summary.oracleVersion} evaluated deterministically`
+            : summary.reason}
         </span>
       </div>
       {verified ? (

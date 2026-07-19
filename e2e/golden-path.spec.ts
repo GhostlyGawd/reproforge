@@ -9,6 +9,8 @@ test("turns the trusted issue into a verified reproduction", async ({ page }) =>
     page.getByRole("heading", { name: "Turn a bug report into proof" }),
   ).toBeVisible();
   await expect(page.getByText(/Offline sample · GPT-5\.6 (available|not configured)/)).toBeVisible();
+  await expect(page.getByText("6 tool calls · 3 clean runs")).toBeVisible();
+  await expect(page.getByText("oracle-cli-spaces v1 · exit 1 + ENOENT")).toBeVisible();
 
   await page.getByRole("button", { name: "Run trusted sample" }).click();
 

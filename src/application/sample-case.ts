@@ -1,5 +1,6 @@
 import {
   createBundle,
+  hashCanonical,
   materializeBundle,
   type ReproBundle,
 } from "@/domain/bundle";
@@ -10,6 +11,7 @@ import {
   type ReproCase,
 } from "@/domain/case";
 import type { EvidenceItem, Hypothesis } from "@/domain/evidence";
+import { minimizeReproduction, type MinimizationResult } from "@/domain/minimization";
 import type { FailureOracle } from "@/domain/oracle";
 import type { RunResult } from "@/domain/run";
 import {
@@ -19,11 +21,16 @@ import {
 import { TrustedFixtureRunner } from "@/infrastructure/runner";
 
 export type SampleCaseResult = {
+  budget: {
+    maxToolCalls: number;
+    requiredRuns: number;
+  };
   bundle: ReproBundle;
   case: ReproCase;
   evidence: EvidenceItem[];
   files: Record<string, string>;
   hypotheses: Hypothesis[];
+  minimization: MinimizationResult;
   oracle: FailureOracle;
   runs: RunResult[];
   summary: VerificationSummary;
@@ -63,7 +70,12 @@ const hypotheses: Hypothesis[] = [
     evidenceIds: ["evidence-report", "evidence-stack", "evidence-inspection"],
     expectedSignal: "A spaced path exits 1 with ENOENT while the control path exits 0.",
     falsificationCondition: "Both the spaced path and control path load successfully.",
+    priority: 1,
     status: "supported",
+    statusHistory: [
+      { reason: "Created from reported and inspected evidence.", sequence: 0, status: "proposed" },
+      { reason: "The control passed and all three candidate runs matched.", sequence: 1, status: "supported" },
+    ],
   },
   {
     id: "hypothesis-node-version",
@@ -71,7 +83,12 @@ const hypotheses: Hypothesis[] = [
     evidenceIds: ["evidence-report", "evidence-environment"],
     expectedSignal: "The same spaced path succeeds on an earlier runtime.",
     falsificationCondition: "The failure occurs across the pinned supported runtimes.",
+    priority: 2,
     status: "inconclusive",
+    statusHistory: [
+      { reason: "Created from the reporter's runtime claim.", sequence: 0, status: "proposed" },
+      { reason: "The trusted slice does not vary the runtime.", sequence: 1, status: "inconclusive" },
+    ],
   },
 ];
 
@@ -116,32 +133,66 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
       id: `candidate-${index}`,
     })),
   );
-  const summary = verifyReproduction({ oracle, control, candidates });
+  const baselineSummary = verifyReproduction({ oracle, control, candidates });
+  const minimizedControl = {
+    ...(await runner.run({ repository: "fixture://cli-spaces", command: "control" })),
+    id: "minimized-control",
+  };
+  const minimizedCandidates = await Promise.all(
+    [1, 2, 3].map(async (index) => ({
+      ...(await runner.run({ repository: "fixture://cli-spaces", command: "reproduce" })),
+      id: `minimized-candidate-${index}`,
+    })),
+  );
+  const minimization = minimizeReproduction({
+    baseline: { candidates, control },
+    oracle,
+    proposals: [
+      {
+        candidates: minimizedCandidates,
+        control: minimizedControl,
+        description: "Retain only the spaced configuration path input.",
+        id: "spaced-path-only",
+        removedInputs: ["reporter shell assumption", "working-directory variation"],
+      },
+    ],
+  });
+  const summary =
+    minimization.evaluations.find(
+      (evaluation) => evaluation.id === minimization.acceptedReductionId,
+    )?.summary ?? baselineSummary;
 
   let current = createCase("sample-cli-spaces", at(0));
   transitionPath.forEach((transition, index) => {
     current = transitionCase(current, transition.state, transition.reason, at(index + 1));
   });
 
-  const runs = [control, ...candidates];
+  const runs = [minimizedControl, ...minimizedCandidates];
   const bundle = await createBundle({
     caseId: current.id,
     generatedAt: at(20).toISOString(),
     hypothesisLedger: hypotheses,
     lock: {
-      command: "npm run fixture:repro -- --config \"fixtures/my config.json\"",
+      command: "npm run fixture:repro -- --config \"fixtures/cli-spaces/my config.json\"",
+      dependencyLockHash: await hashCanonical({ fixture: "cli-spaces", packageManager: "npm@11" }),
+      environment: { NETWORK: "denied", NODE_ENV: "test" },
       environmentHash: "fixture-cli-spaces-v1",
+      oracleId: oracle.id,
+      oracleVersion: oracle.version,
       packageManager: "npm@11",
       repository: "fixture://cli-spaces",
+      repositoryTreeHash: await hashCanonical({ fixture: "cli-spaces", revision: "fixture-v1" }),
+      reproForgeVersion: "0.1.0",
       revision: "fixture-v1",
       runner: "trusted-fixture-v1",
       runtime: "node@24",
     },
+    minimization,
     oracle,
     reproductionPatch: [
       "diff --git a/repro/cli-spaces.test.ts b/repro/cli-spaces.test.ts",
       "new file mode 100644",
-      "+expect(runCli('--config', 'fixtures/my config.json')).toExitWith(1);",
+      "+expect(runCli('--config', 'fixtures/cli-spaces/my config.json')).toExitWith(1);",
       "+expect(stderr).toContain('ENOENT');",
       "",
     ].join("\n"),
@@ -150,11 +201,13 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
   });
 
   return {
+    budget: { maxToolCalls: 6, requiredRuns: 3 },
     bundle,
     case: current,
     evidence,
     files: materializeBundle(bundle),
     hypotheses,
+    minimization,
     oracle,
     runs,
     summary,

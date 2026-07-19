@@ -21,6 +21,15 @@ describe("trusted sample vertical slice", () => {
     expect(result.summary.status).toBe("VERIFIED");
     expect(result.summary.candidateMatches).toBe(3);
     expect(result.summary.controlMatched).toBe(false);
+    expect(result.minimization).toMatchObject({
+      acceptedReductionId: "spaced-path-only",
+      claim: "locally-minimized",
+    });
+    expect(result.bundle.lock).toMatchObject({
+      oracleId: result.oracle.id,
+      oracleVersion: result.oracle.version,
+      reproForgeVersion: "0.1.0",
+    });
     expect(validateMaterializedBundle(result.files)).toEqual({
       success: true,
       errors: [],

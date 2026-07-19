@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { Given, Then, When } from "@cucumber/cucumber";
 
 import type { RunResult } from "@/domain/run";
+import { minimizeReproduction } from "@/domain/minimization";
 import { verifyReproduction } from "@/domain/verification";
 import { runTrustedSample } from "@/application/sample-case";
 import { validateMaterializedBundle } from "@/domain/bundle";
@@ -102,6 +103,51 @@ Then(
     assert.equal(this.executionBlocked, true);
   },
 );
+
+Given("a verified baseline reproduction", function (this: ReproForgeWorld) {
+  this.oracle = {
+    id: "bdd-minimizer-oracle",
+    version: 1,
+    root: { type: "exit_code", expected: 1 },
+  };
+  this.control = run("baseline-control", 0);
+  this.candidates = [run("baseline-1", 1), run("baseline-2", 1), run("baseline-3", 1)];
+});
+
+Given(
+  "a proposed reduction whose control matches the failure",
+  function (this: ReproForgeWorld) {
+    assert(this.oracle, "oracle is required");
+    assert(this.control, "control is required");
+    this.minimizationInput = {
+      baseline: { candidates: this.candidates, control: this.control },
+      oracle: this.oracle,
+      proposals: [
+        {
+          candidates: [
+            run("reduction-1", 1),
+            run("reduction-2", 1),
+            run("reduction-3", 1),
+          ],
+          control: run("reduction-control", 1),
+          description: "Remove the distinction between candidate and control.",
+          id: "over-reduced",
+          removedInputs: ["control distinction"],
+        },
+      ],
+    };
+  },
+);
+
+When("ReproForge evaluates the proposed reduction", function (this: ReproForgeWorld) {
+  assert(this.minimizationInput, "minimization input is required");
+  this.minimization = minimizeReproduction(this.minimizationInput);
+});
+
+Then("the baseline is retained", function (this: ReproForgeWorld) {
+  assert.equal(this.minimization?.acceptedReductionId, null);
+  assert.equal(this.minimization?.claim, "baseline-retained");
+});
 
 Given("the trusted CLI spaces sample", function (this: ReproForgeWorld) {
   this.sample = undefined;

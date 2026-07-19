@@ -24,21 +24,43 @@ const summary: VerificationSummary = {
   totalCandidateRuns: 3,
 };
 
+const lock = {
+  command: "npm run repro",
+  dependencyLockHash: "a".repeat(64),
+  environment: { CI: "true" },
+  environmentHash: "env-one",
+  oracleId: "oracle",
+  oracleVersion: 1,
+  packageManager: "npm@11",
+  repository: "fixture://cli-spaces",
+  repositoryTreeHash: "b".repeat(64),
+  reproForgeVersion: "0.1.0",
+  revision: "fixture-v1",
+  runner: "trusted-fixture-v1",
+  runtime: "node@24",
+};
+
+const minimization = {
+  acceptedReductionId: "reduction-one",
+  acceptedRemovedInputs: ["unused input"],
+  claim: "locally-minimized" as const,
+  evaluations: [
+    {
+      id: "reduction-one",
+      removedInputs: ["unused input"],
+      summary,
+    },
+  ],
+};
+
 describe("Repro Bundle", () => {
   it("materializes every required file and validates independently", async () => {
     const bundle = await createBundle({
       caseId: "case-one",
       generatedAt: "2026-07-19T00:00:00.000Z",
       hypothesisLedger: [],
-      lock: {
-        command: "npm run repro",
-        environmentHash: "env-one",
-        packageManager: "npm@11",
-        repository: "fixture://cli-spaces",
-        revision: "fixture-v1",
-        runner: "trusted-fixture-v1",
-        runtime: "node@24",
-      },
+      lock,
+      minimization,
       oracle: { id: "oracle", version: 1, root: { type: "exit_code", expected: 1 } },
       reproductionPatch: "diff --git a/repro.mjs b/repro.mjs",
       runLog: [],
@@ -55,15 +77,8 @@ describe("Repro Bundle", () => {
         caseId: "case-unverified",
         generatedAt: "2026-07-19T00:00:00.000Z",
         hypothesisLedger: [],
-        lock: {
-          command: "npm run repro",
-          environmentHash: "env-one",
-          packageManager: "npm@11",
-          repository: "fixture://cli-spaces",
-          revision: "fixture-v1",
-          runner: "trusted-fixture-v1",
-          runtime: "node@24",
-        },
+        lock,
+        minimization,
         oracle: { id: "oracle", version: 1, root: { type: "exit_code", expected: 1 } },
         reproductionPatch: "",
         runLog: [],
@@ -78,15 +93,8 @@ describe("Repro Bundle", () => {
         caseId: "case-stale",
         generatedAt: "2026-07-19T00:00:00.000Z",
         hypothesisLedger: [],
-        lock: {
-          command: "npm run repro",
-          environmentHash: "env-one",
-          packageManager: "npm@11",
-          repository: "fixture://cli-spaces",
-          revision: "fixture-v1",
-          runner: "trusted-fixture-v1",
-          runtime: "node@24",
-        },
+        lock,
+        minimization,
         oracle: { id: "oracle", version: 2, root: { type: "exit_code", expected: 1 } },
         reproductionPatch: "",
         runLog: [],

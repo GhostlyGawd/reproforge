@@ -102,7 +102,17 @@ function executeToolCall(
     if (accumulator.hypotheses.some((item) => item.id === parsed.data.id)) {
       return toolOutput(call, { accepted: false, error: "Hypothesis ID already exists" });
     }
-    accumulator.hypotheses.push({ ...parsed.data, status: "proposed" });
+    accumulator.hypotheses.push({
+      ...parsed.data,
+      status: "proposed",
+      statusHistory: [
+        {
+          reason: "Recorded by the bounded GPT investigator.",
+          sequence: 0,
+          status: "proposed",
+        },
+      ],
+    });
     return toolOutput(call, { accepted: true, id: parsed.data.id });
   }
 

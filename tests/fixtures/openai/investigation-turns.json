@@ -20,7 +20,7 @@
           "id": "function_recorded_2",
           "call_id": "call_hypothesis_1",
           "name": "record_hypothesis",
-          "arguments": "{\"id\":\"hypothesis-live-quoting\",\"statement\":\"The path is split before it reaches the CLI.\",\"evidenceIds\":[\"evidence-live-report\"],\"expectedSignal\":\"The spaced path fails while the control succeeds.\",\"falsificationCondition\":\"Both paths produce the same successful result.\"}"
+          "arguments": "{\"id\":\"hypothesis-live-quoting\",\"priority\":1,\"statement\":\"The path is split before it reaches the CLI.\",\"evidenceIds\":[\"evidence-live-report\"],\"expectedSignal\":\"The spaced path fails while the control succeeds.\",\"falsificationCondition\":\"Both paths produce the same successful result.\"}"
         },
         {
           "type": "function_call",

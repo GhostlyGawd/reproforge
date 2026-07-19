@@ -1,0 +1,32 @@
+{
+  "schemaVersion": "1.0",
+  "id": "positive-deterministic",
+  "category": "positive",
+  "description": "All three candidates match while the negative control does not.",
+  "expectedStatus": "VERIFIED",
+  "oracle": {
+    "id": "eval-cli-spaces",
+    "version": 1,
+    "root": {
+      "type": "all",
+      "children": [
+        { "type": "exit_code", "expected": 1 },
+        { "type": "output_contains", "stream": "stderr", "value": "ENOENT" }
+      ]
+    }
+  },
+  "control": {
+    "id": "positive-control",
+    "command": "control",
+    "durationMs": 3,
+    "environmentHash": "eval-node24-v1",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "ok"
+  },
+  "candidates": [
+    { "id": "positive-1", "command": "reproduce", "durationMs": 5, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "Error: ENOENT", "stdout": "" },
+    { "id": "positive-2", "command": "reproduce", "durationMs": 5, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "Error: ENOENT", "stdout": "" },
+    { "id": "positive-3", "command": "reproduce", "durationMs": 5, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "Error: ENOENT", "stdout": "" }
+  ]
+}

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "unstable-intermittent",
+  "category": "unstable",
+  "description": "Two of three candidates match, so the result remains explicitly unstable.",
+  "expectedStatus": "UNSTABLE",
+  "oracle": {
+    "id": "eval-exit-one",
+    "version": 1,
+    "root": { "type": "exit_code", "expected": 1 }
+  },
+  "control": {
+    "id": "unstable-control",
+    "command": "control",
+    "durationMs": 2,
+    "environmentHash": "eval-node24-v1",
+    "exitCode": 0,
+    "stderr": "",
+    "stdout": "ok"
+  },
+  "candidates": [
+    { "id": "unstable-1", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "ENOENT", "stdout": "" },
+    { "id": "unstable-2", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 0, "stderr": "", "stdout": "ok" },
+    { "id": "unstable-3", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "ENOENT", "stdout": "" }
+  ]
+}
