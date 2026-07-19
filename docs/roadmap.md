@@ -14,14 +14,14 @@ Tasks are grouped into independently reviewable and mergeable milestones. A mile
 
 ## Milestone 1 — Deterministic vertical slice
 
-- [ ] `RF-1001` Scaffold a strict Next.js 16 TypeScript application with pinned dependencies.
-- [ ] `RF-1002` Define case, evidence, hypothesis, experiment, run, oracle, and bundle schemas.
-- [ ] `RF-1003` Implement and property-test the case state machine.
-- [ ] `RF-1004` Implement and property-test composite failure oracles.
-- [ ] `RF-1005` Implement control-plus-three-run verification.
-- [ ] `RF-1006` Implement bundle hashing, redaction, serialization, and validation.
-- [ ] `RF-1007` Add a trusted fixture runner and an external-runner fail-closed adapter.
-- [ ] `RF-1008` Execute BDD scenarios for verified, unstable, not-reproduced, and blocked outcomes.
+- [x] `RF-1001` Scaffold a strict Next.js 16 TypeScript application with pinned dependencies.
+- [x] `RF-1002` Define case, evidence, hypothesis, experiment, run, oracle, and bundle schemas.
+- [x] `RF-1003` Implement and property-test the case state machine.
+- [x] `RF-1004` Implement and property-test composite failure oracles.
+- [x] `RF-1005` Implement control-plus-three-run verification.
+- [x] `RF-1006` Implement bundle hashing, redaction, serialization, and validation.
+- [x] `RF-1007` Add a trusted fixture runner and an external-runner fail-closed adapter.
+- [x] `RF-1008` Execute BDD scenarios for verified, unstable, not-reproduced, and blocked outcomes.
 
 **Exit evidence:** unit, property, BDD, type, lint, and production-build checks.
 
