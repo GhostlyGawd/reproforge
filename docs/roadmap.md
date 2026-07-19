@@ -27,13 +27,13 @@ Tasks are grouped into independently reviewable and mergeable milestones. A mile
 
 ## Milestone 2 — Golden-path product experience
 
-- [ ] `RF-2001` Implement the new-case screen with a one-click trusted sample.
-- [ ] `RF-2002` Implement the evidence board and hypothesis ledger.
-- [ ] `RF-2003` Implement the experiment and verification timeline.
-- [ ] `RF-2004` Implement verified, unstable, blocked, and not-reproduced result states.
-- [ ] `RF-2005` Implement the downloadable Repro Bundle preview.
-- [ ] `RF-2006` Add responsive, keyboard, reduced-motion, and automated accessibility coverage.
-- [ ] `RF-2007` Run browser journeys and capture sanitized desktop and mobile evidence.
+- [x] `RF-2001` Implement the new-case screen with a one-click trusted sample.
+- [x] `RF-2002` Implement the evidence board and hypothesis ledger.
+- [x] `RF-2003` Implement the experiment and verification timeline.
+- [x] `RF-2004` Implement verified, unstable, blocked, and not-reproduced result states.
+- [x] `RF-2005` Implement the downloadable Repro Bundle preview.
+- [x] `RF-2006` Add responsive, keyboard, reduced-motion, and automated accessibility coverage.
+- [x] `RF-2007` Run browser journeys and capture sanitized desktop and mobile evidence.
 
 **Exit evidence:** browser tests, accessibility scan, build, screenshots, and evidence manifest.
 
