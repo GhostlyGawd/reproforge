@@ -26,7 +26,6 @@ const hostedSchema = z
       .url()
       .transform((value) => new URL(value))
       .refine((value) => value.protocol === "https:", "must use HTTPS"),
-    blobReadWriteToken: z.string().min(1),
     databaseUrl: z
       .url()
       .refine(
@@ -37,6 +36,10 @@ const hostedSchema = z
   .strict();
 
 type RuntimePolicy = z.infer<typeof policySchema>;
+
+export type BlobAuthentication =
+  | { method: "oidc"; oidcToken: string; storeId: string }
+  | { method: "read-write-token"; token: string };
 
 type OfflineRuntimeConfig = RuntimePolicy & {
   baseUrl: null;
@@ -51,7 +54,7 @@ type OfflineRuntimeConfig = RuntimePolicy & {
 type HostedRuntimeConfig = RuntimePolicy & {
   baseUrl: string;
   credentials: {
-    blobReadWriteToken: string;
+    blob: BlobAuthentication;
     databaseUrl: string;
   };
   mode: "preview" | "production";
@@ -112,6 +115,23 @@ function issueFields(
   });
 }
 
+function resolveBlobAuthentication(
+  environment: RuntimeEnvironment,
+): BlobAuthentication | null {
+  const storeId = environment.BLOB_STORE_ID;
+  const oidcToken = environment.VERCEL_OIDC_TOKEN;
+  const readWriteToken = environment.BLOB_READ_WRITE_TOKEN;
+  const oidcComplete = Boolean(storeId && oidcToken);
+  const oidcPartial = Boolean(storeId) !== Boolean(oidcToken);
+  if (oidcPartial) return null;
+  if (oidcComplete) {
+    return { method: "oidc", oidcToken: oidcToken as string, storeId: storeId as string };
+  }
+  return readWriteToken
+    ? { method: "read-write-token", token: readWriteToken }
+    : null;
+}
+
 export function parseRuntimeConfig(
   environment: RuntimeEnvironment,
 ): RuntimeConfig {
@@ -150,16 +170,20 @@ export function parseRuntimeConfig(
 
   const hostedResult = hostedSchema.safeParse({
     baseUrl: environment.REPROFORGE_BASE_URL,
-    blobReadWriteToken: environment.BLOB_READ_WRITE_TOKEN,
     databaseUrl: environment.DATABASE_URL,
   });
-  if (!hostedResult.success) {
+  const blobAuthentication = resolveBlobAuthentication(environment);
+  if (!hostedResult.success || !blobAuthentication) {
     throw new RuntimeConfigurationError(
-      issueFields(hostedResult, {
-        baseUrl: "REPROFORGE_BASE_URL",
-        blobReadWriteToken: "BLOB_READ_WRITE_TOKEN",
-        databaseUrl: "DATABASE_URL",
-      }),
+      [
+        ...(hostedResult.success
+          ? []
+          : issueFields(hostedResult, {
+              baseUrl: "REPROFORGE_BASE_URL",
+              databaseUrl: "DATABASE_URL",
+            })),
+        ...(blobAuthentication ? [] : ["BLOB_AUTHENTICATION"]),
+      ],
     );
   }
 
@@ -167,7 +191,7 @@ export function parseRuntimeConfig(
     ...policyResult.data,
     baseUrl: hostedResult.data.baseUrl.toString(),
     credentials: {
-      blobReadWriteToken: hostedResult.data.blobReadWriteToken,
+      blob: blobAuthentication,
       databaseUrl: hostedResult.data.databaseUrl,
     },
     mode,

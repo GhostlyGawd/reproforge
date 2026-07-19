@@ -56,7 +56,7 @@ describe("runtime configuration", () => {
       expect(error).toMatchObject({
         code: "INVALID_RUNTIME_CONFIGURATION",
         issues: expect.arrayContaining([
-          "BLOB_READ_WRITE_TOKEN",
+          "BLOB_AUTHENTICATION",
           "REPROFORGE_BASE_URL",
         ]),
       });
@@ -102,6 +102,39 @@ describe("runtime configuration", () => {
     expect(summary).not.toContain(productionEnvironment.DATABASE_URL);
     expect(summary).not.toContain(productionEnvironment.BLOB_READ_WRITE_TOKEN);
     expect(summary).toContain('"database":"neon"');
+  });
+
+  it("prefers short-lived Vercel OIDC credentials for private Blob", () => {
+    const parsed = parseRuntimeConfig({
+      BLOB_STORE_ID: "store_reproforge",
+      DATABASE_URL: productionEnvironment.DATABASE_URL,
+      REPROFORGE_BASE_URL: productionEnvironment.REPROFORGE_BASE_URL,
+      REPROFORGE_RUNTIME_MODE: "production",
+      VERCEL_OIDC_TOKEN: "synthetic-short-lived-oidc-token",
+    });
+
+    expect(parsed).toMatchObject({
+      credentials: {
+        blob: {
+          method: "oidc",
+          storeId: "store_reproforge",
+        },
+      },
+    });
+    expect(JSON.stringify(summarizeRuntimeConfig(parsed))).not.toContain(
+      "synthetic-short-lived-oidc-token",
+    );
+  });
+
+  it("fails closed for a partial Blob OIDC pair", () => {
+    expect(() =>
+      parseRuntimeConfig({
+        BLOB_STORE_ID: "store_reproforge",
+        DATABASE_URL: productionEnvironment.DATABASE_URL,
+        REPROFORGE_BASE_URL: productionEnvironment.REPROFORGE_BASE_URL,
+        REPROFORGE_RUNTIME_MODE: "production",
+      }),
+    ).toThrowError(/BLOB_AUTHENTICATION/);
   });
 
   it("does not read or validate the environment until the lazy loader is called", () => {

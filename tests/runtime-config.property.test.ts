@@ -26,6 +26,25 @@ describe("runtime configuration properties", () => {
     );
   });
 
+  it("never exposes short-lived Blob OIDC credentials in the public summary", () => {
+    fc.assert(
+      fc.property(fc.uuid(), fc.uuid(), (databaseSecret, oidcSecret) => {
+        const config = parseRuntimeConfig({
+          BLOB_STORE_ID: "store_reproforge",
+          DATABASE_URL: `postgresql://user:db-secret-${databaseSecret}@reproforge.invalid/database`,
+          REPROFORGE_BASE_URL: "https://reproforge.example",
+          REPROFORGE_RUNTIME_MODE: "production",
+          VERCEL_OIDC_TOKEN: `oidc-secret-${oidcSecret}`,
+        });
+        const summary = JSON.stringify(summarizeRuntimeConfig(config));
+
+        expect(summary).not.toContain(databaseSecret);
+        expect(summary).not.toContain(oidcSecret);
+      }),
+      { numRuns: 300 },
+    );
+  });
+
   it("rejects every generated unknown ReproForge-prefixed variable", () => {
     fc.assert(
       fc.property(

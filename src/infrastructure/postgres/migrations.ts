@@ -61,6 +61,10 @@ const migrationSources = [
     id: "0002_durable_invariants",
     url: new URL("./migrations/0002_durable_invariants.sql", import.meta.url),
   },
+  {
+    id: "0003_artifact_lifecycle",
+    url: new URL("./migrations/0003_artifact_lifecycle.sql", import.meta.url),
+  },
 ] as const;
 
 export function definePostgresMigration(

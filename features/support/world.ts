@@ -11,6 +11,7 @@ import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { PGlite } from "@electric-sql/pglite";
 import type {
+  ArtifactDescriptor,
   DurableReproductionRecord,
   DurableReservationResult,
 } from "@/application/ports/production";
@@ -19,6 +20,8 @@ import type {
   PostgresDurableReproductionRepository,
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
+import type { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
+import type { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -48,6 +51,10 @@ export class ReproForgeWorld extends World {
   durableRead?: DurableReproductionRecord | null;
   durableStarts: DurableReservationResult[] = [];
   durableErrorCode?: string;
+  durableArtifactStore?: ContentAddressedArtifactStore;
+  durableBlobClient?: MemoryPrivateBlobClient;
+  durableArtifactDescriptor?: ArtifactDescriptor;
+  durableArtifactRead?: { bytes: Uint8Array; descriptor: ArtifactDescriptor } | null;
 }
 
 setWorldConstructor(ReproForgeWorld);

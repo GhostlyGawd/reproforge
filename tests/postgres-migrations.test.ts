@@ -190,7 +190,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(2);
+    expect(migrations).toHaveLength(3);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`
@@ -219,7 +219,7 @@ describe("Postgres durable-foundation migrations", () => {
     `);
 
     expect(result).toEqual({
-      applied: [migrations[1]?.id],
+      applied: migrations.slice(1).map(({ id }) => id),
       skipped: [migrations[0]?.id],
     });
     expect(seeded.rows).toEqual([

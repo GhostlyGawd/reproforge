@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { createHash } from "node:crypto";
 
 import { PGlite } from "@electric-sql/pglite";
 import { After, Given, Then, When } from "@cucumber/cucumber";
@@ -11,6 +12,7 @@ import {
 import type { DurableReproductionRecord } from "@/application/ports/production";
 import { createCase } from "@/domain/case";
 import { createJob } from "@/domain/job";
+import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
   PostgresDurableReproductionRepository,
@@ -18,6 +20,7 @@ import {
 } from "@/infrastructure/postgres/repositories";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
+import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
 import type { ReproForgeWorld } from "../support/world";
 
 const AT = "2026-07-19T20:00:00.000Z";
@@ -200,6 +203,107 @@ Then(
     );
     assert.equal(stored?.caseId, this.durableRecord.caseId);
     assert.equal(stored?.jobId, this.durableRecord.jobId);
+  },
+);
+
+Given(
+  "a private bundle artifact for the durable case",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableUnitOfWork);
+    assert(this.durableRecord);
+    assert(this.durablePostgres);
+    this.durableStarts.push(
+      await reserveDurableStart(
+        this.durableUnitOfWork,
+        bddStartInput(this.durableRecord),
+      ),
+    );
+    const bytes = new TextEncoder().encode("bdd private bundle");
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    this.durableArtifactDescriptor = {
+      artifactId: "artifact_bdd_private",
+      byteCount: bytes.byteLength,
+      caseId: this.durableRecord.caseId,
+      createdAt: AT,
+      kind: "bundle",
+      objectKey: `tenants/${this.durableRecord.tenantId}/cases/${this.durableRecord.caseId}/bundle/${sha256}`,
+      retentionUntil: "2026-08-19T20:00:00.000Z",
+      sha256,
+      tenantId: this.durableRecord.tenantId,
+    };
+    this.durableBlobClient = new MemoryPrivateBlobClient();
+    this.durableArtifactStore = new ContentAddressedArtifactStore(
+      this.durablePostgres,
+      this.durableBlobClient,
+      { now: () => new Date(AT) },
+    );
+    await this.durableArtifactStore.put({
+      bytes,
+      descriptor: this.durableArtifactDescriptor,
+    });
+  },
+);
+
+When(
+  "another tenant reads the private artifact",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableArtifactStore);
+    assert(this.durableArtifactDescriptor);
+    assert(this.durableRecord);
+    this.durableArtifactRead = await this.durableArtifactStore.read(
+      {
+        callerId: this.durableRecord.callerId,
+        principalId: this.durableRecord.callerId,
+        tenantId: "tenant_bdd_other",
+      },
+      this.durableArtifactDescriptor.artifactId,
+    );
+  },
+);
+
+When(
+  "the owner deletes the private artifact",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableArtifactStore);
+    assert(this.durableArtifactDescriptor);
+    assert(this.durableRecord);
+    const owner = {
+      callerId: this.durableRecord.callerId,
+      principalId: this.durableRecord.callerId,
+      tenantId: this.durableRecord.tenantId,
+    };
+    assert.equal(
+      await this.durableArtifactStore.delete(
+        owner,
+        this.durableArtifactDescriptor.artifactId,
+      ),
+      true,
+    );
+    this.durableArtifactRead = await this.durableArtifactStore.read(
+      owner,
+      this.durableArtifactDescriptor.artifactId,
+    );
+  },
+);
+
+Then(
+  "the cross-tenant artifact read returns not found before provider access",
+  function (this: ReproForgeWorld) {
+    assert.equal(this.durableArtifactRead, null);
+    assert.deepEqual(this.durableBlobClient?.gets, []);
+  },
+);
+
+Then(
+  "the private artifact is no longer readable",
+  function (this: ReproForgeWorld) {
+    assert.equal(this.durableArtifactRead, null);
+    assert.equal(
+      this.durableBlobClient?.has(
+        this.durableArtifactDescriptor?.objectKey ?? "missing",
+      ),
+      false,
+    );
   },
 );
 

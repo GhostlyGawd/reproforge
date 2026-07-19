@@ -28,3 +28,15 @@ Feature: Durable reproduction state
     When the caller reserves a durable reproduction
     And another tenant reads the durable case
     Then the cross-tenant durable read returns not found
+
+  Scenario: A tenant cannot read another tenant's private artifact
+    Given an empty durable Postgres store for a tenant
+    And a private bundle artifact for the durable case
+    When another tenant reads the private artifact
+    Then the cross-tenant artifact read returns not found before provider access
+
+  Scenario: Deleting a private artifact removes all later access
+    Given an empty durable Postgres store for a tenant
+    And a private bundle artifact for the durable case
+    When the owner deletes the private artifact
+    Then the private artifact is no longer readable

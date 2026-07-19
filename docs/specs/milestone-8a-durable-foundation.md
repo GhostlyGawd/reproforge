@@ -81,7 +81,7 @@ codes rather than silently falling back to memory.
 - [x] `RF-8102` Define provider-neutral `UnitOfWork`, durable repository, artifact, queue, quota, audit, and lease contracts without importing provider SDKs into domain/application modules.
 - [x] `RF-8103` Write the initial Postgres migration set and migration ledger for every table, index, unique constraint, foreign key, retention field, and optimistic version above.
 - [x] `RF-8104` Implement the Postgres repositories and transactional idempotent start with tenant-keyed reads and compare-and-swap updates.
-- [ ] `RF-8105` Implement private content-addressed artifact storage, verified round-trips, and deletion semantics.
+- [x] `RF-8105` Implement private content-addressed artifact storage, verified round-trips, and deletion semantics.
 - [ ] `RF-8106` Implement the transactional outbox, queue publisher/consumer adapter, lease claim/renew/release, bounded retry, and expired-lease recovery sweep.
 - [ ] `RF-8107` Implement durable quota reservations, cancellation flags, retention scheduling, deletion requests, and append-only audit events.
 - [ ] `RF-8108` Add liveness, readiness, database, artifact, queue, and runner-capability health contracts with sanitized structured logs and metrics.
