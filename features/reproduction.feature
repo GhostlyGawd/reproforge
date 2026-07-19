@@ -47,3 +47,22 @@ Feature: Evidence-backed reproduction outcomes
     And a proposed reduction whose control matches the failure
     When ReproForge evaluates the proposed reduction
     Then the baseline is retained
+
+  Scenario: A ChatGPT subscription-first start is keyless and idempotent
+    Given a subscription-first trusted ReproForge service
+    And no OpenAI API key is configured
+    When the caller starts the trusted sample twice with idempotency key "bdd-retry"
+    Then one trusted reproduction is executed
+    And both starts return the same case and job
+    And the service case state is "VERIFIED"
+
+  Scenario: A caller cannot read a case it does not own
+    Given a subscription-first trusted ReproForge service
+    When the caller reads unknown case "case-not-owned"
+    Then the service error code is "NOT_FOUND"
+
+  Scenario: An idempotency key cannot be reused for changed input
+    Given a subscription-first trusted ReproForge service
+    When the caller reuses idempotency key "bdd-conflict" with a different budget
+    Then the service error code is "IDEMPOTENCY_CONFLICT"
+    And one trusted reproduction is executed

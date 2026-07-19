@@ -1,16 +1,18 @@
 import assert from "node:assert/strict";
 
-import { Given, Then, When } from "@cucumber/cucumber";
+import { After, Given, Then, When } from "@cucumber/cucumber";
 
+import { CaseService, CaseServiceError } from "@/application/case-service";
+import { runTrustedSample } from "@/application/sample-case";
 import type { RunResult } from "@/domain/run";
 import { minimizeReproduction } from "@/domain/minimization";
 import { verifyReproduction } from "@/domain/verification";
-import { runTrustedSample } from "@/application/sample-case";
 import { validateMaterializedBundle } from "@/domain/bundle";
 import {
   ExternalRunnerUnavailable,
   UnavailableExternalRunner,
 } from "@/infrastructure/runner";
+import { InMemoryReproductionRepository } from "@/infrastructure/reproduction-repository";
 import type { ReproForgeWorld } from "../support/world";
 
 function run(id: string, exitCode: number): RunResult {
@@ -24,6 +26,32 @@ function run(id: string, exitCode: number): RunResult {
     stdout: "",
   };
 }
+
+function createBddService(world: ReproForgeWorld): CaseService {
+  let caseSequence = 0;
+  let jobSequence = 0;
+  return new CaseService({
+    clock: { now: () => new Date("2026-07-19T19:00:00.000Z") },
+    executeTrustedSample: async (options) => {
+      world.trustedExecutionCount += 1;
+      return runTrustedSample(options);
+    },
+    identifiers: {
+      nextCaseId: () => `bdd-case-${++caseSequence}`,
+      nextJobId: () => `bdd-job-${++jobSequence}`,
+    },
+    repository: new InMemoryReproductionRepository(),
+  });
+}
+
+After(function (this: ReproForgeWorld) {
+  if (!this.openAIKeyWasChanged) return;
+  if (this.previousOpenAIKey === undefined) {
+    delete process.env.OPENAI_API_KEY;
+  } else {
+    process.env.OPENAI_API_KEY = this.previousOpenAIKey;
+  }
+});
 
 Given(
   "a failure oracle that expects exit code {int}",
@@ -148,6 +176,108 @@ Then("the baseline is retained", function (this: ReproForgeWorld) {
   assert.equal(this.minimization?.acceptedReductionId, null);
   assert.equal(this.minimization?.claim, "baseline-retained");
 });
+
+Given(
+  "a subscription-first trusted ReproForge service",
+  function (this: ReproForgeWorld) {
+    this.caseService = createBddService(this);
+    this.serviceErrorCode = undefined;
+    this.serviceStarts = [];
+    this.trustedExecutionCount = 0;
+  },
+);
+
+Given("no OpenAI API key is configured", function (this: ReproForgeWorld) {
+  this.previousOpenAIKey = process.env.OPENAI_API_KEY;
+  this.openAIKeyWasChanged = true;
+  delete process.env.OPENAI_API_KEY;
+});
+
+When(
+  "the caller starts the trusted sample twice with idempotency key {string}",
+  async function (this: ReproForgeWorld, idempotencyKey: string) {
+    assert(this.caseService, "case service is required");
+    const command = {
+      callerId: "bdd-caller",
+      idempotencyKey,
+      sampleId: "cli-spaces" as const,
+    };
+    this.serviceStarts = [
+      await this.caseService.startTrustedReproduction(command),
+      await this.caseService.startTrustedReproduction(command),
+    ];
+  },
+);
+
+When(
+  "the caller reads unknown case {string}",
+  async function (this: ReproForgeWorld, caseId: string) {
+    assert(this.caseService, "case service is required");
+    try {
+      await this.caseService.getReproduction({ callerId: "bdd-caller", caseId });
+    } catch (error) {
+      this.serviceErrorCode =
+        error instanceof CaseServiceError ? error.code : "UNEXPECTED_ERROR";
+    }
+  },
+);
+
+When(
+  "the caller reuses idempotency key {string} with a different budget",
+  async function (this: ReproForgeWorld, idempotencyKey: string) {
+    assert(this.caseService, "case service is required");
+    await this.caseService.startTrustedReproduction({
+      budget: { maxToolCalls: 6, requiredRuns: 3 },
+      callerId: "bdd-caller",
+      idempotencyKey,
+      sampleId: "cli-spaces",
+    });
+    try {
+      await this.caseService.startTrustedReproduction({
+        budget: { maxToolCalls: 7, requiredRuns: 3 },
+        callerId: "bdd-caller",
+        idempotencyKey,
+        sampleId: "cli-spaces",
+      });
+    } catch (error) {
+      this.serviceErrorCode =
+        error instanceof CaseServiceError ? error.code : "UNEXPECTED_ERROR";
+    }
+  },
+);
+
+Then("one trusted reproduction is executed", function (this: ReproForgeWorld) {
+  assert.equal(this.trustedExecutionCount, 1);
+});
+
+Then(
+  "both starts return the same case and job",
+  function (this: ReproForgeWorld) {
+    assert.equal(this.serviceStarts.length, 2);
+    assert.equal(
+      this.serviceStarts[0]?.snapshot.case.id,
+      this.serviceStarts[1]?.snapshot.case.id,
+    );
+    assert.equal(
+      this.serviceStarts[0]?.snapshot.job.id,
+      this.serviceStarts[1]?.snapshot.job.id,
+    );
+  },
+);
+
+Then(
+  "the service case state is {string}",
+  function (this: ReproForgeWorld, state: string) {
+    assert.equal(this.serviceStarts.at(-1)?.snapshot.case.state, state);
+  },
+);
+
+Then(
+  "the service error code is {string}",
+  function (this: ReproForgeWorld, code: string) {
+    assert.equal(this.serviceErrorCode, code);
+  },
+);
 
 Given("the trusted CLI spaces sample", function (this: ReproForgeWorld) {
   this.sample = undefined;

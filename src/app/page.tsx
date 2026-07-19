@@ -1,12 +1,12 @@
 import { connection } from "next/server";
 
 import { getInvestigatorAvailability } from "@/ai/factory";
-import { runTrustedSample } from "@/application/sample-case";
+import { getTrustedWebSample } from "@/application/default-case-service";
 import { ReproForgeApp } from "@/components/reproforge-app";
 
 export default async function Home() {
   await connection();
-  const sample = await runTrustedSample();
+  const sample = await getTrustedWebSample();
   const availability = getInvestigatorAvailability();
 
   return (
