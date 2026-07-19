@@ -1,5 +1,7 @@
 # ReproForge delivery roadmap
 
+Milestones 0–4 below are the completed v1 MVP record. Productization continues in the [v2 roadmap](roadmap-v2.md).
+
 Tasks are grouped into independently reviewable and mergeable milestones. A milestone is complete only when its acceptance evidence is committed and linked from its pull request.
 
 ## Milestone 0 — Specification and delivery contract
