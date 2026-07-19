@@ -25,7 +25,7 @@ export const jobFailureSchema = z
 
 export const reproductionJobSchema = z
   .object({
-    attempt: z.number().int().positive(),
+    attempt: z.number().int().nonnegative().max(100),
     caseId: z.string().min(1),
     createdAt: z.string().datetime(),
     failure: jobFailureSchema.nullable(),
@@ -36,6 +36,13 @@ export const reproductionJobSchema = z
   })
   .strict()
   .superRefine((job, context) => {
+    if (job.state !== "QUEUED" && job.state !== "CANCELLED" && job.attempt < 1) {
+      context.addIssue({
+        code: "custom",
+        message: "An active or terminal job requires an attempt",
+        path: ["attempt"],
+      });
+    }
     if (job.state === "FAILED" && job.failure === null) {
       context.addIssue({
         code: "custom",
@@ -76,7 +83,7 @@ export function createJob(
 ): ReproductionJob {
   const timestamp = at.toISOString();
   return reproductionJobSchema.parse({
-    attempt: 1,
+    attempt: 0,
     caseId,
     createdAt: timestamp,
     failure: null,
@@ -106,6 +113,10 @@ export function transitionJob(
 
   return reproductionJobSchema.parse({
     ...current,
+    attempt:
+      current.state === "QUEUED" && to === "RUNNING"
+        ? current.attempt + 1
+        : current.attempt,
     failure: options.failure ?? null,
     progressPhase: options.progressPhase,
     state: to,

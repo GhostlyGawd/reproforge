@@ -77,13 +77,13 @@ codes rather than silently falling back to memory.
 
 ## Ordered task list
 
-- [ ] `RF-8101` Add failing configuration-contract tests and a strict runtime configuration schema that distinguishes offline, test, preview, and production modes.
-- [ ] `RF-8102` Define provider-neutral `UnitOfWork`, durable repository, artifact, queue, quota, audit, and lease contracts without importing provider SDKs into domain/application modules.
-- [ ] `RF-8103` Write the initial Postgres migration set and migration ledger for every table, index, unique constraint, foreign key, retention field, and optimistic version above.
-- [ ] `RF-8104` Implement the Postgres repositories and transactional idempotent start with tenant-keyed reads and compare-and-swap updates.
-- [ ] `RF-8105` Implement private content-addressed artifact storage, verified round-trips, and deletion semantics.
-- [ ] `RF-8106` Implement the transactional outbox, queue publisher/consumer adapter, lease claim/renew/release, bounded retry, and expired-lease recovery sweep.
-- [ ] `RF-8107` Implement durable quota reservations, cancellation flags, retention scheduling, deletion requests, and append-only audit events.
+- [x] `RF-8101` Add failing configuration-contract tests and a strict runtime configuration schema that distinguishes offline, test, preview, and production modes.
+- [x] `RF-8102` Define provider-neutral `UnitOfWork`, durable repository, artifact, queue, quota, audit, and lease contracts without importing provider SDKs into domain/application modules.
+- [x] `RF-8103` Write the initial Postgres migration set and migration ledger for every table, index, unique constraint, foreign key, retention field, and optimistic version above.
+- [x] `RF-8104` Implement the Postgres repositories and transactional idempotent start with tenant-keyed reads and compare-and-swap updates.
+- [x] `RF-8105` Implement private content-addressed artifact storage, verified round-trips, and deletion semantics.
+- [x] `RF-8106` Implement the transactional outbox, queue publisher/consumer adapter, lease claim/renew/release, bounded retry, and expired-lease recovery sweep.
+- [x] `RF-8107` Implement durable quota reservations, cancellation flags, retention scheduling, deletion requests, and append-only audit events.
 - [ ] `RF-8108` Add liveness, readiness, database, artifact, queue, and runner-capability health contracts with sanitized structured logs and metrics.
 - [ ] `RF-8109` Add backup/export and restore verification for one tenant's complete case/job/evidence/artifact manifest without exposing object bodies in logs.
 - [ ] `RF-8110` Route the trusted fixture through the durable adapters in provider integration tests while preserving its existing browser, REST, MCP, and bundle identity behavior.
