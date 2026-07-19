@@ -1,0 +1,125 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
+  <title id="title">ReproForge trust architecture</title>
+  <desc id="desc">A maintainer uses the Next.js interface and case orchestrator. Offline or GPT-5.6 investigators may propose bounded work. A trusted runner, deterministic oracle and verifier, minimizer, and bundle builder own proof and artifacts. External repository execution is disabled.</desc>
+  <defs>
+    <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#07120f"/>
+      <stop offset="1" stop-color="#0c1e19"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#183129"/>
+      <stop offset="1" stop-color="#10251f"/>
+    </linearGradient>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="12" stdDeviation="16" flood-color="#020605" flood-opacity="0.45"/>
+    </filter>
+    <marker id="arrowGreen" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#69e6ad"/>
+    </marker>
+    <marker id="arrowBlue" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto">
+      <path d="M0 0L10 5L0 10Z" fill="#77b8ff"/>
+    </marker>
+    <style>
+      .eyebrow { font: 700 18px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 3px; fill: #69e6ad; }
+      .title { font: 700 48px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f3faf7; }
+      .subtitle { font: 400 20px Inter, ui-sans-serif, system-ui, sans-serif; fill: #9bb9ad; }
+      .label { font: 700 21px Inter, ui-sans-serif, system-ui, sans-serif; fill: #f3faf7; }
+      .copy { font: 400 15px Inter, ui-sans-serif, system-ui, sans-serif; fill: #a9c2b8; }
+      .micro { font: 700 12px ui-monospace, SFMono-Regular, Consolas, monospace; letter-spacing: 1px; }
+      .flow { fill: none; stroke: #69e6ad; stroke-width: 3; marker-end: url(#arrowGreen); }
+      .proposal { fill: none; stroke: #77b8ff; stroke-width: 3; stroke-dasharray: 9 8; marker-end: url(#arrowBlue); }
+    </style>
+  </defs>
+
+  <rect width="1440" height="900" rx="28" fill="url(#background)"/>
+  <circle cx="1250" cy="80" r="240" fill="#174434" opacity="0.18"/>
+  <circle cx="180" cy="840" r="280" fill="#123e32" opacity="0.22"/>
+
+  <text x="72" y="72" class="eyebrow">REPROFORGE / TRUST ARCHITECTURE</text>
+  <text x="72" y="130" class="title">Proposals are not proof.</text>
+  <text x="72" y="169" class="subtitle">The investigator suggests bounded work; deterministic code owns execution, verification, and export.</text>
+
+  <g transform="translate(1040 64)">
+    <rect width="142" height="34" rx="17" fill="#122b24" stroke="#69e6ad" stroke-opacity="0.5"/>
+    <circle cx="19" cy="17" r="5" fill="#69e6ad"/>
+    <text x="33" y="22" class="micro" fill="#baf7dc">PROOF PATH</text>
+    <rect x="154" width="174" height="34" rx="17" fill="#132638" stroke="#77b8ff" stroke-opacity="0.5"/>
+    <circle cx="173" cy="17" r="5" fill="#77b8ff"/>
+    <text x="187" y="22" class="micro" fill="#b9d9ff">PROPOSAL PATH</text>
+  </g>
+
+  <path class="flow" d="M282 346H354"/>
+  <path class="flow" d="M614 346H704"/>
+  <path class="flow" d="M964 346H1054"/>
+  <path class="proposal" d="M484 520V456"/>
+  <path class="flow" d="M834 456V520"/>
+  <path class="flow" d="M964 607H1010Q1080 607 1080 476V456"/>
+  <path class="flow" d="M484 456V660Q484 705 534 705H1010"/>
+  <path class="flow" d="M1080 688V456"/>
+
+  <g filter="url(#shadow)">
+    <rect x="72" y="278" width="210" height="136" rx="20" fill="url(#card)" stroke="#315c4d"/>
+    <text x="98" y="314" class="micro" fill="#69e6ad">INPUT</text>
+    <text x="98" y="350" class="label">Maintainer + UI</text>
+    <text x="98" y="378" class="copy">Issue evidence</text>
+    <text x="98" y="400" class="copy">Trusted sample action</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="354" y="258" width="260" height="176" rx="20" fill="url(#card)" stroke="#4f8d76"/>
+    <text x="380" y="294" class="micro" fill="#69e6ad">APPLICATION CORE</text>
+    <text x="380" y="330" class="label">Case orchestrator</text>
+    <text x="380" y="360" class="copy">State machine + budget</text>
+    <text x="380" y="384" class="copy">Evidence + hypothesis ledger</text>
+    <text x="380" y="408" class="copy">Terminal outcome ownership</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="704" y="258" width="260" height="176" rx="20" fill="url(#card)" stroke="#69e6ad" stroke-width="2"/>
+    <text x="730" y="294" class="micro" fill="#69e6ad">DETERMINISTIC PROOF</text>
+    <text x="730" y="330" class="label">Oracle + verifier</text>
+    <text x="730" y="360" class="copy">Versioned failure signature</text>
+    <text x="730" y="384" class="copy">Negative control + 3 runs</text>
+    <text x="730" y="408" class="copy">Verification-preserving minimizer</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1054" y="258" width="314" height="176" rx="20" fill="url(#card)" stroke="#69e6ad" stroke-width="2"/>
+    <text x="1080" y="294" class="micro" fill="#69e6ad">PORTABLE OUTPUT</text>
+    <text x="1080" y="330" class="label">Repro Bundle 1.1</text>
+    <text x="1080" y="360" class="copy">One-command reproduction</text>
+    <text x="1080" y="384" class="copy">Provenance lock + redacted logs</text>
+    <text x="1080" y="408" class="copy">Hashable, offline-validatable files</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="354" y="520" width="260" height="168" rx="20" fill="#102538" stroke="#477da9"/>
+    <text x="380" y="556" class="micro" fill="#77b8ff">BOUNDED PROPOSALS</text>
+    <text x="380" y="592" class="label">Investigator interface</text>
+    <text x="380" y="622" class="copy">Deterministic offline mode</text>
+    <text x="380" y="646" class="copy">Optional GPT-5.6 Responses mode</text>
+    <text x="380" y="670" class="copy">Strict, non-executing tools</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="704" y="520" width="260" height="168" rx="20" fill="url(#card)" stroke="#4f8d76"/>
+    <text x="730" y="556" class="micro" fill="#69e6ad">EXECUTION BOUNDARY</text>
+    <text x="730" y="592" class="label">Runner interface</text>
+    <text x="730" y="622" class="copy">Bundled fixture allowlist</text>
+    <rect x="730" y="645" width="208" height="27" rx="13.5" fill="#3a191a" stroke="#b95558"/>
+    <text x="745" y="663" class="micro" fill="#ffb0b2">EXTERNAL: DISABLED</text>
+  </g>
+
+  <g filter="url(#shadow)">
+    <rect x="1010" y="520" width="358" height="168" rx="20" fill="url(#card)" stroke="#4f8d76"/>
+    <text x="1036" y="556" class="micro" fill="#69e6ad">AUDIT TRAIL</text>
+    <text x="1036" y="592" class="label">Evidence + artifact ledger</text>
+    <text x="1036" y="622" class="copy">Sources, observations, unknowns</text>
+    <text x="1036" y="646" class="copy">Commands, results, decisions, hashes</text>
+    <text x="1036" y="670" class="copy">No hidden model confidence gate</text>
+  </g>
+
+  <rect x="72" y="790" width="1296" height="58" rx="16" fill="#0b1915" stroke="#294a3f"/>
+  <text x="98" y="825" class="micro" fill="#9bb9ad">INVARIANT</text>
+  <text x="220" y="826" class="copy" fill="#e7f5ef">A case is VERIFIED only when the versioned oracle matches every clean candidate run and does not match the control.</text>
+</svg>

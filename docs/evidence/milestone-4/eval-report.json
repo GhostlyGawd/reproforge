@@ -1,0 +1,61 @@
+{
+  "accuracy": 1,
+  "bundleCompleteness": 1,
+  "cases": [
+    {
+      "actualStatus": "BLOCKED",
+      "category": "misleading",
+      "expectedStatus": "BLOCKED",
+      "id": "misleading-control",
+      "passed": true,
+      "reason": "The failure oracle also matched the negative control.",
+      "recordedRunDurationMs": 15,
+      "repeatability": 1
+    },
+    {
+      "actualStatus": "NOT_REPRODUCED",
+      "category": "negative",
+      "expectedStatus": "NOT_REPRODUCED",
+      "id": "negative-no-match",
+      "passed": true,
+      "reason": "The oracle matched none of 3 candidate runs.",
+      "recordedRunDurationMs": 11,
+      "repeatability": 0
+    },
+    {
+      "actualStatus": "VERIFIED",
+      "category": "positive",
+      "expectedStatus": "VERIFIED",
+      "id": "positive-deterministic",
+      "passed": true,
+      "reason": "The oracle matched all 3 clean candidate runs and did not match the control.",
+      "recordedRunDurationMs": 18,
+      "repeatability": 1
+    },
+    {
+      "actualStatus": "UNSTABLE",
+      "category": "unstable",
+      "expectedStatus": "UNSTABLE",
+      "id": "unstable-intermittent",
+      "passed": true,
+      "reason": "The oracle matched 2 of 3 candidate runs.",
+      "recordedRunDurationMs": 14,
+      "repeatability": 0.6666666666666666
+    }
+  ],
+  "failed": 0,
+  "falseNegatives": 0,
+  "falsePositives": 0,
+  "meanRepeatability": 0.6667,
+  "passed": 4,
+  "schemaVersion": "1.0",
+  "statusDistribution": {
+    "VERIFIED": 1,
+    "UNSTABLE": 1,
+    "NOT_REPRODUCED": 1,
+    "BLOCKED": 1
+  },
+  "suite": "reproforge-core",
+  "total": 4,
+  "totalRecordedRunDurationMs": 58
+}

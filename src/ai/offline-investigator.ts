@@ -40,8 +40,16 @@ export class OfflineInvestigator implements Investigator {
           expectedSignal: "The spaced path fails while the control succeeds.",
           falsificationCondition: "Both recipes produce the same successful result.",
           id: "hypothesis-offline-quoting",
+          priority: 1,
           statement: "The configuration path is not preserved as one argument.",
           status: "proposed",
+          statusHistory: [
+            {
+              reason: "Recorded by the deterministic offline investigator.",
+              sequence: 0,
+              status: "proposed",
+            },
+          ],
         },
       ],
       mode: "offline",

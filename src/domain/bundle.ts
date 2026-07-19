@@ -3,6 +3,7 @@ import { createHash } from "node:crypto";
 import { z } from "zod";
 
 import { hypothesisSchema } from "./evidence";
+import { minimizationResultSchema } from "./minimization";
 import { failureOracleSchema } from "./oracle";
 import { runResultSchema } from "./run";
 import {
@@ -13,9 +14,15 @@ import {
 const bundleLockSchema = z
   .object({
     command: z.string().min(1),
+    dependencyLockHash: z.string().regex(/^[a-f0-9]{64}$/),
+    environment: z.record(z.string(), z.string()),
     environmentHash: z.string().min(1),
+    oracleId: z.string().min(1),
+    oracleVersion: z.number().int().positive(),
     packageManager: z.string().min(1),
     repository: z.string().min(1),
+    repositoryTreeHash: z.string().regex(/^[a-f0-9]{64}$/),
+    reproForgeVersion: z.string().regex(/^\d+\.\d+\.\d+$/),
     revision: z.string().min(1),
     runner: z.string().min(1),
     runtime: z.string().min(1),
@@ -29,10 +36,11 @@ export const reproBundleSchema = z
     generatedAt: z.string().datetime(),
     hypothesisLedger: z.array(hypothesisSchema),
     lock: bundleLockSchema,
+    minimization: minimizationResultSchema,
     oracle: failureOracleSchema,
     reproductionPatch: z.string(),
     runLog: z.array(runResultSchema),
-    schemaVersion: z.literal("1.0"),
+    schemaVersion: z.literal("1.1"),
     summary: verificationSummarySchema,
   })
   .strict()
@@ -58,6 +66,20 @@ export const reproBundleSchema = z
         path: ["summary", "oracleVersion"],
       });
     }
+    if (bundle.lock.oracleId !== bundle.oracle.id) {
+      context.addIssue({
+        code: "custom",
+        message: "Lock oracle ID must match bundle oracle ID",
+        path: ["lock", "oracleId"],
+      });
+    }
+    if (bundle.lock.oracleVersion !== bundle.oracle.version) {
+      context.addIssue({
+        code: "custom",
+        message: "Lock oracle version must match bundle oracle version",
+        path: ["lock", "oracleVersion"],
+      });
+    }
   });
 
 export type ReproBundle = z.infer<typeof reproBundleSchema>;
@@ -70,6 +92,7 @@ export const REQUIRED_BUNDLE_FILES = [
   "reproduction.patch",
   "artifacts/redacted-run-log.jsonl",
   "artifacts/hypothesis-ledger.json",
+  "artifacts/minimization.json",
   "artifacts/verification-summary.json",
 ] as const;
 
@@ -148,7 +171,7 @@ export function redactSecrets<T>(value: T, secrets: string[]): T {
 export async function createBundle(input: ReproBundleInput): Promise<ReproBundle> {
   const base = {
     ...input,
-    schemaVersion: "1.0" as const,
+    schemaVersion: "1.1" as const,
   };
   return reproBundleSchema.parse({
     ...base,
@@ -191,6 +214,7 @@ export function materializeBundle(bundle: ReproBundle): Record<string, string> {
       .map((run) => JSON.stringify(run))
       .join("\n"),
     "artifacts/hypothesis-ledger.json": JSON.stringify(parsed.hypothesisLedger, null, 2),
+    "artifacts/minimization.json": JSON.stringify(parsed.minimization, null, 2),
     "artifacts/verification-summary.json": JSON.stringify(parsed.summary, null, 2),
   };
 }
@@ -218,7 +242,15 @@ export function validateMaterializedBundle(
   };
 
   parse("failure-signature.json", failureOracleSchema);
+  parse(
+    "reproforge.lock.json",
+    bundleLockSchema.extend({
+      bundleHash: z.string().regex(/^[a-f0-9]{64}$/),
+      schemaVersion: z.literal("1.1"),
+    }),
+  );
   parse("artifacts/hypothesis-ledger.json", z.array(hypothesisSchema));
+  parse("artifacts/minimization.json", minimizationResultSchema);
   parse("artifacts/verification-summary.json", verificationSummarySchema);
 
   if (!(files["REPRO.md"] ?? "").includes("## Run")) {

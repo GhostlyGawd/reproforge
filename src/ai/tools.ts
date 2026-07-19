@@ -12,6 +12,7 @@ export const recordHypothesisArgumentsSchema = z
     expectedSignal: z.string().min(1),
     falsificationCondition: z.string().min(1),
     id: z.string().min(1),
+    priority: z.number().int().min(1).max(5),
     statement: z.string().min(1),
   })
   .strict();
@@ -63,6 +64,7 @@ export const investigatorTools = [
       type: "object",
       properties: {
         id: { type: "string", minLength: 1 },
+        priority: { type: "integer", minimum: 1, maximum: 5 },
         statement: { type: "string", minLength: 1 },
         evidenceIds: {
           type: "array",
@@ -74,6 +76,7 @@ export const investigatorTools = [
       },
       required: [
         "id",
+        "priority",
         "statement",
         "evidenceIds",
         "expectedSignal",

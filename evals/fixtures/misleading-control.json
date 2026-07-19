@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "id": "misleading-control",
+  "category": "misleading",
+  "description": "Candidate failures look deterministic, but the same oracle also matches the negative control.",
+  "expectedStatus": "BLOCKED",
+  "oracle": {
+    "id": "eval-exit-one",
+    "version": 1,
+    "root": { "type": "exit_code", "expected": 1 }
+  },
+  "control": {
+    "id": "misleading-control-run",
+    "command": "control",
+    "durationMs": 3,
+    "environmentHash": "eval-node24-v1",
+    "exitCode": 1,
+    "stderr": "ENOENT",
+    "stdout": ""
+  },
+  "candidates": [
+    { "id": "misleading-1", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "ENOENT", "stdout": "" },
+    { "id": "misleading-2", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "ENOENT", "stdout": "" },
+    { "id": "misleading-3", "command": "reproduce", "durationMs": 4, "environmentHash": "eval-node24-v1", "exitCode": 1, "stderr": "ENOENT", "stdout": "" }
+  ]
+}

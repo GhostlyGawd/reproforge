@@ -1,9 +1,9 @@
 # ReproForge product and technical specification
 
-**Status:** Approved for implementation  
-**Version:** 1.0  
-**Date:** 2026-07-19  
-**Track:** OpenAI Build Week — Developer Tools
+- **Status:** Implemented for the trusted-fixture MVP
+- **Version:** 1.1
+- **Date:** 2026-07-19
+- **Track:** OpenAI Build Week — Developer Tools
 
 ## 1. Product contract
 
@@ -40,8 +40,8 @@ The core job is:
 | Primary surface | Local-first Next.js App Router application |
 | Supported input | Bundled trusted JS/TS fixture for the complete demo |
 | External repositories | Disabled until an isolated runner is configured |
-| Package managers | npm and pnpm detection; bundled demo uses npm |
-| Execution platform | Runner interface with trusted-fixture and Docker-compatible adapters |
+| Package managers | Bundled demo pins npm; automatic repository detection is deferred |
+| Execution platform | Runner interface with a trusted-fixture adapter and fail-closed external adapter |
 | Model | `gpt-5.6-sol` through the Responses API |
 | Model reasoning | Explicit `medium` baseline, measured before tuning |
 | Offline behavior | Deterministic investigator provides the full sample journey without credentials |
@@ -112,6 +112,7 @@ repro-bundle/
   artifacts/
     redacted-run-log.jsonl
     hypothesis-ledger.json
+    minimization.json
     verification-summary.json
 ```
 

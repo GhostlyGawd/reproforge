@@ -41,3 +41,9 @@ Feature: Evidence-backed reproduction outcomes
     When ReproForge completes the sample investigation
     Then the case state is "VERIFIED"
     And the Repro Bundle validates independently
+
+  Scenario: An over-reduced reproduction is rejected
+    Given a verified baseline reproduction
+    And a proposed reduction whose control matches the failure
+    When ReproForge evaluates the proposed reduction
+    Then the baseline is retained

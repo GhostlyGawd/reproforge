@@ -19,11 +19,16 @@ export function HypothesisLedger({ hypotheses }: HypothesisLedgerProps) {
       <ol className="hypothesis-list">
         {hypotheses.map((hypothesis, index) => (
           <li className="hypothesis-item" key={hypothesis.id}>
-            <span className="hypothesis-number">H{index + 1}</span>
+            <span className="hypothesis-number">
+              H{index + 1} · P{hypothesis.priority}
+            </span>
             <div>
               <p className="hypothesis-statement">{hypothesis.statement}</p>
               <p className="hypothesis-signal">
                 Falsified when: {hypothesis.falsificationCondition}
+              </p>
+              <p className="hypothesis-signal">
+                Latest: {hypothesis.statusHistory.at(-1)?.reason}
               </p>
             </div>
             <StatusPill

@@ -7,6 +7,8 @@ import {
   CircleX,
   CircleDot,
   Code2,
+  Fingerprint,
+  Gauge,
   GitBranch,
   LoaderCircle,
   LockKeyhole,
@@ -202,6 +204,25 @@ export function ReproForgeApp({
                   </dt>
                   <dd>
                     Offline sample · GPT-5.6 {liveInvestigatorAvailable ? "available" : "not configured"}
+                  </dd>
+                </div>
+                <div className="context-row">
+                  <dt>
+                    <Gauge size={15} aria-hidden="true" />
+                    <span>Budget</span>
+                  </dt>
+                  <dd>
+                    {sample.budget.maxToolCalls} tool calls · {sample.budget.requiredRuns} clean
+                    runs
+                  </dd>
+                </div>
+                <div className="context-row">
+                  <dt>
+                    <Fingerprint size={15} aria-hidden="true" />
+                    <span>Failure oracle</span>
+                  </dt>
+                  <dd>
+                    {sample.oracle.id} v{sample.oracle.version} · exit 1 + ENOENT
                   </dd>
                 </div>
               </dl>
