@@ -1,8 +1,8 @@
-# MVP completion audit
+# Trusted-slice completion audit
 
 - **Audit date:** 2026-07-19
-- **Scope:** approved trusted-fixture MVP in product specification 1.1
-- **Verification baseline:** 46 Vitest tests, 7 BDD scenarios / 32 steps, 8 Playwright tests, production build, and 4/4 deterministic eval fixtures
+- **Scope:** approved trusted-fixture MVP plus the v2 REST and MCP adapter slices
+- **Verification baseline:** 70 Vitest tests, 13 BDD scenarios / 73 steps, 16 Playwright tests, production build, and 4/4 deterministic eval fixtures
 
 “Satisfied” below means satisfied for the explicitly approved bundled-fixture scope. It does not imply arbitrary-repository support or production readiness.
 
@@ -22,6 +22,9 @@
 | RF-10 Investigation UI | Satisfied | The browser shows phase, classifications, prioritized hypothesis history, experiments, budget, oracle, three runs, control, minimization, terminal result, command, and bundle. Playwright covers desktop, mobile, keyboard, reduced motion, cancellation, and Axe. |
 | RF-11 Offline and live investigators | Satisfied with noted verification gap | Offline mode is deterministic and fully tested. The explicit GPT-5.6 Responses adapter and recorded transport contracts are tested without credentials. A live-key smoke was not run because no key was present. |
 | RF-12 Evaluation mode | Satisfied | Strict JSON fixtures and `npm run eval` measure status accuracy, false positives/negatives, repeatability, recorded duration, and bundle completeness across positive, negative, unstable, and misleading cases. |
+| RF-13 Headless case/job service | Satisfied for process-local scope | Browser and REST v2 share `CaseService`; caller-scoped idempotency, conflicts, reads, jobs, export, sanitized failures, and serialization are contract- and property-tested. |
+| RF-14 ChatGPT MCP adapter | Satisfied for local trusted scope | Stateless Streamable HTTP exposes exactly three closed, annotated tools. Official SDK clients prove the no-key start/retry/read/export journey, and the independent MCP Inspector confirms discovery. |
+| RF-15 Embedded MCP App | Satisfied for local trusted scope | The exact self-contained resource uses the MCP Apps bridge, closed CSP, escaped DOM rendering, read/export controls, responsive layouts, 100 hostile-payload properties, Playwright, and Axe. |
 
 ## Success criteria
 
@@ -32,7 +35,7 @@
 | Negative control | Pass: `0` oracle matches. |
 | Required bundle files | Pass: `8 / 8`, benchmark completeness `1.0`. |
 | Property-test depth | Pass: every property declares at least 100 generated runs; high-value serialization/redaction properties use 300 and minimization uses 250. |
-| Critical BDD scenarios | Pass: 7 scenarios and 32 steps. |
+| Critical BDD scenarios | Pass: 13 scenarios and 73 steps. |
 | Judge/sample setup under five minutes | Pass by documented path: Node + `npm ci` + `npm run dev`, with no key or Docker. Environment download speed remains external. |
 | Critical automated accessibility findings | Pass: full Axe analysis returns zero violations on the verified result. |
 
@@ -49,10 +52,11 @@
 
 - Arbitrary repository execution remains unavailable until an isolated runner exists.
 - No live OpenAI smoke test was performed during this milestone; recorded contracts and offline behavior are the committed evidence.
+- No ChatGPT developer-mode smoke or local plugin wrapper was completed because a reachable HTTPS URL and real account-created `plugin_asdk_app…` ID were unavailable. The MCP implementation and evidence do not substitute a host claim.
 - The four synthetic eval fixtures are regression coverage, not an external benchmark.
-- No deployment, authentication, persistence, release, package publication, license, or service-level promise exists.
+- No deployment, tenant authentication, durable persistence, plugin/publication, release, package publication, license, or service-level promise exists.
 - Minimization is local to supplied proposals and does not claim global minimality.
 
 ## Audit decision
 
-The trusted-fixture MVP satisfies its specification and proof gates when the milestone branch passes CI and is merged. Deferred capabilities remain visibly fail-closed and do not weaken the verified sample claim.
+The trusted-fixture MVP and local v2 REST/MCP slices satisfy their specification and proof gates when the milestone branch passes CI and is merged. Deferred account, hosting, identity, persistence, and execution capabilities remain visibly fail-closed and do not weaken the verified sample claim.

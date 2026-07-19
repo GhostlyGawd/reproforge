@@ -1,10 +1,11 @@
 # ReproForge v2 product and platform specification
 
 - **Status:** Approved for implementation
-- **Version:** 2.0-draft.1
+- **Version:** 2.0-draft.2
 - **Date:** 2026-07-19
 - **Decision:** [API-first core with plugin-first distribution](adr/0001-api-first-plugin-first.md)
 - **Delivery plan:** [v2 roadmap](roadmap-v2.md)
+- **Implementation:** trusted REST and MCP slices complete through Milestone 7; account-side developer-mode smoke and production boundaries remain gated
 
 ## 1. Product promise
 
@@ -163,11 +164,11 @@ Responses use a versioned envelope with `data`, `error`, `requestId`, and `schem
 
 | Tool | Behavior | Annotations |
 |---|---|---|
-| `start_reproduction` | Start/reuse the trusted sample job | `readOnlyHint: false`, `destructiveHint: false`, `openWorldHint: false` |
-| `get_reproduction` | Read a case/job proof snapshot | `readOnlyHint: true`, `destructiveHint: false`, `openWorldHint: false` |
-| `export_repro_bundle` | Read the validated bundle for a verified case | `readOnlyHint: true`, `destructiveHint: false`, `openWorldHint: false` |
+| `start_reproduction` | Start/reuse the trusted sample job | `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
+| `get_reproduction` | Read a case/job proof snapshot | `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
+| `export_repro_bundle` | Read the validated bundle for a verified case | `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
 
-Each tool has one job, strict input and output schemas, bounded descriptions, machine-readable identifiers, and accurate status text. Start is idempotent because hosts may retry calls. All three tools return useful text and `structuredContent` without a widget. `start_reproduction` and `get_reproduction` point to `ui://widget/reproforge-case.html` for the richer view.
+Each tool has one job, strict input and output schemas, bounded descriptions, machine-readable identifiers, and accurate status text. Start is idempotent because hosts may retry calls. All three tools return useful text and `structuredContent` without a widget. `start_reproduction` and `get_reproduction` point to `ui://reproforge/proof-v1.html` for the richer view.
 
 Model-readable `structuredContent` contains only sanitized case state, proof summaries, and reusable identifiers. Rich widget-only display data may use result `_meta`, but secrets and undisclosed personal data are forbidden there too.
 

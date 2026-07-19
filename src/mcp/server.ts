@@ -89,7 +89,7 @@ function appMeta(options: {
     ...(options.resource
       ? {
           "openai/outputTemplate": REPROFORGE_WIDGET_URI,
-          "openai/widgetAccessible": options.visibility.includes("app"),
+          "openai/widgetAccessible": true,
         }
       : {}),
     "openai/toolInvocation/invoked": options.invoked,

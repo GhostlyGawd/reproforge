@@ -111,6 +111,7 @@ describe("ReproForge MCP app contract", () => {
       expect(serializedInputs).not.toContain("api_key");
       expect(serializedInputs).not.toContain("openai");
       expect(listed.tools.every((tool) => tool._meta?.securitySchemes)).toBe(true);
+      expect(listed.tools[0]?._meta?.["openai/widgetAccessible"]).toBe(true);
     } finally {
       await connection.close();
     }

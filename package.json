@@ -16,7 +16,7 @@
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build",
-    "verify": "npm run check && npm run eval && npm run test:browser"
+    "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser"
   },
   "engines": {
     "node": ">=20.9"

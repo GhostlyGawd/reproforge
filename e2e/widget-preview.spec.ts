@@ -35,3 +35,33 @@ test("keeps the proof card legible in a narrow ChatGPT container", async ({ page
   );
   expect(hasNoHorizontalOverflow).toBe(true);
 });
+
+test("remains usable at 200 percent zoom", async ({ page }) => {
+  await page.setViewportSize({ width: 780, height: 900 });
+  await page.goto("/widget-preview");
+  await page.evaluate(() => {
+    document.documentElement.style.zoom = "2";
+  });
+
+  await expect(page.getByRole("heading", { name: "Verified reproduction" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Export bundle" })).toBeVisible();
+  const hasNoHorizontalOverflow = await page.evaluate(
+    () => document.documentElement.scrollWidth <= document.documentElement.clientWidth,
+  );
+  expect(hasNoHorizontalOverflow).toBe(true);
+});
+
+test("provides visible keyboard focus for widget actions", async ({ page }) => {
+  await page.goto("/widget-preview");
+
+  await page.keyboard.press("Tab");
+  const refresh = page.getByRole("button", { name: "Refresh proof" });
+  await expect(refresh).toBeFocused();
+  const outlineWidth = await refresh.evaluate((element) =>
+    Number.parseFloat(getComputedStyle(element).outlineWidth),
+  );
+  expect(outlineWidth).toBeGreaterThanOrEqual(3);
+
+  await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: "Export bundle" })).toBeFocused();
+});
