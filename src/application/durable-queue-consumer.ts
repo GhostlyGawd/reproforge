@@ -16,7 +16,7 @@ export type DurableWorker = Readonly<{
 
 export type DurableQueueConsumeResult = Readonly<{
   attempt?: number;
-  outcome: "completed" | "exhausted" | "ignored" | "requeued";
+  outcome: "cancelled" | "completed" | "exhausted" | "ignored" | "requeued";
 }>;
 
 type DurableQueueConsumerDependencies = Readonly<{
@@ -66,6 +66,12 @@ export class DurableQueueConsumer {
     if (!record || record.caseId !== message.caseId) {
       throw new Error("Claimed queue work was unavailable");
     }
+    if (await this.dependencies.repository.isCancellationRequested(lease)) {
+      await this.dependencies.repository.cancelLease(lease, {
+        at: this.dependencies.clock.now().toISOString(),
+      });
+      return { attempt: lease.attempt, outcome: "cancelled" };
+    }
 
     let completed: DurableReproductionRecord;
     try {
@@ -76,6 +82,12 @@ export class DurableQueueConsumer {
       });
     } catch {
       const failedAt = this.dependencies.clock.now();
+      if (await this.dependencies.repository.isCancellationRequested(lease)) {
+        await this.dependencies.repository.cancelLease(lease, {
+          at: failedAt.toISOString(),
+        });
+        return { attempt: lease.attempt, outcome: "cancelled" };
+      }
       const disposition = await this.dependencies.repository.failLease(lease, {
         at: failedAt.toISOString(),
         code: "DURABLE_WORKER_FAILED",
@@ -85,6 +97,12 @@ export class DurableQueueConsumer {
       return { attempt: lease.attempt, outcome: disposition };
     }
 
+    if (await this.dependencies.repository.isCancellationRequested(lease)) {
+      await this.dependencies.repository.cancelLease(lease, {
+        at: this.dependencies.clock.now().toISOString(),
+      });
+      return { attempt: lease.attempt, outcome: "cancelled" };
+    }
     await this.dependencies.repository.completeLease(lease, completed);
     return { attempt: lease.attempt, outcome: "completed" };
   }

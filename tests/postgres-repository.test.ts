@@ -93,7 +93,9 @@ function startInput(value: DurableReproductionRecord): DurableStartInput {
     },
     quotaReservation: {
       amount: 1,
+      caseId: value.caseId,
       expiresAt: "2026-07-20T20:10:00.000Z",
+      jobId: value.jobId,
       reservationId: `quota_${value.caseId}`,
       resource: "active-jobs",
       tenantId: value.tenantId,

@@ -36,7 +36,7 @@ export const reproductionJobSchema = z
   })
   .strict()
   .superRefine((job, context) => {
-    if (job.state !== "QUEUED" && job.attempt < 1) {
+    if (job.state !== "QUEUED" && job.state !== "CANCELLED" && job.attempt < 1) {
       context.addIssue({
         code: "custom",
         message: "An active or terminal job requires an attempt",

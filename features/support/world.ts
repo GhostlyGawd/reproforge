@@ -22,6 +22,10 @@ import type {
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
 import type { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
+import type {
+  PostgresTenantDataRetention,
+  RetentionDeletionResult,
+} from "@/infrastructure/retention/postgres-tenant-data-retention";
 import type { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
 
 export class ReproForgeWorld extends World {
@@ -59,6 +63,8 @@ export class ReproForgeWorld extends World {
   durableQueueExecutions = 0;
   durableQueueOutcomes: string[] = [];
   durableRecoverySummaries: LeaseRecoverySummary[] = [];
+  durableRetention?: PostgresTenantDataRetention;
+  durableRetentionResult?: RetentionDeletionResult | null;
 }
 
 setWorldConstructor(ReproForgeWorld);

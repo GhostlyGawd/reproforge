@@ -120,13 +120,13 @@ describe("Postgres job leases and recovery", () => {
         at: "2026-07-19T20:02:00.000Z",
         limit: 10,
       }),
-    ).resolves.toEqual({ exhausted: 0, requeued: 1 });
+    ).resolves.toEqual({ cancelled: 0, exhausted: 0, requeued: 1 });
     await expect(
       repository.recoverExpiredLeases({
         at: "2026-07-19T20:02:00.000Z",
         limit: 10,
       }),
-    ).resolves.toEqual({ exhausted: 0, requeued: 0 });
+    ).resolves.toEqual({ cancelled: 0, exhausted: 0, requeued: 0 });
 
     const jobs = await database.query<{
       attempt: number;
@@ -273,8 +273,8 @@ describe("Postgres job leases and recovery", () => {
       });
       expect(result).toEqual(
         attempt < 3
-          ? { exhausted: 0, requeued: 1 }
-          : { exhausted: 1, requeued: 0 },
+          ? { cancelled: 0, exhausted: 0, requeued: 1 }
+          : { cancelled: 0, exhausted: 1, requeued: 0 },
       );
     }
 

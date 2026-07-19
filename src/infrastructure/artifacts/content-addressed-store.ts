@@ -7,7 +7,10 @@ import {
   type ArtifactStore,
   type TenantScope,
 } from "@/application/ports/production";
-import type { PostgresDatabase } from "@/infrastructure/postgres/database";
+import {
+  runSerializableTransaction,
+  type PostgresDatabase,
+} from "@/infrastructure/postgres/database";
 
 import type {
   PrivateBlobClient,
@@ -34,7 +37,8 @@ export class ArtifactStoreError extends Error {
     readonly code:
       | "ARTIFACT_INTEGRITY_MISMATCH"
       | "ARTIFACT_PENDING"
-      | "ARTIFACT_PROVIDER_UNAVAILABLE",
+      | "ARTIFACT_PROVIDER_UNAVAILABLE"
+      | "ARTIFACT_TENANT_UNAVAILABLE",
     message: string,
     readonly retryable: boolean,
   ) {
@@ -153,29 +157,45 @@ export class ContentAddressedArtifactStore implements ArtifactStore {
     descriptor: ArtifactDescriptor;
   }): Promise<ArtifactDescriptor> {
     const input = validatePut(rawInput);
-    const inserted = await this.database.query<ArtifactRow>(
-      `INSERT INTO artifacts (
-         tenant_id, id, case_id, kind, sha256, byte_count, object_key,
-         access_class, retention_class, created_at, retention_until,
-         status, version, updated_at
-       ) VALUES (
-         $1, $2, $3, $4, $5, $6, $7,
-         'PRIVATE', $8, $9, $10, 'PENDING', 1, $9
-       )
-       ON CONFLICT (tenant_id, case_id, kind, sha256) DO NOTHING
-       RETURNING *`,
-      [
-        input.descriptor.tenantId,
-        input.descriptor.artifactId,
-        input.descriptor.caseId,
-        input.descriptor.kind,
-        input.descriptor.sha256,
-        input.descriptor.byteCount,
-        input.descriptor.objectKey,
-        this.retentionClass(input.descriptor.kind),
-        input.descriptor.createdAt,
-        input.descriptor.retentionUntil,
-      ],
+    const inserted = await runSerializableTransaction(
+      this.database,
+      async (executor) => {
+        const tenant = await executor.query<{ status: string }>(
+          "SELECT status FROM tenants WHERE id = $1 FOR UPDATE",
+          [input.descriptor.tenantId],
+        );
+        if (tenant.rows[0]?.status !== "ACTIVE") {
+          throw new ArtifactStoreError(
+            "ARTIFACT_TENANT_UNAVAILABLE",
+            "The tenant cannot accept artifact writes",
+            false,
+          );
+        }
+        return executor.query<ArtifactRow>(
+          `INSERT INTO artifacts (
+             tenant_id, id, case_id, kind, sha256, byte_count, object_key,
+             access_class, retention_class, created_at, retention_until,
+             status, version, updated_at
+           ) VALUES (
+             $1, $2, $3, $4, $5, $6, $7,
+             'PRIVATE', $8, $9, $10, 'PENDING', 1, $9
+           )
+           ON CONFLICT (tenant_id, case_id, kind, sha256) DO NOTHING
+           RETURNING *`,
+          [
+            input.descriptor.tenantId,
+            input.descriptor.artifactId,
+            input.descriptor.caseId,
+            input.descriptor.kind,
+            input.descriptor.sha256,
+            input.descriptor.byteCount,
+            input.descriptor.objectKey,
+            this.retentionClass(input.descriptor.kind),
+            input.descriptor.createdAt,
+            input.descriptor.retentionUntil,
+          ],
+        );
+      },
     );
 
     let row: ArtifactRow | null | undefined = inserted.rows[0];

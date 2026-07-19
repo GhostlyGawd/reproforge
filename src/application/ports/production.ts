@@ -142,7 +142,9 @@ export const auditEventSchema = z
 export const quotaReservationSchema = z
   .object({
     amount: z.number().int().positive(),
+    caseId: opaqueIdSchema,
     expiresAt: timestampSchema,
+    jobId: opaqueIdSchema,
     reservationId: opaqueIdSchema,
     resource: z.enum([
       "active-jobs",
@@ -185,11 +187,18 @@ export type LeaseFailure = Readonly<{
   retryable: boolean;
 }>;
 
-export type LeaseFailureDisposition = "exhausted" | "requeued";
+export type LeaseFailureDisposition = "cancelled" | "exhausted" | "requeued";
 
 export type LeaseRecoverySummary = Readonly<{
+  cancelled: number;
   exhausted: number;
   requeued: number;
+}>;
+
+export type CancellationRequestResult = Readonly<{
+  caseId: string;
+  changed: boolean;
+  disposition: "cancelled" | "requested";
 }>;
 
 export type OutboxClaim = Readonly<{
@@ -249,7 +258,16 @@ export interface DurableReproductionRepository {
     at: string;
     limit: number;
   }): Promise<LeaseRecoverySummary>;
-  requestCancellation(scope: TenantScope, jobId: string): Promise<boolean>;
+  requestCancellation(
+    scope: TenantScope,
+    jobId: string,
+    at: string,
+  ): Promise<CancellationRequestResult | null>;
+  isCancellationRequested(lease: JobLease): Promise<boolean>;
+  cancelLease(
+    lease: JobLease,
+    input: { at: string },
+  ): Promise<DurableReproductionRecord>;
 }
 
 export interface ArtifactStore {
@@ -299,6 +317,7 @@ export interface QuotaLedger {
     actualAmount: number,
   ): Promise<void>;
   release(tenantId: string, reservationId: string): Promise<void>;
+  releaseForJob(tenantId: string, jobId: string, at: string): Promise<number>;
 }
 
 export interface AuditSink {

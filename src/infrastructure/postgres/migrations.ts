@@ -69,6 +69,10 @@ const migrationSources = [
     id: "0004_queue_delivery",
     url: new URL("./migrations/0004_queue_delivery.sql", import.meta.url),
   },
+  {
+    id: "0005_governance_lifecycle",
+    url: new URL("./migrations/0005_governance_lifecycle.sql", import.meta.url),
+  },
 ] as const;
 
 export function definePostgresMigration(

@@ -59,22 +59,33 @@ describe("durable queue delivery properties", () => {
               execute: async ({ record: claimed }) => {
                 executions += 1;
                 const at = new Date("2026-07-19T20:00:01.000Z");
+                const completedAt = new Date("2026-07-19T20:00:02.000Z");
                 return {
                   ...claimed,
                   snapshot: {
                     ...claimed.snapshot,
                     case: transitionCase(
-                      claimed.snapshot.case,
-                      "CANCELLED",
+                      transitionCase(
+                        claimed.snapshot.case,
+                        "INGESTING",
+                        "generated property execution",
+                        at,
+                      ),
+                      "BLOCKED",
                       "generated property completion",
-                      at,
+                      completedAt,
                     ),
-                    job: transitionJob(claimed.snapshot.job, "CANCELLED", {
-                      at,
-                      progressPhase: "CANCELLED",
+                    job: transitionJob(claimed.snapshot.job, "FAILED", {
+                      at: completedAt,
+                      failure: {
+                        code: "GENERATED_TERMINAL",
+                        message: "The generated worker stopped safely",
+                        retryable: false,
+                      },
+                      progressPhase: "BLOCKED",
                     }),
                   },
-                  updatedAt: at.toISOString(),
+                  updatedAt: completedAt.toISOString(),
                 };
               },
             },
@@ -103,7 +114,7 @@ describe("durable queue delivery properties", () => {
             record.caseId,
           );
           expect(stored).toMatchObject({
-            snapshot: { job: { attempt: 1, state: "CANCELLED" } },
+            snapshot: { job: { attempt: 1, state: "FAILED" } },
           });
         },
       ),

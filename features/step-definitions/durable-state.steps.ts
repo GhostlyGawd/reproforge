@@ -10,6 +10,7 @@ import {
   type DurableStartInput,
 } from "@/application/durable-start";
 import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
+import { requestDurableCancellation } from "@/application/durable-cancellation";
 import type { DurableReproductionRecord } from "@/application/ports/production";
 import { createCase, transitionCase } from "@/domain/case";
 import { createJob, transitionJob } from "@/domain/job";
@@ -19,6 +20,7 @@ import {
   PostgresDurableReproductionRepository,
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
+import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
 import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
@@ -76,7 +78,9 @@ function bddStartInput(record: DurableReproductionRecord): DurableStartInput {
     },
     quotaReservation: {
       amount: 1,
+      caseId: record.caseId,
       expiresAt: "2026-07-20T20:00:00.000Z",
+      jobId: record.jobId,
       reservationId: `quota_${record.caseId}`,
       resource: "active-jobs",
       tenantId: record.tenantId,
@@ -324,22 +328,33 @@ When(
         execute: async ({ record }) => {
           this.durableQueueExecutions += 1;
           const completedAt = new Date("2026-07-19T20:00:01.000Z");
+          const blockedCase = transitionCase(
+            transitionCase(
+              record.snapshot.case,
+              "INGESTING",
+              "BDD worker started",
+              completedAt,
+            ),
+            "BLOCKED",
+            "BDD terminal completion",
+            new Date("2026-07-19T20:00:02.000Z"),
+          );
           return {
             ...record,
             snapshot: {
               ...record.snapshot,
-              case: transitionCase(
-                record.snapshot.case,
-                "CANCELLED",
-                "BDD terminal completion",
-                completedAt,
-              ),
-              job: transitionJob(record.snapshot.job, "CANCELLED", {
-                at: completedAt,
-                progressPhase: "CANCELLED",
+              case: blockedCase,
+              job: transitionJob(record.snapshot.job, "FAILED", {
+                at: new Date("2026-07-19T20:00:02.000Z"),
+                failure: {
+                  code: "BDD_TERMINAL",
+                  message: "The BDD worker stopped safely",
+                  retryable: false,
+                },
+                progressPhase: "BLOCKED",
               }),
             },
-            updatedAt: completedAt.toISOString(),
+            updatedAt: "2026-07-19T20:00:02.000Z",
           };
         },
       },
@@ -368,7 +383,206 @@ Then(
       this.durableRecord.caseId,
     );
     assert.equal(stored?.snapshot.job.attempt, 1);
-    assert.equal(stored?.snapshot.job.state, "CANCELLED");
+    assert.equal(stored?.snapshot.job.state, "FAILED");
+  },
+);
+
+When(
+  "the caller cancels the queued durable job",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableUnitOfWork);
+    assert(this.durableRecord);
+    const result = await requestDurableCancellation(this.durableUnitOfWork, {
+      at: AT,
+      jobId: this.durableRecord.jobId,
+      scope: {
+        callerId: this.durableRecord.callerId,
+        principalId: this.durableRecord.callerId,
+        tenantId: this.durableRecord.tenantId,
+      },
+    });
+    assert.deepEqual(result, {
+      accepted: true,
+      changed: true,
+      disposition: "cancelled",
+    });
+  },
+);
+
+When(
+  "the cancelled durable job is delivered",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRepository);
+    assert(this.durableRecord);
+    const consumer = new DurableQueueConsumer({
+      clock: { now: () => new Date(AT) },
+      leaseSeconds: 60,
+      repository: this.durableRepository,
+      worker: {
+        execute: async ({ record }) => {
+          this.durableQueueExecutions += 1;
+          return record;
+        },
+      },
+    });
+    const result = await consumer.consume(
+      bddStartInput(this.durableRecord).outboxMessage,
+      "worker_bdd_cancelled",
+    );
+    this.durableQueueOutcomes.push(result.outcome);
+  },
+);
+
+Then("no durable attempt starts", async function (this: ReproForgeWorld) {
+  assert(this.durableDatabase);
+  assert(this.durableRecord);
+  assert.equal(this.durableQueueExecutions, 0);
+  assert.deepEqual(this.durableQueueOutcomes, ["ignored"]);
+  const rows = await this.durableDatabase.query<{
+    attempt: number;
+    quota_state: string;
+    state: string;
+  }>(
+    `SELECT j.attempt, j.state, q.state AS quota_state
+       FROM jobs j
+       JOIN quota_ledger q
+         ON q.tenant_id = j.tenant_id AND q.job_id = j.id
+      WHERE j.tenant_id = $1 AND j.id = $2`,
+    [this.durableRecord.tenantId, this.durableRecord.jobId],
+  );
+  assert.deepEqual(rows.rows, [
+    { attempt: 0, quota_state: "RELEASED", state: "CANCELLED" },
+  ]);
+});
+
+Given(
+  "an expired tenant with a private durable artifact",
+  { timeout: 30_000 },
+  async function (this: ReproForgeWorld) {
+    this.durableDatabase = new PGlite();
+    await applyPostgresMigrations(pgliteMigrationClient(this.durableDatabase));
+    this.durablePostgres = pglitePostgresDatabase(this.durableDatabase);
+    this.durableRepository = new PostgresDurableReproductionRepository(
+      this.durablePostgres,
+    );
+    this.durableUnitOfWork = new PostgresUnitOfWork(this.durablePostgres);
+    this.durableRecord = bddRecord({
+      caseId: "case_bdd_retention",
+      idempotencyKey: "key_bdd_retention",
+      jobId: "job_bdd_retention",
+      tenantId: "tenant_bdd_retention",
+    });
+    await this.durableDatabase.query(
+      `INSERT INTO tenants (
+         id, created_at, updated_at, retention_until
+       ) VALUES ($1, '2026-07-19T19:00:00.000Z',
+                    '2026-07-20T20:00:00.000Z',
+                    '2026-07-20T20:00:00.000Z')`,
+      [this.durableRecord.tenantId],
+    );
+    await reserveDurableStart(
+      this.durableUnitOfWork,
+      bddStartInput(this.durableRecord),
+    );
+    const bytes = new TextEncoder().encode("bdd retention artifact");
+    const sha256 = createHash("sha256").update(bytes).digest("hex");
+    this.durableArtifactDescriptor = {
+      artifactId: "artifact_bdd_retention",
+      byteCount: bytes.byteLength,
+      caseId: this.durableRecord.caseId,
+      createdAt: AT,
+      kind: "bundle",
+      objectKey: `tenants/${this.durableRecord.tenantId}/cases/${this.durableRecord.caseId}/bundle/${sha256}`,
+      retentionUntil: "2026-08-19T20:00:00.000Z",
+      sha256,
+      tenantId: this.durableRecord.tenantId,
+    };
+    this.durableBlobClient = new MemoryPrivateBlobClient();
+    this.durableArtifactStore = new ContentAddressedArtifactStore(
+      this.durablePostgres,
+      this.durableBlobClient,
+      { now: () => new Date(AT) },
+    );
+    await this.durableArtifactStore.put({
+      bytes,
+      descriptor: this.durableArtifactDescriptor,
+    });
+    this.durableRetention = new PostgresTenantDataRetention(
+      this.durablePostgres,
+      this.durableBlobClient,
+    );
+  },
+);
+
+When(
+  "the retention deletion worker runs",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRetention);
+    const at = "2026-07-22T20:00:00.000Z";
+    assert.equal(
+      (await this.durableRetention.scheduleDue({ at, limit: 1 })).length,
+      1,
+    );
+    this.durableRetentionResult = await this.durableRetention.executeNext({ at });
+  },
+);
+
+Then(
+  "all retained customer data is removed",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    assert(this.durableRecord);
+    assert(this.durableArtifactDescriptor);
+    const counts = await this.durableDatabase.query<{
+      artifacts: string;
+      cases: string;
+      jobs: string;
+      requests: string;
+    }>(
+      `SELECT
+         (SELECT count(*) FROM artifacts WHERE tenant_id = $1)::text AS artifacts,
+         (SELECT count(*) FROM cases WHERE tenant_id = $1)::text AS cases,
+         (SELECT count(*) FROM jobs WHERE tenant_id = $1)::text AS jobs,
+         (SELECT count(*) FROM deletion_requests WHERE tenant_id = $1)::text AS requests`,
+      [this.durableRecord.tenantId],
+    );
+    assert.deepEqual(counts.rows[0], {
+      artifacts: "0",
+      cases: "0",
+      jobs: "0",
+      requests: "0",
+    });
+    assert.equal(
+      this.durableBlobClient?.has(this.durableArtifactDescriptor.objectKey),
+      false,
+    );
+  },
+);
+
+Then(
+  "exactly one sanitized deletion audit tombstone remains",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    assert(this.durableRecord);
+    assert(this.durableRetentionResult);
+    const rows = await this.durableDatabase.query<{
+      action: string;
+      actor_id: string;
+      metadata: unknown;
+      outcome: string;
+    }>(
+      `SELECT action, actor_id, metadata, outcome
+         FROM audit_events WHERE tenant_id = $1`,
+      [this.durableRecord.tenantId],
+    );
+    assert.deepEqual(rows.rows, [
+      {
+        action: "account.deleted",
+        actor_id: "system_retention",
+        metadata: { reason: "retention" },
+        outcome: "success",
+      },
+    ]);
   },
 );
 
@@ -402,8 +616,8 @@ Then(
     assert(this.durableDatabase);
     assert(this.durableRecord);
     assert.deepEqual(this.durableRecoverySummaries, [
-      { exhausted: 0, requeued: 1 },
-      { exhausted: 0, requeued: 0 },
+      { cancelled: 0, exhausted: 0, requeued: 1 },
+      { cancelled: 0, exhausted: 0, requeued: 0 },
     ]);
     const jobs = await this.durableDatabase.query<{
       attempt: number;

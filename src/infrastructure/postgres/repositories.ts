@@ -8,6 +8,7 @@ import {
   tenantScopeSchema,
   type AuditEvent,
   type AuditSink,
+  type CancellationRequestResult,
   type DurableReproductionRecord,
   type DurableReproductionRepository,
   type DurableReservationResult,
@@ -26,7 +27,8 @@ import {
   type UnitOfWork,
 } from "@/application/ports/production";
 import { reproductionSnapshotSchema } from "@/application/reproduction-contracts";
-import { JOB_TERMINAL_STATES } from "@/domain/job";
+import { transitionCase } from "@/domain/case";
+import { transitionJob } from "@/domain/job";
 
 import {
   runSerializableTransaction,
@@ -392,6 +394,11 @@ export class PostgresDurableReproductionRepository
       acquiredAt.getTime() + input.leaseSeconds * 1_000,
     ).toISOString();
     return this.write(async (repository) => {
+      const tenant = await repository.source.query<{ status: string }>(
+        "SELECT status FROM tenants WHERE id = $1 FOR UPDATE",
+        [input.tenantId],
+      );
+      if (tenant.rows[0]?.status !== "ACTIVE") return null;
       const result = await repository.source.query<{
         attempt: number | string;
         case_id: string;
@@ -509,9 +516,8 @@ export class PostgresDurableReproductionRepository
       record.tenantId !== lease.tenantId ||
       record.jobId !== lease.jobId ||
       record.snapshot.job.attempt !== lease.attempt ||
-      !(JOB_TERMINAL_STATES as readonly string[]).includes(
-        record.snapshot.job.state,
-      )
+      (record.snapshot.job.state !== "SUCCEEDED" &&
+        record.snapshot.job.state !== "FAILED")
     ) {
       throw new LeaseOwnershipError();
     }
@@ -567,6 +573,7 @@ export class PostgresDurableReproductionRepository
             AND state = 'RUNNING' AND lease_owner = $4 AND attempt = $5
             AND lease_acquired_at = $6 AND lease_expires_at = $7
             AND case_id = $8 AND attempt = $9
+            AND cancellation_requested_at IS NULL
           RETURNING version`,
         [
           lease.tenantId,
@@ -589,6 +596,11 @@ export class PostgresDurableReproductionRepository
       if (integer(savedJob.rows[0]?.version ?? 0) !== nextVersion) {
         throw new LeaseOwnershipError();
       }
+      await repository.releaseActiveJobQuota(
+        lease.tenantId,
+        lease.jobId,
+        record.updatedAt,
+      );
       return cloneRecord({ ...record, version: nextVersion });
     });
   }
@@ -612,11 +624,12 @@ export class PostgresDurableReproductionRepository
     return this.write(async (repository) => {
       const current = await repository.source.query<{
         attempt: number | string;
+        cancellation_requested_at: Date | string | null;
         case_id: string;
         max_attempts: number | string;
         version: number | string;
       }>(
-        `SELECT attempt, case_id, max_attempts, version
+        `SELECT attempt, cancellation_requested_at, case_id, max_attempts, version
            FROM jobs
           WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
             AND lease_owner = $3 AND attempt = $4
@@ -633,6 +646,10 @@ export class PostgresDurableReproductionRepository
       );
       const row = current.rows[0];
       if (!row) throw new LeaseOwnershipError();
+      if (row.cancellation_requested_at !== null) {
+        await repository.cancelLeaseInTransaction(lease, at);
+        return "cancelled";
+      }
       const attempt = integer(row.attempt);
       const requeue = failure.retryable && attempt < integer(row.max_attempts);
       const failureCode = requeue
@@ -718,6 +735,12 @@ export class PostgresDurableReproductionRepository
             at,
           ],
         );
+      } else {
+        await repository.releaseActiveJobQuota(
+          lease.tenantId,
+          lease.jobId,
+          at,
+        );
       }
       return requeue ? "requeued" : "exhausted";
     });
@@ -749,7 +772,11 @@ export class PostgresDurableReproductionRepository
           LIMIT $2`,
         [at, input.limit],
       );
-      const summary = { exhausted: 0, requeued: 0 };
+      const summary = {
+        cancelled: 0,
+        exhausted: 0,
+        requeued: 0,
+      };
       for (const row of expired.rows) {
         const lease = jobLeaseSchema.parse({
           acquiredAt: timestamp(row.lease_acquired_at),
@@ -774,37 +801,281 @@ export class PostgresDurableReproductionRepository
   async requestCancellation(
     rawScope: TenantScope,
     jobId: string,
-  ): Promise<boolean> {
+    requestedAt: string,
+  ): Promise<CancellationRequestResult | null> {
     const scope = tenantScopeSchema.parse(rawScope);
+    const at = canonicalTimestamp(requestedAt);
+    if (!at || !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(jobId)) {
+      throw new InvalidDurableRecordError();
+    }
     return this.write(async (repository) => {
-      const updated = await repository.source.query<{ id: string }>(
-        `UPDATE jobs j
-            SET cancellation_requested_at = CURRENT_TIMESTAMP,
-                version = version + 1
-          WHERE j.tenant_id = $1 AND j.id = $2
-            AND j.cancellation_requested_at IS NULL
-            AND j.state IN ('QUEUED', 'RUNNING')
-            AND EXISTS (
-              SELECT 1 FROM idempotency_keys i
-               WHERE i.tenant_id = j.tenant_id AND i.job_id = j.id
-                 AND i.caller_id = $3
-            )
-          RETURNING j.id`,
-        [scope.tenantId, jobId, scope.callerId],
-      );
-      if (updated.rows[0]) return true;
-      const existing = await repository.source.query<{ found: boolean }>(
-        `SELECT true AS found
+      const selected = await repository.source.query<{
+        cancellation_requested_at: Date | string | null;
+        case_id: string;
+        state: string;
+        version: number | string;
+      }>(
+        `SELECT j.case_id, j.state, j.version, j.cancellation_requested_at
            FROM jobs j
            JOIN idempotency_keys i
              ON i.tenant_id = j.tenant_id AND i.job_id = j.id
           WHERE j.tenant_id = $1 AND j.id = $2 AND i.caller_id = $3
-            AND j.cancellation_requested_at IS NOT NULL
-          LIMIT 1`,
+          FOR UPDATE OF j`,
         [scope.tenantId, jobId, scope.callerId],
       );
-      return existing.rows[0]?.found === true;
+      const selectedJob = selected.rows[0];
+      if (!selectedJob) return null;
+      if (selectedJob.state === "CANCELLED") {
+        return {
+          caseId: selectedJob.case_id,
+          changed: false,
+          disposition: "cancelled",
+        };
+      }
+      if (
+        selectedJob.state === "RUNNING" &&
+        selectedJob.cancellation_requested_at !== null
+      ) {
+        return {
+          caseId: selectedJob.case_id,
+          changed: false,
+          disposition: "requested",
+        };
+      }
+      if (selectedJob.state !== "QUEUED" && selectedJob.state !== "RUNNING") {
+        return null;
+      }
+
+      const record = await repository.findByJobId(scope, jobId);
+      if (!record || record.version !== integer(selectedJob.version)) {
+        throw new CorruptDurableRecordError();
+      }
+      if (Date.parse(at) < Date.parse(record.createdAt)) {
+        throw new InvalidDurableRecordError();
+      }
+      if (selectedJob.state === "RUNNING") {
+        const updated = await repository.source.query<{ version: number | string }>(
+          `UPDATE jobs
+              SET cancellation_requested_at = $4,
+                  updated_at = $4,
+                  version = version + 1
+            WHERE tenant_id = $1 AND id = $2 AND version = $3
+              AND state = 'RUNNING' AND cancellation_requested_at IS NULL
+            RETURNING version`,
+          [scope.tenantId, jobId, record.version, at],
+        );
+        if (integer(updated.rows[0]?.version ?? 0) !== record.version + 1) {
+          throw new OptimisticConcurrencyError();
+        }
+        await repository.advanceCaseVersion(
+          scope.tenantId,
+          record.caseId,
+          record.version,
+          at,
+        );
+        return {
+          caseId: record.caseId,
+          changed: true,
+          disposition: "requested",
+        };
+      }
+
+      const cancelledCase = transitionCase(
+        record.snapshot.case,
+        "CANCELLED",
+        "Cancellation requested",
+        new Date(at),
+      );
+      const cancelledJob = transitionJob(record.snapshot.job, "CANCELLED", {
+        at: new Date(at),
+        progressPhase: "CANCELLED",
+      });
+      const cancelledRecord: DurableReproductionRecord = {
+        ...record,
+        snapshot: {
+          ...record.snapshot,
+          case: cancelledCase,
+          job: cancelledJob,
+        },
+        updatedAt: at,
+      };
+      const savedCase = await repository.source.query<{ version: number | string }>(
+        `UPDATE cases
+            SET state = 'CANCELLED', domain_state = $4::jsonb,
+                updated_at = $5, version = version + 1
+          WHERE tenant_id = $1 AND id = $2 AND version = $3
+          RETURNING version`,
+        [
+          scope.tenantId,
+          record.caseId,
+          record.version,
+          serializeCaseDomain(cancelledRecord),
+          at,
+        ],
+      );
+      if (integer(savedCase.rows[0]?.version ?? 0) !== record.version + 1) {
+        throw new OptimisticConcurrencyError();
+      }
+      const savedJob = await repository.source.query<{ version: number | string }>(
+        `UPDATE jobs
+            SET state = 'CANCELLED', progress_phase = 'CANCELLED',
+                cancellation_requested_at = $4, cancelled_at = $4,
+                updated_at = $4, version = version + 1
+          WHERE tenant_id = $1 AND id = $2 AND version = $3
+            AND state = 'QUEUED' AND attempt = 0
+          RETURNING version`,
+        [scope.tenantId, jobId, record.version, at],
+      );
+      if (integer(savedJob.rows[0]?.version ?? 0) !== record.version + 1) {
+        throw new OptimisticConcurrencyError();
+      }
+      await repository.releaseActiveJobQuota(scope.tenantId, jobId, at);
+      return {
+        caseId: record.caseId,
+        changed: true,
+        disposition: "cancelled",
+      };
     });
+  }
+
+  async isCancellationRequested(rawLease: JobLease): Promise<boolean> {
+    const lease = jobLeaseSchema.parse(rawLease);
+    const result = await this.source.query<{ requested: boolean }>(
+      `SELECT cancellation_requested_at IS NOT NULL AS requested
+         FROM jobs
+        WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
+          AND lease_owner = $3 AND attempt = $4
+          AND lease_acquired_at = $5 AND lease_expires_at = $6`,
+      [
+        lease.tenantId,
+        lease.jobId,
+        lease.ownerId,
+        lease.attempt,
+        lease.acquiredAt,
+        lease.expiresAt,
+      ],
+    );
+    return result.rows[0]?.requested === true;
+  }
+
+  async cancelLease(
+    rawLease: JobLease,
+    input: { at: string },
+  ): Promise<DurableReproductionRecord> {
+    const lease = jobLeaseSchema.parse(rawLease);
+    const at = canonicalTimestamp(input.at);
+    if (!at || Date.parse(at) < Date.parse(lease.acquiredAt)) {
+      throw new LeaseOwnershipError();
+    }
+    return this.write((repository) =>
+      repository.cancelLeaseInTransaction(lease, at),
+    );
+  }
+
+  private async cancelLeaseInTransaction(
+    lease: JobLease,
+    at: string,
+  ): Promise<DurableReproductionRecord> {
+    const owned = await this.source.query<{ version: number | string }>(
+      `SELECT version
+         FROM jobs
+        WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
+          AND lease_owner = $3 AND attempt = $4
+          AND lease_acquired_at = $5 AND lease_expires_at = $6
+          AND cancellation_requested_at IS NOT NULL
+        FOR UPDATE`,
+      [
+        lease.tenantId,
+        lease.jobId,
+        lease.ownerId,
+        lease.attempt,
+        lease.acquiredAt,
+        lease.expiresAt,
+      ],
+    );
+    const version = integer(owned.rows[0]?.version ?? 0);
+    if (version < 1) throw new LeaseOwnershipError();
+    const record = await this.findByLease(lease);
+    if (!record || record.version !== version) throw new LeaseOwnershipError();
+    const cancelledCase = transitionCase(
+      record.snapshot.case,
+      "CANCELLED",
+      "Cancellation requested",
+      new Date(at),
+    );
+    const cancelledJob = transitionJob(record.snapshot.job, "CANCELLED", {
+      at: new Date(at),
+      progressPhase: "CANCELLED",
+    });
+    const cancelledRecord: DurableReproductionRecord = {
+      ...record,
+      snapshot: {
+        ...record.snapshot,
+        case: cancelledCase,
+        job: cancelledJob,
+      },
+      updatedAt: at,
+    };
+    const savedCase = await this.source.query<{ version: number | string }>(
+      `UPDATE cases
+          SET state = 'CANCELLED', domain_state = $4::jsonb,
+              updated_at = $5, version = version + 1
+        WHERE tenant_id = $1 AND id = $2 AND version = $3
+        RETURNING version`,
+      [
+        lease.tenantId,
+        record.caseId,
+        version,
+        serializeCaseDomain(cancelledRecord),
+        at,
+      ],
+    );
+    if (integer(savedCase.rows[0]?.version ?? 0) !== version + 1) {
+      throw new OptimisticConcurrencyError();
+    }
+    const savedJob = await this.source.query<{ version: number | string }>(
+      `UPDATE jobs
+          SET state = 'CANCELLED', progress_phase = 'CANCELLED',
+              cancelled_at = $7,
+              lease_owner = NULL, lease_acquired_at = NULL, lease_expires_at = NULL,
+              updated_at = $7, version = version + 1
+        WHERE tenant_id = $1 AND id = $2 AND state = 'RUNNING'
+          AND lease_owner = $3 AND attempt = $4
+          AND lease_acquired_at = $5 AND lease_expires_at = $6
+          AND cancellation_requested_at IS NOT NULL AND version = $8
+        RETURNING version`,
+      [
+        lease.tenantId,
+        lease.jobId,
+        lease.ownerId,
+        lease.attempt,
+        lease.acquiredAt,
+        lease.expiresAt,
+        at,
+        version,
+      ],
+    );
+    if (integer(savedJob.rows[0]?.version ?? 0) !== version + 1) {
+      throw new LeaseOwnershipError();
+    }
+    await this.releaseActiveJobQuota(lease.tenantId, lease.jobId, at);
+    return cloneRecord({ ...cancelledRecord, version: version + 1 });
+  }
+
+  private async releaseActiveJobQuota(
+    tenantId: string,
+    jobId: string,
+    at: string,
+  ): Promise<number> {
+    const released = await this.source.query<{ id: string }>(
+      `UPDATE quota_ledger
+          SET state = 'RELEASED', updated_at = $3
+        WHERE tenant_id = $1 AND job_id = $2
+          AND resource = 'active-jobs' AND state = 'RESERVED'
+        RETURNING id`,
+      [tenantId, jobId, at],
+    );
+    return released.rows.length;
   }
 
   private async find(
@@ -846,6 +1117,13 @@ export class PostgresDurableReproductionRepository
   private async reserveInTransaction(
     record: DurableReproductionRecord,
   ): Promise<DurableReservationResult> {
+    const tenant = await this.source.query<{ status: string }>(
+      "SELECT status FROM tenants WHERE id = $1 FOR UPDATE",
+      [record.tenantId],
+    );
+    if (tenant.rows[0]?.status !== "ACTIVE") {
+      throw new InvalidDurableRecordError();
+    }
     await this.source.query(
       "SELECT pg_advisory_xact_lock(hashtext($1)) AS idempotency_lock",
       [JSON.stringify([record.tenantId, record.callerId, record.idempotencyKey])],
@@ -1169,27 +1447,89 @@ export class PostgresOutbox implements Outbox {
   }
 }
 
+type QuotaResource = QuotaReservation["resource"];
+export type QuotaLimits = Readonly<Record<QuotaResource, number>>;
+
+const DEFAULT_QUOTA_LIMITS: QuotaLimits = Object.freeze({
+  "active-jobs": 2,
+  "artifact-bytes": 1_073_741_824,
+  "cpu-milliseconds": 3_600_000,
+  exports: 20,
+});
+
 export class PostgresQuotaLedger implements QuotaLedger {
-  constructor(private readonly executor: PostgresExecutor) {}
+  private readonly limits: QuotaLimits;
+
+  constructor(
+    private readonly source: PostgresDatabase | PostgresExecutor,
+    limits: Partial<QuotaLimits> = {},
+  ) {
+    this.limits = { ...DEFAULT_QUOTA_LIMITS, ...limits };
+    if (
+      Object.values(this.limits).some(
+        (limit) => !Number.isSafeInteger(limit) || limit < 1,
+      )
+    ) {
+      throw new Error("Invalid durable quota limits");
+    }
+  }
 
   async reserve(rawReservation: QuotaReservation): Promise<boolean> {
     const reservation = quotaReservationSchema.parse(rawReservation);
-    const result = await this.executor.query<{ id: string }>(
-      `INSERT INTO quota_ledger (
-         tenant_id, id, resource, window_start, window_end,
-         reserved_amount, expires_at
-       ) VALUES ($1, $2, $3, CURRENT_TIMESTAMP, $4, $5, $4)
-       ON CONFLICT (tenant_id, id) DO NOTHING
-       RETURNING id`,
-      [
-        reservation.tenantId,
-        reservation.reservationId,
-        reservation.resource,
-        reservation.expiresAt,
-        reservation.amount,
-      ],
-    );
-    return result.rows.length === 1;
+    return this.write(async (ledger) => {
+      await ledger.source.query(
+        "SELECT pg_advisory_xact_lock(hashtext($1)) AS quota_lock",
+        [`quota:${reservation.tenantId}:${reservation.resource}`],
+      );
+      await ledger.source.query(
+        `UPDATE quota_ledger
+            SET state = 'EXPIRED', updated_at = CURRENT_TIMESTAMP
+          WHERE tenant_id = $1 AND resource = $2 AND state = 'RESERVED'
+            AND expires_at <= CURRENT_TIMESTAMP`,
+        [reservation.tenantId, reservation.resource],
+      );
+      const usage = await ledger.source.query<{ amount: number | string }>(
+        `SELECT coalesce(sum(
+           CASE WHEN state = 'COMMITTED' THEN actual_amount
+                WHEN state = 'RESERVED' THEN reserved_amount ELSE 0 END
+         ), 0) AS amount
+           FROM quota_ledger
+          WHERE tenant_id = $1 AND resource = $2
+            AND state IN ('RESERVED', 'COMMITTED')
+            AND window_end > CURRENT_TIMESTAMP`,
+        [reservation.tenantId, reservation.resource],
+      );
+      const used = Number(usage.rows[0]?.amount ?? 0);
+      if (
+        !Number.isSafeInteger(used) ||
+        used < 0 ||
+        used + reservation.amount > ledger.limits[reservation.resource]
+      ) {
+        return false;
+      }
+      const result = await ledger.source.query<{ id: string }>(
+        `INSERT INTO quota_ledger (
+           tenant_id, id, case_id, job_id, resource, window_start, window_end,
+           reserved_amount, expires_at, created_at, updated_at
+         )
+         SELECT $1, $2, $3, $4, $5, j.created_at, $6, $7, $6,
+                j.created_at, j.created_at
+           FROM jobs j
+          WHERE j.tenant_id = $1 AND j.case_id = $3 AND j.id = $4
+         ON CONFLICT (tenant_id, id) DO NOTHING
+         RETURNING id`,
+        [
+          reservation.tenantId,
+          reservation.reservationId,
+          reservation.caseId,
+          reservation.jobId,
+          reservation.resource,
+          reservation.expiresAt,
+          reservation.amount,
+        ],
+      );
+      return result.rows.length === 1;
+    });
   }
 
   async commit(
@@ -1197,7 +1537,7 @@ export class PostgresQuotaLedger implements QuotaLedger {
     reservationId: string,
     actualAmount: number,
   ): Promise<void> {
-    const result = await this.executor.query<{ id: string }>(
+    const result = await this.source.query<{ id: string }>(
       `UPDATE quota_ledger
           SET state = 'COMMITTED', actual_amount = $3,
               updated_at = CURRENT_TIMESTAMP
@@ -1210,7 +1550,7 @@ export class PostgresQuotaLedger implements QuotaLedger {
   }
 
   async release(tenantId: string, reservationId: string): Promise<void> {
-    const result = await this.executor.query<{ id: string }>(
+    const result = await this.source.query<{ id: string }>(
       `UPDATE quota_ledger
           SET state = 'RELEASED', updated_at = CURRENT_TIMESTAMP
         WHERE tenant_id = $1 AND id = $2 AND state = 'RESERVED'
@@ -1218,6 +1558,39 @@ export class PostgresQuotaLedger implements QuotaLedger {
       [tenantId, reservationId],
     );
     if (!result.rows[0]) throw new QuotaReservationError();
+  }
+
+  async releaseForJob(
+    tenantId: string,
+    jobId: string,
+    releasedAt: string,
+  ): Promise<number> {
+    const at = canonicalTimestamp(releasedAt);
+    if (
+      !at ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(tenantId) ||
+      !/^[A-Za-z0-9][A-Za-z0-9._:-]{0,127}$/.test(jobId)
+    ) {
+      throw new QuotaReservationError();
+    }
+    const result = await this.source.query<{ id: string }>(
+      `UPDATE quota_ledger
+          SET state = 'RELEASED', updated_at = $3
+        WHERE tenant_id = $1 AND job_id = $2
+          AND resource = 'active-jobs' AND state = 'RESERVED'
+        RETURNING id`,
+      [tenantId, jobId, at],
+    );
+    return result.rows.length;
+  }
+
+  private async write<T>(
+    operation: (ledger: PostgresQuotaLedger) => Promise<T>,
+  ): Promise<T> {
+    if (!isDatabase(this.source)) return operation(this);
+    return runSerializableTransaction(this.source, (executor) =>
+      operation(new PostgresQuotaLedger(executor, this.limits)),
+    );
   }
 }
 
@@ -1246,21 +1619,27 @@ export class PostgresAuditSink implements AuditSink {
   }
 }
 
-function transactionPorts(executor: PostgresExecutor): TransactionPorts {
+function transactionPorts(
+  executor: PostgresExecutor,
+  quotaLimits: Partial<QuotaLimits>,
+): TransactionPorts {
   return {
     audit: new PostgresAuditSink(executor),
     outbox: new PostgresOutbox(executor),
-    quotas: new PostgresQuotaLedger(executor),
+    quotas: new PostgresQuotaLedger(executor, quotaLimits),
     reproductions: new PostgresDurableReproductionRepository(executor),
   };
 }
 
 export class PostgresUnitOfWork implements UnitOfWork {
-  constructor(private readonly database: PostgresDatabase) {}
+  constructor(
+    private readonly database: PostgresDatabase,
+    private readonly quotaLimits: Partial<QuotaLimits> = {},
+  ) {}
 
   async run<T>(operation: (ports: TransactionPorts) => Promise<T>): Promise<T> {
     return runSerializableTransaction(this.database, (executor) =>
-      operation(transactionPorts(executor)),
+      operation(transactionPorts(executor, this.quotaLimits)),
     );
   }
 }

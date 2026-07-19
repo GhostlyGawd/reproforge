@@ -52,3 +52,16 @@ Feature: Durable reproduction state
     When the caller reserves a durable reproduction
     And a worker lease expires and recovery runs twice
     Then exactly one recovery intent requeues the durable job
+
+  Scenario: A cancelled queued job never starts
+    Given an empty durable Postgres store for a tenant
+    When the caller reserves a durable reproduction
+    And the caller cancels the queued durable job
+    And the cancelled durable job is delivered
+    Then no durable attempt starts
+
+  Scenario: Retention deletion removes customer artifacts and records an audit tombstone
+    Given an expired tenant with a private durable artifact
+    When the retention deletion worker runs
+    Then all retained customer data is removed
+    And exactly one sanitized deletion audit tombstone remains

@@ -190,7 +190,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(4);
+    expect(migrations).toHaveLength(5);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`
@@ -282,7 +282,7 @@ describe("Postgres durable-foundation migrations", () => {
     );
 
     expect(result).toEqual({
-      applied: [migrations[3]?.id],
+      applied: migrations.slice(3).map(({ id }) => id),
       skipped: migrations.slice(0, 3).map(({ id }) => id),
     });
     expect(event.rows).toEqual([
@@ -352,6 +352,12 @@ describe("Postgres durable-foundation migrations", () => {
           WHERE tenant_id = 'tenant_a' AND id = 'job_a'`,
       ),
     ).rejects.toThrow(/transition/i);
+    await expect(
+      database.query(
+        `INSERT INTO jobs (tenant_id, id, case_id, state)
+         VALUES ('tenant_a', 'job_cancel_without_timestamps', 'case_a', 'CANCELLED')`,
+      ),
+    ).rejects.toThrow(/cancellation/i);
 
     await database.query(
       "UPDATE cases SET version = 2 WHERE tenant_id = 'tenant_a' AND id = 'case_a'",

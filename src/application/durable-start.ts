@@ -62,7 +62,9 @@ function validateStartInput(input: DurableStartInput): DurableStartInput {
     input.outboxMessage.tenantId === record.tenantId &&
     input.outboxMessage.caseId === record.caseId &&
     input.outboxMessage.jobId === record.jobId &&
-    input.quotaReservation.tenantId === record.tenantId;
+    input.quotaReservation.tenantId === record.tenantId &&
+    input.quotaReservation.caseId === record.caseId &&
+    input.quotaReservation.jobId === record.jobId;
   if (!aligned) {
     throw new DurableStartError(
       "INVALID_START_INPUT",
