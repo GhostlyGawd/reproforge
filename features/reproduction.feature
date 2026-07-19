@@ -66,3 +66,24 @@ Feature: Evidence-backed reproduction outcomes
     When the caller reuses idempotency key "bdd-conflict" with a different budget
     Then the service error code is "IDEMPOTENCY_CONFLICT"
     And one trusted reproduction is executed
+
+  Scenario: ChatGPT discovers a closed keyless reproduction app
+    Given a subscription-first ReproForge MCP app
+    And no OpenAI API key is configured
+    When ChatGPT discovers the ReproForge tools
+    Then only 3 bounded ReproForge tools are exposed
+    And no MCP tool accepts a repository URL, arbitrary command, or API key
+
+  Scenario: ChatGPT retries a trusted reproduction without duplicate execution
+    Given a subscription-first ReproForge MCP app
+    And no OpenAI API key is configured
+    When ChatGPT starts the trusted MCP sample twice with idempotency key "bdd-mcp-retry"
+    Then one trusted reproduction is executed
+    And both MCP starts return the same case and job
+    And the MCP proof status is "VERIFIED"
+
+  Scenario: ChatGPT receives a self-contained proof widget
+    Given a subscription-first ReproForge MCP app
+    When ChatGPT reads the proof widget resource
+    Then the widget uses the MCP App HTML media type
+    And the widget declares no external network domains

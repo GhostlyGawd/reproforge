@@ -34,7 +34,7 @@ const lock = {
   packageManager: "npm@11",
   repository: "fixture://cli-spaces",
   repositoryTreeHash: "b".repeat(64),
-  reproForgeVersion: "0.1.0",
+  reproForgeVersion: "0.2.0",
   revision: "fixture-v1",
   runner: "trusted-fixture-v1",
   runtime: "node@24",
