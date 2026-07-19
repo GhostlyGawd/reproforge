@@ -19,16 +19,16 @@ Tracking: [#10](https://github.com/GhostlyGawd/reproforge/issues/10)
 
 Tracking: [#11](https://github.com/GhostlyGawd/reproforge/issues/11)
 
-- [ ] `RF-6001` Write failing service/store contract tests before implementation.
-- [ ] `RF-6002` Add schema-versioned reproduction snapshot and job lifecycle contracts.
-- [ ] `RF-6003` Implement in-memory repositories with injected clock and identifier seams.
-- [ ] `RF-6004` Implement caller-scoped idempotent start, conflict detection, read, and export.
-- [ ] `RF-6005` Route the trusted browser and REST behavior through `CaseService`.
-- [ ] `RF-6006` Property-test idempotency, lifecycle, serialization, and proof preservation.
-- [ ] `RF-6007` Add BDD for start, retry, poll, export, conflict, and unknown-case outcomes.
-- [ ] `RF-6008` Preserve browser, eval, accessibility, and bundle regressions.
+- [x] `RF-6001` Write failing service/store contract tests before implementation.
+- [x] `RF-6002` Add schema-versioned reproduction snapshot and job lifecycle contracts.
+- [x] `RF-6003` Implement in-memory repositories with injected clock and identifier seams.
+- [x] `RF-6004` Implement caller-scoped idempotent start, conflict detection, read, and export.
+- [x] `RF-6005` Route the trusted browser and REST behavior through `CaseService`.
+- [x] `RF-6006` Property-test idempotency, lifecycle, serialization, and proof preservation.
+- [x] `RF-6007` Add BDD for start, retry, poll, export, conflict, and unknown-case outcomes.
+- [x] `RF-6008` Preserve browser, eval, accessibility, and bundle regressions.
 
-**Exit evidence:** red/green test history, unit/property/BDD/browser/eval/build checks, API contract examples, and CI.
+**Exit evidence:** the [committed milestone record](evidence/milestone-6/README.md) contains red/green history, unit/property/BDD/browser/eval/build results, a live REST transcript, visual proof, and provenance. CI must also pass on the pull request.
 
 ## Milestone 7 — ChatGPT MCP app and embedded widget
 

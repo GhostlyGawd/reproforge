@@ -31,6 +31,27 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000), select **Run trusted sample**, and follow the issue-to-bundle timeline. The sample is deterministic and always identifies itself as offline.
 
+## Headless REST v2 sample
+
+The same trusted journey is available through a transport-neutral case/job service. Start it with a caller-generated idempotency key:
+
+```bash
+curl --request POST http://localhost:3000/api/v2/reproductions \
+  --header "Content-Type: application/json" \
+  --header "Idempotency-Key: demo-1" \
+  --data '{"sampleId":"cli-spaces"}'
+```
+
+The response returns `case.id`, `job.id`, and schema-versioned proof data. Repeat the exact request with the same key to reuse the result without executing it twice. Poll or export with:
+
+```text
+GET /api/v2/reproductions/{caseId}
+GET /api/v2/jobs/{jobId}
+GET /api/v2/reproductions/{caseId}/bundle
+```
+
+No OpenAI API key is used. The current repository is process-local and in-memory, so cases disappear on restart and are not suitable for a multi-instance deployment.
+
 ## Run the exported reproduction directly
 
 This command exercises the same intentionally defective spaced-path fixture represented in the sample bundle:
@@ -66,7 +87,7 @@ The committed four-case suite covers a verified positive, a negative no-match, a
 
 ## How it works
 
-1. The case state machine records ingestion, inspection, hypothesis, experiment, verification, minimization, and packaging phases.
+1. A transport-neutral case service creates caller-scoped, idempotent jobs and records ingestion, inspection, hypothesis, experiment, verification, minimization, and packaging phases.
 2. An offline or GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
 3. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
 4. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
@@ -117,11 +138,12 @@ This key is required only for the current optional standalone Responses route. I
 - [Artifact and asset provenance](docs/provenance.md)
 - [Release status](docs/release-status.md)
 - [Completion audit](docs/completion-audit.md)
+- [Headless case/job service evidence](docs/evidence/milestone-6/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
 
-ReproForge is a pre-alpha Build Week prototype. The complete bundled JavaScript/TypeScript fixture journey works locally and in browser tests. External repository execution, private-repository access, persistence, authentication, and autonomous publishing are intentionally unavailable. The synthetic four-case eval is a contract check, not a claim of real-world benchmark performance.
+ReproForge is a pre-alpha Build Week prototype. The complete bundled JavaScript/TypeScript fixture journey works through the browser and REST v2 with an in-memory case/job service. Durable persistence, external repository execution, private-repository access, authentication, and autonomous publishing are intentionally unavailable. The synthetic four-case eval is a contract check, not a claim of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

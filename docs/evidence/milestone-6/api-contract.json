@@ -1,0 +1,36 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-19T19:00:39.8145787Z",
+  "sourceCommit": "869f3d9e3bfb29b828351387f3b362b30fad3a8c",
+  "baseUrl": "http://127.0.0.1:3000/api/v2",
+  "request": {
+    "method": "POST",
+    "path": "/reproductions",
+    "idempotencyKey": "milestone-6-evidence-v3",
+    "body": {
+      "sampleId": "cli-spaces"
+    }
+  },
+  "observed": {
+    "firstStatus": 201,
+    "retryStatus": 200,
+    "retryReused": true,
+    "responseSchemaVersion": "2.0",
+    "caseId": "case_348367a5-cf9e-4075-ae45-0f2b45c22c7f",
+    "caseState": "VERIFIED",
+    "jobId": "job_58183d05-c101-4eb3-bd8b-d89c629e6407",
+    "jobState": "SUCCEEDED",
+    "candidateMatches": 3,
+    "requiredRuns": 3,
+    "controlMatched": false,
+    "bundleSchemaVersion": "1.1",
+    "bundleHash": "33bb744ff6a2c89b0854a2de12741869a21e1296e13cbec422f338349b0dddbf",
+    "bundleFileCount": 8
+  },
+  "followUpRequests": [
+    "GET /reproductions/{caseId}",
+    "GET /jobs/{jobId}",
+    "GET /reproductions/{caseId}/bundle"
+  ],
+  "sanitization": "Synthetic bundled fixture only; no API key, credential, private repository, personal data, or user-provided content."
+}

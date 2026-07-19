@@ -1,0 +1,68 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-6",
+  "capturedAt": "2026-07-19T19:00:39.8145787Z",
+  "sourceCommit": "869f3d9e3bfb29b828351387f3b362b30fad3a8c",
+  "route": "http://127.0.0.1:3000/",
+  "captureMethod": {
+    "applicationCommand": "npm run start -- --hostname 127.0.0.1",
+    "browserTool": "agent-browser 0.32.2",
+    "browser": "headless Chromium",
+    "mode": "Next.js production build"
+  },
+  "state": {
+    "scenario": "service-backed trusted reproduction",
+    "visibleCaseId": "case_f9f97e13-f527-468d-97fe-62a73474f839",
+    "expectedCaseState": "VERIFIED",
+    "expectedJobState": "SUCCEEDED",
+    "candidateMatches": 3,
+    "requiredRuns": 3,
+    "controlMatched": false,
+    "externalExecution": false,
+    "openAiApiKeyRequired": false
+  },
+  "verification": {
+    "redCommand": "npm test -- --run tests/case-service.test.ts tests/case-service.property.test.ts tests/reproduction-route.test.ts",
+    "redResult": "3 suites failed because the case service, repository, job model, and REST v2 adapter did not exist",
+    "greenCommand": "npm run verify",
+    "vitest": {
+      "filesPassed": 19,
+      "testsPassed": 61,
+      "idempotencyPropertyRuns": 100,
+      "terminalJobPropertyRuns": 100,
+        "repeatabilityPolicyPropertyRuns": 100
+    },
+    "bdd": {
+      "scenariosPassed": 10,
+      "stepsPassed": 55
+    },
+    "browserTestsPassed": 9,
+    "axeViolations": 0,
+    "productionBuild": "passed",
+    "browserPage": "HAS_CONTENT",
+    "browserErrorOverlay": "OK",
+    "browserConsoleErrors": 0,
+    "browserPageErrors": 0,
+    "httpContract": "api-contract.json"
+  },
+  "captures": [
+    {
+      "file": "service-backed-desktop.png",
+      "capturedAt": "2026-07-19T18:59:46.6164238Z",
+      "viewport": {
+        "width": 1264,
+        "height": 569
+      },
+      "image": {
+        "width": 1264,
+        "height": 2061,
+        "bytes": 388196,
+        "sha256": "aa0d2f438440f1e4ea8452413663043c05beaed4666780f32028a1c3fee123fd"
+      },
+      "alt": "The production ReproForge interface showing a service-generated case identifier, verified synthetic CLI reproduction, evidence and hypothesis ledgers, control and three candidate runs, and the complete eight-file Repro Bundle.",
+      "caption": "The existing browser journey now reads its trusted result through the same idempotent CaseService used by REST v2."
+    }
+  ],
+  "sanitization": "Synthetic bundled fixture only; no API key, credentials, private repositories, personal data, or user-provided content.",
+  "provenance": "Real ReproForge application state rendered locally from the recorded source commit and captured with agent-browser; not concept art or generated imagery."
+}
