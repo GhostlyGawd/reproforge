@@ -154,6 +154,8 @@ This key is required only for the current optional standalone Responses route. I
 - [Approved v2 product and platform specification](docs/product-spec-v2.md)
 - [V2 delivery roadmap and GitHub milestones](docs/roadmap-v2.md)
 - [API-first/plugin-first architecture decision](docs/adr/0001-api-first-plugin-first.md)
+- [Managed production-stack decision](docs/adr/0002-managed-production-stack.md)
+- [Ordered remaining delivery specifications](docs/specs/README.md)
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Architecture and trust boundaries](docs/architecture.md)

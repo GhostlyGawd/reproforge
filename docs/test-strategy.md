@@ -135,3 +135,17 @@ A milestone is complete when:
 - the pull request describes impact and verification; and
 - the reviewed milestone branch is merged into `main`.
 
+## 7. Production-boundary gates
+
+Milestones 8 and 9 add provider-backed gates defined in the
+[remaining delivery plan](specs/README.md). In-memory, recorded, and fake
+adapters remain valuable for TDD but cannot prove real Postgres transactions,
+private object access, queue delivery, OAuth/PKCE, GitHub installation
+authorization, sandbox network isolation, hosted ChatGPT behavior, backup
+restore, or rollback.
+
+Provider suites run only with authorized development/staging credentials and
+synthetic or public fixtures. A skipped provider suite reports why it skipped
+and leaves its task unchecked. CI secrets are scoped to the minimum environment
+and never reach forked pull requests, logs, screenshots, fixtures, or artifacts.
+

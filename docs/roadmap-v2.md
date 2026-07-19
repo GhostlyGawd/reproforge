@@ -50,30 +50,25 @@ Tracking: [#12](https://github.com/GhostlyGawd/reproforge/issues/12)
 
 Tracking: [#13](https://github.com/GhostlyGawd/reproforge/issues/13)
 
-- [ ] `RF-8001` Select and provision durable database, queue, and object storage through a reviewed infrastructure decision.
-- [ ] `RF-8002` Implement transactional case/job repositories, migrations, leases, recovery, and backups.
-- [ ] `RF-8003` Implement OAuth 2.1/PKCE, tenant identity, and per-tool scopes.
-- [ ] `RF-8004` Implement least-privilege GitHub App installation and repository authorization.
-- [ ] `RF-8005` Implement a separately isolated external runner and artifact transfer protocol.
-- [ ] `RF-8006` Enforce resource, network, process, secret, output, and duration limits.
-- [ ] `RF-8007` Implement cancellation, retries, quotas, retention/deletion, and abuse controls.
-- [ ] `RF-8008` Add observability, runbooks, restore tests, tenant-isolation tests, and sandbox security tests.
-- [ ] `RF-8009` Verify public- and private-repository canaries without weakening the trusted fixture.
+- [x] `RF-8001` Select the managed production baseline and provider-neutral seams in [ADR 0002](adr/0002-managed-production-stack.md).
+- [ ] `RF-8002` Complete [8A durable foundation](specs/milestone-8a-durable-foundation.md): Postgres migrations/repositories, private artifacts, transactional outbox, queue, leases, quotas, retention, audit, health, and restore.
+- [ ] `RF-8003` Complete [8B identity and GitHub authorization](specs/milestone-8b-identity-and-github.md): OAuth 2.1/PKCE, tenant/scopes, GitHub App installation, immutable revision authorization, revocation, and secret-safety proof.
+- [ ] `RF-8004` Complete [8C isolated execution](specs/milestone-8c-isolated-execution.md): safe source/dependency acquisition, disposable microVM runner, deny-all execution, limits, cancellation, proof integration, and sandbox security tests.
+- [ ] `RF-8005` Complete [8D private beta](specs/milestone-8d-private-beta.md): composed staging runtime, resilient async journey, operations, public/private canaries, tenant/abuse audits, and visual evidence.
 
-**Exit evidence:** threat model, migrations, recovery/restore proof, auth E2E, sandbox controls, canary bundles, operational dashboards/runbooks, and CI. Production provisioning requires an explicit deployment decision.
+The authoritative ordered task lists are in the linked specifications and the
+[remaining delivery plan](specs/README.md). A parent checkbox is checked only
+when every child task and provider-backed gate in that specification passes.
+
+**Exit evidence:** threat model, migrations, recovery/restore proof, auth E2E, sandbox controls, canary bundles, operational dashboards/runbooks, and CI. Real provider evidence is required; mocks cannot close provider tasks.
 
 ## Milestone 9 — Hosted plugin submission readiness
 
 Tracking: [#14](https://github.com/GhostlyGawd/reproforge/issues/14)
 
-- [ ] `RF-9001` Deploy stable HTTPS MCP, widget, health, and challenge endpoints.
-- [ ] `RF-9002` Complete developer-mode testing across supported ChatGPT plan/workspace configurations.
-- [ ] `RF-9003` Verify publisher identity and MCP domain.
-- [ ] `RF-9004` Finalize CSP, privacy, terms, support, listing copy, logo, and screenshots.
-- [ ] `RF-9005` Add five positive and three negative review cases with expected behavior.
-- [ ] `RF-9006` Complete security, accessibility, load, latency, failure-mode, and rollback verification.
-- [ ] `RF-9007` Prepare the plugin portal draft and submission-readiness audit.
-- [ ] `RF-9008` Obtain explicit go/no-go approval before public submission and publication.
+- [ ] `RF-9001` Complete hosted integration tasks `RF-9101`–`RF-9106` in the [Milestone 9 specification](specs/milestone-9-hosted-launch.md): stable HTTPS, domain/auth callbacks, hosted smoke, real developer app ID, local plugin wrapper, and ChatGPT coverage.
+- [ ] `RF-9002` Complete review/readiness tasks `RF-9201`–`RF-9209`: public policy/listing assets, exactly five positive and three negative cases, security, accessibility, load, failure, cost, operations, rollback, portal draft, and final audit.
+- [ ] `RF-9003` Complete `RF-9210`: record explicit owner go/no-go approval before any portal submission or publication.
 
 **Exit evidence:** stable hosted test report, domain/publisher evidence, complete review pack, launch/rollback checklist, and recorded approval decision.
 
