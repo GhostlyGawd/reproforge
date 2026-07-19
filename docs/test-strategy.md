@@ -22,6 +22,10 @@ Use fast-check for invariants with large input spaces:
 - redaction is idempotent and never reveals a registered secret;
 - canonical serialization is stable across key insertion order;
 - bundle hashes change when contract-relevant content changes;
+- repeated caller-scoped idempotency keys execute at most once;
+- terminal jobs never return to active states;
+- schema-valid case snapshots survive JSON round trips;
+- the requested clean-run policy is preserved in the proof;
 - accepted minimization never converts a passing control into a matching failure; and
 - verification status agrees with candidate/control run counts.
 
@@ -34,9 +38,13 @@ Use Gherkin and Cucumber for user-observable behavior. Scenarios cover:
 - a candidate that matches three times and whose control does not match becomes verified;
 - an intermittent candidate becomes unstable;
 - a candidate that never matches becomes not reproduced;
+- a control that matches the same oracle blocks verification;
 - an external repository request without an isolated runner becomes blocked;
-- changing the oracle after runs invalidates verification; and
-- a verified case exports a complete, independently valid bundle.
+- an over-reduced reproduction is rejected;
+- a verified case exports a complete, independently valid bundle;
+- a subscription-first trusted start succeeds without an OpenAI API key and reuses retries;
+- another caller cannot read a case it does not own; and
+- changed input under the same idempotency key is rejected.
 
 Step definitions invoke application services, not browser selectors. Browser journeys separately prove the UI.
 
@@ -49,6 +57,7 @@ Use Playwright for the critical sample journey at desktop and mobile sizes. Asse
 - understanding evidence classifications;
 - reaching the verified result;
 - accessing the one-command reproduction and bundle contents;
+- starting, retrying, polling, reading, and exporting through REST v2;
 - keyboard navigation and focus visibility; and
 - zero critical automated accessibility violations.
 

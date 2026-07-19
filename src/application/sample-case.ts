@@ -2,38 +2,60 @@ import {
   createBundle,
   hashCanonical,
   materializeBundle,
-  type ReproBundle,
+  reproBundleSchema,
 } from "@/domain/bundle";
 import {
   createCase,
+  reproCaseSchema,
   transitionCase,
   type CaseState,
-  type ReproCase,
 } from "@/domain/case";
-import type { EvidenceItem, Hypothesis } from "@/domain/evidence";
-import { minimizeReproduction, type MinimizationResult } from "@/domain/minimization";
-import type { FailureOracle } from "@/domain/oracle";
-import type { RunResult } from "@/domain/run";
 import {
+  evidenceItemSchema,
+  hypothesisSchema,
+  type EvidenceItem,
+  type Hypothesis,
+} from "@/domain/evidence";
+import {
+  minimizationResultSchema,
+  minimizeReproduction,
+} from "@/domain/minimization";
+import { failureOracleSchema, type FailureOracle } from "@/domain/oracle";
+import { runResultSchema } from "@/domain/run";
+import {
+  verificationSummarySchema,
   verifyReproduction,
-  type VerificationSummary,
 } from "@/domain/verification";
 import { TrustedFixtureRunner } from "@/infrastructure/runner";
+import { z } from "zod";
 
-export type SampleCaseResult = {
-  budget: {
-    maxToolCalls: number;
-    requiredRuns: number;
-  };
-  bundle: ReproBundle;
-  case: ReproCase;
-  evidence: EvidenceItem[];
-  files: Record<string, string>;
-  hypotheses: Hypothesis[];
-  minimization: MinimizationResult;
-  oracle: FailureOracle;
-  runs: RunResult[];
-  summary: VerificationSummary;
+export const trustedSampleBudgetSchema = z
+  .object({
+    maxToolCalls: z.number().int().min(1).max(20).default(6),
+    requiredRuns: z.number().int().min(1).max(5).default(3),
+  })
+  .strict();
+
+export const sampleCaseResultSchema = z
+  .object({
+    budget: trustedSampleBudgetSchema,
+    bundle: reproBundleSchema,
+    case: reproCaseSchema,
+    evidence: z.array(evidenceItemSchema),
+    files: z.record(z.string(), z.string()),
+    hypotheses: z.array(hypothesisSchema),
+    minimization: minimizationResultSchema,
+    oracle: failureOracleSchema,
+    runs: z.array(runResultSchema),
+    summary: verificationSummarySchema,
+  })
+  .strict();
+
+export type SampleCaseResult = z.infer<typeof sampleCaseResultSchema>;
+export type TrustedSampleOptions = {
+  budget?: z.input<typeof trustedSampleBudgetSchema>;
+  caseId?: string;
+  startedAt?: Date;
 };
 
 const evidence: EvidenceItem[] = [
@@ -115,17 +137,19 @@ const transitionPath: Array<{ state: CaseState; reason: string }> = [
   { state: "VERIFIED", reason: "Three candidate runs matched and the control did not." },
 ];
 
-function at(index: number): Date {
-  return new Date(Date.UTC(2026, 6, 19, 16, 0, 0, index));
-}
-export async function runTrustedSample(): Promise<SampleCaseResult> {
+export async function runTrustedSample(
+  options: TrustedSampleOptions = {},
+): Promise<SampleCaseResult> {
+  const budget = trustedSampleBudgetSchema.parse(options.budget ?? {});
+  const startedAt = options.startedAt ?? new Date(Date.UTC(2026, 6, 19, 16));
+  const at = (index: number): Date => new Date(startedAt.getTime() + index);
   const runner = new TrustedFixtureRunner();
   const control = {
     ...(await runner.run({ repository: "fixture://cli-spaces", command: "control" })),
     id: "control-1",
   };
   const candidates = await Promise.all(
-    [1, 2, 3].map(async (index) => ({
+    Array.from({ length: budget.requiredRuns }, (_, index) => index + 1).map(async (index) => ({
       ...(await runner.run({
         repository: "fixture://cli-spaces",
         command: "reproduce",
@@ -133,13 +157,18 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
       id: `candidate-${index}`,
     })),
   );
-  const baselineSummary = verifyReproduction({ oracle, control, candidates });
+  const baselineSummary = verifyReproduction({
+    oracle,
+    control,
+    candidates,
+    requiredRuns: budget.requiredRuns,
+  });
   const minimizedControl = {
     ...(await runner.run({ repository: "fixture://cli-spaces", command: "control" })),
     id: "minimized-control",
   };
   const minimizedCandidates = await Promise.all(
-    [1, 2, 3].map(async (index) => ({
+    Array.from({ length: budget.requiredRuns }, (_, index) => index + 1).map(async (index) => ({
       ...(await runner.run({ repository: "fixture://cli-spaces", command: "reproduce" })),
       id: `minimized-candidate-${index}`,
     })),
@@ -147,6 +176,7 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
   const minimization = minimizeReproduction({
     baseline: { candidates, control },
     oracle,
+    requiredRuns: budget.requiredRuns,
     proposals: [
       {
         candidates: minimizedCandidates,
@@ -162,7 +192,7 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
       (evaluation) => evaluation.id === minimization.acceptedReductionId,
     )?.summary ?? baselineSummary;
 
-  let current = createCase("sample-cli-spaces", at(0));
+  let current = createCase(options.caseId ?? "sample-cli-spaces", at(0));
   transitionPath.forEach((transition, index) => {
     current = transitionCase(current, transition.state, transition.reason, at(index + 1));
   });
@@ -200,8 +230,8 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
     summary,
   });
 
-  return {
-    budget: { maxToolCalls: 6, requiredRuns: 3 },
+  return sampleCaseResultSchema.parse({
+    budget,
     bundle,
     case: current,
     evidence,
@@ -211,5 +241,5 @@ export async function runTrustedSample(): Promise<SampleCaseResult> {
     oracle,
     runs,
     summary,
-  };
+  });
 }

@@ -129,6 +129,7 @@ The first implementation exposes these transport-neutral operations:
 type CaseService = {
   startTrustedReproduction(command: StartTrustedReproduction): Promise<StartResult>;
   getReproduction(query: GetReproduction): Promise<ReproductionSnapshot>;
+  getJob(query: GetJob): Promise<JobSnapshot>;
   exportReproBundle(query: ExportReproBundle): Promise<ExportResult>;
 };
 ```
@@ -156,7 +157,7 @@ Job state and case state are separate. A job may fail operationally before a cas
 | `GET /api/v2/jobs/{jobId}` | Poll operational progress | Read-only |
 | `GET /api/v2/reproductions/{caseId}/bundle` | Export a verified bundle | Read-only |
 
-Responses use a versioned envelope with `data`, `error`, `requestId`, and `schemaVersion`. Errors have stable codes: `INVALID_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `IDEMPOTENCY_CONFLICT`, `UNSUPPORTED_SOURCE`, `RUNNER_UNAVAILABLE`, `BUDGET_EXHAUSTED`, `RATE_LIMITED`, and `INTERNAL_ERROR`. Raw exceptions, commands containing secrets, and provider payloads are never returned.
+Responses use a versioned envelope with `data`, `error`, `requestId`, and `schemaVersion`. Errors have stable codes: `INVALID_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `IDEMPOTENCY_CONFLICT`, `BUNDLE_NOT_READY`, `UNSUPPORTED_SOURCE`, `RUNNER_UNAVAILABLE`, `BUDGET_EXHAUSTED`, `RATE_LIMITED`, and `INTERNAL_ERROR`. Raw exceptions, commands containing secrets, and provider payloads are never returned.
 
 ### 5.5 MCP tool v1
 

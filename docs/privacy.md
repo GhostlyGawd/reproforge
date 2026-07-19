@@ -2,7 +2,7 @@
 
 ## Offline trusted sample
 
-The default sample uses synthetic issue text and a bundled fixture. It requires no account, API key, telemetry service, database, or third-party request. Case state is assembled in memory and is not persisted by ReproForge. A downloaded bundle is written only where the browser user chooses to save it.
+The default sample uses synthetic issue text and a bundled fixture. It requires no account, API key, telemetry service, database, or third-party request. REST v2 case/job state is held in memory for one server process and disappears on restart. A downloaded bundle is written only where the browser user chooses to save it.
 
 ## Optional live investigator
 

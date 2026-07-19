@@ -14,7 +14,7 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
 - The full browser demo always uses the offline investigator.
 - The live GPT-5.6 API path plans through strict, non-executing tools; it does not connect those proposals to an external execution sandbox.
 - No live-key smoke evidence is committed because no key was present during milestone verification.
-- Cases are not persisted, resumed, shared, or authenticated.
+- Trusted cases and jobs can be started, retried idempotently, read, polled, and exported within one server process. They are not durable across restart, shared across instances, or authenticated.
 
 ## Verification and minimization
 
@@ -31,7 +31,7 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
 
 ## Product readiness
 
-- There is no hosted deployment, stable API, published package, signed artifact, release tag, service-level agreement, or compatibility guarantee.
+- REST v2 is an implemented draft contract for the trusted slice, not a stability guarantee. There is no hosted deployment, published package, signed artifact, release tag, service-level agreement, or compatibility guarantee.
 - Security controls required for an internet-facing multi-user service are outside the MVP.
 - Browser automation covers Chromium at desktop and mobile viewports; it is not a cross-browser certification.
 - No license has been selected, so reuse rights have not been granted.

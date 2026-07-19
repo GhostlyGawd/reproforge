@@ -5,6 +5,8 @@ import type { MinimizationInput, MinimizationResult } from "@/domain/minimizatio
 import type { RunResult } from "@/domain/run";
 import type { VerificationSummary } from "@/domain/verification";
 import type { SampleCaseResult } from "@/application/sample-case";
+import type { CaseService } from "@/application/case-service";
+import type { StartResult } from "@/application/reproduction-contracts";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -15,6 +17,12 @@ export class ReproForgeWorld extends World {
   oracle?: FailureOracle;
   summary?: VerificationSummary;
   sample?: SampleCaseResult;
+  caseService?: CaseService;
+  serviceErrorCode?: string;
+  serviceStarts: StartResult[] = [];
+  trustedExecutionCount = 0;
+  previousOpenAIKey?: string;
+  openAIKeyWasChanged = false;
 }
 
 setWorldConstructor(ReproForgeWorld);

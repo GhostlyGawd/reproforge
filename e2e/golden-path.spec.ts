@@ -11,6 +11,7 @@ test("turns the trusted issue into a verified reproduction", async ({ page }) =>
   await expect(page.getByText(/Offline sample · GPT-5\.6 (available|not configured)/)).toBeVisible();
   await expect(page.getByText("6 tool calls · 3 clean runs")).toBeVisible();
   await expect(page.getByText("oracle-cli-spaces v1 · exit 1 + ENOENT")).toBeVisible();
+  await expect(page.getByText(/^case \/ case_[0-9a-f-]+$/)).toBeVisible();
 
   await page.getByRole("button", { name: "Run trusted sample" }).click();
 
@@ -83,6 +84,54 @@ test("returns a deterministic investigation plan from the offline API", async ({
   };
   expect(plan).toMatchObject({ mode: "offline", model: "offline-fixture-v1" });
   expect(plan.experiments).toHaveLength(1);
+});
+
+test("starts, polls, reads, and exports through REST v2", async ({ request }) => {
+  const idempotencyKey = `playwright-${Date.now()}-${Math.random()}`;
+  const start = await request.post("/api/v2/reproductions", {
+    data: { sampleId: "cli-spaces" },
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  expect(start.status()).toBe(201);
+  const startBody = (await start.json()) as {
+    data: {
+      snapshot: { case: { id: string }; job: { id: string; state: string } };
+    };
+    error: null;
+    schemaVersion: string;
+  };
+
+  expect(startBody).toMatchObject({
+    data: { snapshot: { job: { state: "SUCCEEDED" } } },
+    error: null,
+    schemaVersion: "2.0",
+  });
+  const caseId = startBody.data.snapshot.case.id;
+  const jobId = startBody.data.snapshot.job.id;
+
+  const retry = await request.post("/api/v2/reproductions", {
+    data: { sampleId: "cli-spaces" },
+    headers: { "Idempotency-Key": idempotencyKey },
+  });
+  expect(retry.status()).toBe(200);
+  await expect(retry.json()).resolves.toMatchObject({
+    data: { reused: true, snapshot: { case: { id: caseId } } },
+  });
+
+  const [reproduction, job, bundle] = await Promise.all([
+    request.get(`/api/v2/reproductions/${caseId}`),
+    request.get(`/api/v2/jobs/${jobId}`),
+    request.get(`/api/v2/reproductions/${caseId}/bundle`),
+  ]);
+  expect(reproduction.ok()).toBe(true);
+  expect(job.ok()).toBe(true);
+  expect(bundle.ok()).toBe(true);
+  await expect(job.json()).resolves.toMatchObject({
+    data: { job: { id: jobId, state: "SUCCEEDED" } },
+  });
+  await expect(bundle.json()).resolves.toMatchObject({
+    data: { bundle: { caseId, schemaVersion: "1.1" }, caseId },
+  });
 });
 
 test("cancels an in-flight investigation without losing the issue", async ({ page }) => {

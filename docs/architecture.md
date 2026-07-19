@@ -10,8 +10,8 @@ GPT-5.6 may organize evidence and propose bounded experiments. It does not own e
 
 ## Runtime flow
 
-1. The browser requests the bundled sample from the Next.js application.
-2. The case orchestrator advances a validated state machine and retains a sourced evidence ledger, prioritized hypotheses, tool budget, and event history.
+1. The browser and REST v2 routes call the same transport-neutral `CaseService`. A caller-scoped idempotency key reserves one case/job before execution so a retry cannot duplicate work.
+2. The job advances from queued to running to a terminal operational state while the case orchestrator advances its separate validated state machine and retains a sourced evidence ledger, prioritized hypotheses, tool budget, and event history.
 3. The investigator interface selects either the deterministic offline implementation or the explicit live Responses API implementation.
 4. Strict investigator tools record evidence and hypotheses. They are proposal contracts and cannot execute shell commands or modify repositories.
 5. All execution crosses the runner interface. The current trusted fixture accepts one fixture ID and two allowlisted actions. The external adapter throws a typed unavailable error.
@@ -31,13 +31,16 @@ GPT-5.6 may organize evidence and propose bounded experiments. It does not own e
 | Bundle hashing, redaction, and validation | `src/domain/bundle.ts` |
 | Trusted and unavailable runners | `src/infrastructure/runner.ts` |
 | Trusted golden-path orchestration | `src/application/sample-case.ts` |
+| Case/job application boundary | `src/application/case-service.ts` and `src/application/reproduction-contracts.ts` |
+| Job state and transitions | `src/domain/job.ts` |
+| Process-local repository | `src/infrastructure/reproduction-repository.ts` |
 | Investigator implementations | `src/ai/` |
 | Deterministic benchmark | `src/evaluation/` and `evals/fixtures/` |
-| Browser surface and API routes | `src/app/` and `src/components/` |
+| Browser surface and API routes | `src/app/`, including `src/app/api/v2/`, and `src/components/` |
 
 ## Data and persistence
 
-The MVP has no database, user accounts, or server-side case persistence. The trusted sample is constructed per request. A bundle is returned as validated JSON/files and downloaded by the browser. The optional OpenAI transport sends only the explicit investigation request and uses `store: false`.
+The MVP has no database or user accounts. The v2 trusted slice retains cases and jobs in a caller-scoped in-memory repository for the life of one server process; data disappears on restart and cannot coordinate multiple instances. A bundle is returned as validated JSON/files and downloaded by the browser. The optional OpenAI transport sends only the explicit investigation request and uses `store: false`.
 
 ## Deployment shape
 

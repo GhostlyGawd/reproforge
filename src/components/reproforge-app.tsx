@@ -130,7 +130,7 @@ export function ReproForgeApp({
               <span className="window-dot" />
               <span className="window-dot" />
             </div>
-            <span>case / sample-cli-spaces</span>
+            <span>case / {sample.case.id}</span>
             <span>runner / trusted-fixture-v1</span>
           </div>
 

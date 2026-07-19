@@ -1,9 +1,9 @@
-import { runTrustedSample } from "@/application/sample-case";
+import { getTrustedWebSample } from "@/application/default-case-service";
 
 export const runtime = "nodejs";
 
 export async function GET() {
-  const sample = await runTrustedSample();
+  const sample = await getTrustedWebSample();
   const payload = JSON.stringify(
     {
       bundle: sample.bundle,
