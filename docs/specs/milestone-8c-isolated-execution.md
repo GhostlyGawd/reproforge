@@ -139,7 +139,7 @@ Required defenses cover:
 ## Ordered task list
 
 - [x] `RF-8301` Write failing source/profile/execution-plan schemas and provider-neutral acquisition/sandbox contracts.
-- [ ] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
+- [x] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
 - [ ] `RF-8303` Implement the Vercel Sandbox adapter using the current SDK with explicit creation, command, file, network, usage, and stop behavior.
 - [ ] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
 - [ ] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
