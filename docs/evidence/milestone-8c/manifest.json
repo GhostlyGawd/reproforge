@@ -115,6 +115,13 @@
     "browserTestsPassed": 18,
     "accessibility": "passed"
   },
+  "deploymentVerification": {
+    "sourceCommit": "2aaebed6d5f658892f47cb2c119bfa64df329463",
+    "plan": "Hobby",
+    "queueFunctionMaxDurationSeconds": 60,
+    "contractTest": "passed",
+    "vercelBuild": "passed"
+  },
   "visualEvidence": {
     "productScreenshotApplicable": false,
     "reason": "This backend boundary is materially verified by provider behavior, source hash identity, network denial, bounded output, cancellation, fresh restores, cleanup, and the portable machine-readable bundle. Hosted browser and ChatGPT visual requirements remain in 8D/9.",
