@@ -17,7 +17,7 @@ contracts, and real managed-provider behavior are kept distinct below.
 | `RF-8108` | process liveness is dependency-free; readiness is fail-closed across configuration, database, private artifact store, and queue checks; runner capability remains independently disableable; failures and timeouts expose stable codes only; allowlisted JSON logs redact secrets and credential shapes; bounded-cardinality metrics record health outcomes | `npm run test:operations` (10 tests, including 250 generated redaction events), missing-production-configuration BDD scenario, built-server smoke (`/health/live` 200, `/health/ready` 200 in explicit local mode, `/health/runner` 503 with retry hint), `npm audit` (zero vulnerabilities), followed by `npm run check` (158 Vitest tests, 24 BDD scenarios/156 steps, production build with all three health routes) |
 | `RF-8109` | a canonical SHA-256 manifest exports one active quiescent tenant's terminal case/job/idempotency metadata, ordered evidence, and private artifact descriptors while keeping object bodies separate; restore verifies every body before mutation, recreates relational state under a restore-only evidence gate, records digest identity, is idempotent, rejects occupied targets, re-exports and digest-compares the restored tenant, and proves the verified private bundle remains readable without body-bearing logs | `npm run test:backup` (14 tests, including six forward migrations and 250 generated private-body mutation sequences), verified-bundle restore BDD scenario, tenant-isolation/idempotent-retry/corruption-before-write checks, `npm audit` (zero vulnerabilities), followed by the final repository gate |
 | `RF-8110` | the trusted fixture crosses real Neon transactions, a live identifier-only Queue publish, private Blob, leased execution, terminal commit, restart/retry identity, cross-tenant denial, concurrent idempotency, expired-lease recovery, live readiness, and a destructive export/remove/restore/re-hash drill | `npm run test:providers` (6/6 live tests; the command enables the provider gate itself), plus the 250-sequence durable restart/retry property and existing REST/MCP/browser identity gates |
-| `RF-8111` | architecture, setup, operations, security, privacy, limitations, release truth, roadmap, and evidence align with the verified implementation without claiming hosting, authentication, external execution, or publication | `npm run verify` (170 Vitest tests, 26 BDD scenarios/171 steps, build, MCP smoke, four evals, 16 browser tests), `npm run verify:docs` (103 links and 11 JSON files), `npm audit` (zero vulnerabilities), exact-commit CI, and this sanitized evidence set |
+| `RF-8111` | architecture, setup, operations, security, privacy, limitations, release truth, roadmap, and evidence align with the verified implementation without claiming stable hosting, authentication, external execution, or publication | `npm run verify` (172 Vitest tests, 26 BDD scenarios/171 steps, build, MCP smoke, four evals, 16 browser tests), `npm run verify:docs` (103 links and 11 JSON files), `npm audit` (zero vulnerabilities), exact-commit CI, protected-preview health probes, and this sanitized evidence set |
 
 ## Local and live proof boundary
 
@@ -57,6 +57,29 @@ Health probes expose only stable component codes, timing, and status. Live
 readiness reported Neon, private Blob, and Queue configuration ready while the
 external runner remained truthfully `RUNNER_NOT_CONFIGURED`. This is dependency
 proof, not a deployed availability or monitoring claim.
+
+## Protected preview deployment regression
+
+The first Vercel preview build exposed a contract defect: importing the default
+case service resolved hosted configuration during Next.js page-data collection.
+The build failed closed on missing build-time runtime values. A red subprocess
+test reproduced the same import failure with preview mode and provider values
+absent.
+
+The fix wraps runtime selection in the same memoized lazy operations boundary.
+Import and page-data collection no longer read credentials; the first actual
+operation still validates once, preserves the error, and never falls back to
+memory. The focused test passed 5/5, the complete local gate passed 172 Vitest
+tests, and the six live provider tests remained green.
+
+The exact fix commit then passed GitHub CI and produced a Ready, Vercel
+SSO-protected preview. Authenticated probes returned liveness `200`, readiness
+`200` with `DATABASE_READY`, `ARTIFACT_STORE_READY`, and
+`QUEUE_CONFIGURATION_READY`, and runner `503` with the expected
+`RUNNER_NOT_CONFIGURED`. This proves a protected development preview and its
+durable dependencies, not stable hosting, public availability, deployed Queue
+redelivery, an external runner, or an SLA. Deployment, project, resource,
+request, and provider identifiers are omitted from committed evidence.
 
 Tenant restore is transactionally atomic for Postgres state and uploads only
 content-addressed objects that pass the manifest hashes before that transaction.

@@ -2,7 +2,7 @@
 
 - **Audit date:** 2026-07-19
 - **Scope:** approved trusted-fixture MVP, REST/MCP adapters, and Milestone 8A durable hosted foundation
-- **Verification baseline:** 170 offline Vitest tests, 26 BDD scenarios / 171 steps, 16 Playwright tests, production build, 4/4 deterministic eval fixtures, and 6/6 live Neon/Blob/Queue provider tests
+- **Verification baseline:** 172 offline Vitest tests, 26 BDD scenarios / 171 steps, 16 Playwright tests, production build, 4/4 deterministic eval fixtures, and 6/6 live Neon/Blob/Queue provider tests
 
 “Satisfied” below means satisfied for the explicitly approved bundled-fixture scope. It does not imply arbitrary-repository support or production readiness.
 
