@@ -79,6 +79,15 @@ describe("runtime configuration", () => {
     ).toThrowError(/REPROFORGE_DATABSAE/);
   });
 
+  it("allows ReproForge variables owned by the OAuth configuration boundary", () => {
+    expect(
+      parseRuntimeConfig({
+        ...productionEnvironment,
+        REPROFORGE_OAUTH_TENANT_CLAIM: "https://reproforge.dev/tenant_id",
+      }).mode,
+    ).toBe("production");
+  });
+
   it("parses bounded policy values without exposing provider credentials", () => {
     const parsed = parseRuntimeConfig({
       ...productionEnvironment,
