@@ -142,7 +142,7 @@ Required defenses cover:
 - [x] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
 - [x] `RF-8303` Implement the Vercel Sandbox adapter using the current SDK with explicit creation, command, file, network, usage, and stop behavior.
 - [x] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
-- [ ] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
+- [x] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
 - [ ] `RF-8306` Implement typed command planning, clean control/candidate workspaces, separated executable/args invocation, and immutable environment provenance.
 - [ ] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
 - [ ] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
