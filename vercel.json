@@ -10,7 +10,7 @@
           "initialDelaySeconds": 0
         }
       ],
-      "maxDuration": 900
+      "maxDuration": 60
     }
   }
 }

@@ -3,7 +3,7 @@ import { getDefaultGitHubServices } from "@/github/default-services";
 import { createVercelQueueConsumerHandler } from "@/infrastructure/queue/vercel-job-queue";
 
 export const runtime = "nodejs";
-export const maxDuration = 900;
+export const maxDuration = 60;
 
 const consumer = {
   consume: async (message: QueueMessage, ownerId: string) =>

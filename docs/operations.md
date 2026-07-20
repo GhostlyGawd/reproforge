@@ -51,9 +51,16 @@ delivery attempts, 25-event publish batch, two active jobs per tenant,
 24-hour Queue retention, and 30-day customer-data retention. Override only
 through the validated variables documented in [`.env.example`](../.env.example).
 
+The current Hobby preview configures the Queue callback to the plan-compatible
+60-second Function maximum. The 15-minute sandbox attempt budget is an internal
+upper bound, not a promise that one hosted callback can wait that long. Before
+8D can claim a stable repository journey, its effective profile must complete
+inside the deployed callback limit or move orchestration behind a provider-
+verified durable workflow/worker boundary.
+
 ## Migration and provider gate
 
-Hosted composition initializes lazily. Its first operation applies the six
+Hosted composition initializes lazily. Its first operation applies the nine
 forward-only migrations under a Postgres advisory lock and records canonical
 SHA-256 checksums in `reproforge_schema_migrations`. Reapplying is safe; an
 applied checksum mismatch is a hard failure. Never edit an applied migration—

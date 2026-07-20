@@ -98,6 +98,13 @@ port 3129; direct `npm run test:browser` remains self-contained by building
 first. All 18 journeys passed that production path in 15.5 seconds without
 loosening any assertion or timeout.
 
+The first pushed preview then rejected a 900-second Queue Function duration on
+the linked Hobby plan. An explicit deployment-contract test failed at 900 and
+passed after both the Next route and `vercel.json` were set to the universally
+Hobby-compatible 60-second ceiling. Documentation now distinguishes the longer
+internal sandbox budget from the effective hosted callback limit; 8D retains
+the obligation to prove or redesign longer-running orchestration.
+
 ## Evidence boundary
 
 This is backend evidence, so a product screenshot would add no meaningful proof. Its

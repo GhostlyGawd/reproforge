@@ -81,6 +81,10 @@
     {
       "red": "Four unrelated Playwright journeys reached the shared test timeout while competing for on-demand Next development compilation after the production build.",
       "green": "The release browser gate starts the already-built production server on dedicated port 3129; all 18 journeys pass in 15.5 seconds without weakening assertions or timeouts."
+    },
+    {
+      "red": "The linked Hobby preview rejected the Queue Function's 900-second maxDuration as outside the plan limit.",
+      "green": "A deployment-contract test pins both the Next route and vercel.json to the universally Hobby-compatible 60-second ceiling; longer hosted orchestration remains an explicit 8D gate."
     }
   ],
   "propertyVerification": {

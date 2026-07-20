@@ -24,6 +24,10 @@ public repository canary. Its boundaries are intentional and user-visible.
 - The extracted workspace is capped at 500 MiB, archive input at 100 MiB,
   supported lock metadata is deliberately restrictive, and provider/plan
   limits may be lower. Unsupported sources fail closed.
+- The current Vercel Hobby preview caps its Queue callback at 60 seconds. The
+  15-minute internal attempt budget is therefore not a hosted latency promise;
+  8D must prove the supported canary/profile within the effective callback
+  ceiling or adopt a separately validated durable worker/workflow.
 
 ## Investigation
 
