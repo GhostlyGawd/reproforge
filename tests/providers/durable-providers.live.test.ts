@@ -422,7 +422,7 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
     }
   });
 
-  it("reports live durable dependencies ready while the external runner stays unavailable", async () => {
+  it("reports live durable dependencies and isolated runner ready", async () => {
     const logs: string[] = [];
     const health = createRuntimeHealthService({
       clock: { now: () => new Date() },
@@ -465,12 +465,12 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
     await expect(health.runner()).resolves.toMatchObject({
       checks: [
         {
-          code: "RUNNER_NOT_CONFIGURED",
+          code: "RUNNER_READY",
           component: "runner",
-          status: "unavailable",
+          status: "ready",
         },
       ],
-      status: "unavailable",
+      status: "ready",
     });
     expect(logs.join("\n")).not.toContain("postgresql://");
     expect(logs.join("\n")).not.toContain("BLOB_READ_WRITE_TOKEN");
