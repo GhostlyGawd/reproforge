@@ -1,6 +1,8 @@
 import "server-only";
 
 import type { WebIdentity } from "@/auth/web-session";
+import { RepositoryCatalogOperations } from "@/application/repository-catalog-operations";
+import type { RepositoryOperations } from "@/application/repository-operations";
 import { getGitHubConfig, type GitHubConfig } from "@/config/github";
 import { getRuntimeConfig } from "@/config/runtime";
 import { GitHubAppClient } from "@/github/app-client";
@@ -28,6 +30,7 @@ export type DefaultGitHubServices = {
   config: GitHubConfig;
   database: NeonPostgresDatabase;
   provider: GitHubRepositoryProvider;
+  repositoryOperations: RepositoryOperations;
   store: PostgresGitHubAuthorizationStore;
   webPrincipals: PostgresWebPrincipalSession;
 };
@@ -50,13 +53,15 @@ async function createServices(): Promise<DefaultGitHubServices> {
     clientSecret: config.credentials.clientSecret,
     privateKey: config.credentials.privateKey,
   });
+  const provider = new GitHubRepositoryProvider(store, client, {
+    audit: new PostgresAuditSink(database),
+  });
   return {
     client,
     config,
     database,
-    provider: new GitHubRepositoryProvider(store, client, {
-      audit: new PostgresAuditSink(database),
-    }),
+    provider,
+    repositoryOperations: new RepositoryCatalogOperations(provider),
     store,
     webPrincipals: new PostgresWebPrincipalSession(database),
   };

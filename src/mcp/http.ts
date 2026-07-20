@@ -22,7 +22,10 @@ const CORS_HEADERS = {
 type McpHttpOptions = {
   authorization?: (
     request: Request,
-  ) => McpAuthorizationDependencies | Promise<McpAuthorizationDependencies>;
+  ) =>
+    | McpAuthorizationDependencies
+    | Promise<McpAuthorizationDependencies | undefined>
+    | undefined;
   repositoryService?: RepositoryOperations;
   service: CaseOperations;
 };
