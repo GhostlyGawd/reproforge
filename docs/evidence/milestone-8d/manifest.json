@@ -1,16 +1,16 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8d",
-  "capturedAt": "2026-07-20T22:29:29.270Z",
-  "implementationCommit": "370db06247ad8fa80714de2ca7015cb86f453919",
-  "scope": "private-beta runtime health, durable progress, resilience, and account data lifecycle implementation evidence",
+  "capturedAt": "2026-07-20T22:56:06.742Z",
+  "implementationCommit": "7c75a8f0131f85ac1987737e5370e49deaa10b7f",
+  "scope": "private-beta runtime health, durable progress, resilience, account data lifecycle, and operations-control implementation evidence",
   "status": "in-progress",
   "tasks": {
     "RF-8401": "implementation-passed-live-configuration-pending",
     "RF-8402": "implementation-passed-hosted-journey-pending",
     "RF-8403": "implementation-passed-hosted-operations-pending",
     "RF-8404": "implementation-passed-hosted-lifecycle-pending",
-    "RF-8405": "pending",
+    "RF-8405": "implementation-passed-hosted-rehearsal-pending",
     "RF-8406": "pending",
     "RF-8407": "pending",
     "RF-8408": "pending",
@@ -38,8 +38,8 @@
     "generatedSchedules": 500,
     "propertyTestsPassed": 2,
     "focusedTestsPassed": 13,
-    "bddScenariosPassed": 45,
-    "bddStepsPassed": 326,
+    "bddScenariosPassed": 46,
+    "bddStepsPassed": 333,
     "productionBuild": "passed"
   },
   "resilience": {
@@ -64,6 +64,19 @@
     "explicitDeletionConfirmation": "passed-local",
     "providerFirstDeletion": "passed-local",
     "hostedExercise": "pending"
+  },
+  "operationsControls": {
+    "dashboardSchemaVersion": "1.0",
+    "aggregateIdentifiersExposed": 0,
+    "ownedAlerts": 8,
+    "featureKillSwitches": 3,
+    "generatedAdmissionCombinations": 500,
+    "generatedDashboardMetricSets": 500,
+    "focusedTestsPassed": 51,
+    "operationsTestsPassed": 44,
+    "deploymentPolicyVerifier": "passed",
+    "productionBuild": "passed",
+    "hostedAlertAndRollbackRehearsal": "pending"
   },
   "browserVerification": {
     "tool": "agent-browser",
@@ -118,6 +131,15 @@
       "alt": "Mobile ReproForge account data page showing responsive export, deletion, and retention controls without horizontal overflow."
     }
   ],
+  "contractEvidence": [
+    {
+      "file": "local-operations-dashboard.json",
+      "bytes": 3385,
+      "sha256": "8b5e5210879a2d8dbdffe155e8dfd70ce67848d6d45ce51b7dd78bf3f78665d6",
+      "provenance": "schema-validated synthetic local aggregate; not a hosted operations snapshot",
+      "sanitized": true
+    }
+  ],
   "redGreenFindings": [
     {
       "red": "Hosted runner health always returned RUNNER_NOT_CONFIGURED even though isolated execution was composed.",
@@ -138,6 +160,10 @@
     {
       "red": "Tenant archives were internal structures and users had no authenticated export or deletion controls.",
       "green": "A strict portable archive verifies its manifest and object digests, authenticated account routes enforce quota/idempotency/origin/confirmation boundaries, and provider-first deletion suspends and cancels work before purging tenant data."
+    },
+    {
+      "red": "Private-beta operations had health primitives but no aggregate dashboard, owned alert thresholds, feature kill switches, or executable rollback compatibility contract.",
+      "green": "A schema-closed identifier-free dashboard evaluates eight owned alerts, three fail-closed switches deny only new repository work, and an executable policy pins the additive schema window and application-only rollback procedure."
     }
   ],
   "deferred": [
@@ -147,7 +173,8 @@
     "public and private deployed canaries",
     "hosted RF-8403 recovery and quarantine exercise",
     "hosted RF-8404 retention, deletion, and backup/restore exercise",
-    "RF-8405 through RF-8411"
+    "hosted RF-8405 alert delivery, deployment, and rollback rehearsal",
+    "RF-8406 through RF-8411"
   ],
-  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, and the signed-out/unconfigured account-data state; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
+  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, the signed-out/unconfigured account-data state, and an identifier-free synthetic operations aggregate; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
 }

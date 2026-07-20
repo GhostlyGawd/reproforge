@@ -11,11 +11,11 @@ Evidence is added incrementally and tied to an exact Git commit in
 ## Current verified slice
 
 Exact implementation commit
-`370db06247ad8fa80714de2ca7015cb86f453919` adds a real isolated-runner
+`7c75a8f0131f85ac1987737e5370e49deaa10b7f` adds a real isolated-runner
 capability probe, fail-closed validation of the complete hosted product
 configuration, one durable progress projection shared by REST, MCP, ChatGPT
-widget, and tenant-scoped web views, resilient worker/operator controls, and
-the account data lifecycle.
+widget, and tenant-scoped web views, resilient worker/operator controls, the
+account data lifecycle, and private-beta operations controls.
 
 The RF-8403 slice blocks new starts during runner degradation while preserving
 reads, recovers expired leases, observes cancellation before the next command,
@@ -31,12 +31,29 @@ governance suite passed 25 tests, including 250 generated retention/deletion
 sequences; the backup suite passed 14 tests, including 500 generated portable
 archive round trips and mutations.
 
-At this commit, Cucumber passed 45 scenarios and 326 steps, the account page
+The RF-8405 slice adds three fail-closed feature kill switches, a
+schema-validated identifier-free operations dashboard, eight alerts with an
+owner/threshold/runbook/test procedure, structured Vercel runtime health logs,
+and an executable expand/contract deployment policy. Its focused gate passed
+51 tests; the operations aggregate passed 44 tests, including 500 generated
+admission combinations and 500 generated dashboard metric sets. The deployment
+policy verifier pins migration `0009_github_event_ordering`, compatibility with
+the immediately previous additive schema, and application-only rollback.
+
+At this commit, Cucumber passed 46 scenarios and 333 steps, the account page
 passed 3 browser tests, TypeScript and ESLint passed, and the production Next.js
 build completed. Production-build browser inspection found no framework error
 overlay, page errors, console output, or horizontal overflow at a 390 × 844
 mobile viewport. The final local account page deliberately shows real controls
 disabled while identity configuration is absent.
+
+## Local contract evidence
+
+[`local-operations-dashboard.json`](local-operations-dashboard.json) is the
+exact schema-validated synthetic dashboard aggregate used for sanitized local
+evidence. It contains no tenant, principal, repository, case, job, provider
+resource, source, or object identity. It is not a hosted snapshot and does not
+prove alert delivery or a rollback rehearsal.
 
 ## Local visual evidence
 

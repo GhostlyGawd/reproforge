@@ -46,6 +46,9 @@ public repository canary. Its boundaries are intentional and user-visible.
   deletion, and responsive controls are implemented and locally verified. They
   have not completed a signed-in deployed lifecycle drill, so they are not a
   customer-data readiness claim.
+- The aggregate operations dashboard, owned alert thresholds, kill switches,
+  and rollback policy are locally verified. Alert delivery, an early hosted log
+  scan, and an actual deployment/rollback rehearsal remain unproven.
 - The no-auth trusted sample still uses an anonymous public synthetic tenant.
   OAuth/principal and GitHub authorization contracts are implemented for the
   protected path, but they are not safe for private/customer data until the

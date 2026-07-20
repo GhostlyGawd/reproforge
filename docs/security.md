@@ -57,6 +57,13 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
   objects before customer-class rows, and preserves only the documented
   sanitized audit tombstone. Backup/restore verifies the portable manifest and
   every object hash before accepting restored state.
+- Three schema-closed feature switches can disable all new repository starts,
+  private starts, or a Node execution profile without hiding existing evidence,
+  blocking cancellation, or changing terminal truth. Denials are tenant-audited
+  without repository names.
+- The private operations dashboard returns global counts/status only and never
+  serializes a tenant, principal, repository, case, job, provider resource,
+  source, or object identifier.
 - Operational logs use allowlisted fields and secret/credential-shape redaction; provider bodies and connection strings are not logged.
 - Bundle materialization redacts registered secrets before serialization.
 - Canonical hashes cover contract-relevant bundle content and provenance fields.

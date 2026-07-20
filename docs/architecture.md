@@ -92,6 +92,7 @@ flowchart LR
 | Retention, deletion, backup, and restore | `src/infrastructure/retention/` and `src/infrastructure/backup/` |
 | Account export/deletion boundary | `src/application/account-data-service.ts`, `src/account/`, and `src/app/api/account/` |
 | Health and sanitized operations telemetry | `src/application/health.ts` and `src/infrastructure/operations/` |
+| Operations dashboard, alerts, and kill switches | `src/application/operations-dashboard.ts`, `src/infrastructure/operations/postgres-operations-dashboard.ts`, and `src/infrastructure/operations/feature-start-admission.ts` |
 | MCP schemas and view mapping | `src/mcp/contracts.ts` |
 | MCP tool/resource registration | `src/mcp/server.ts` |
 | Stateless Streamable HTTP adapter | `src/mcp/http.ts` and `src/app/mcp/route.ts` |

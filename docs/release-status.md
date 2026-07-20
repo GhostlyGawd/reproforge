@@ -16,10 +16,11 @@ are implemented. The source also contains a provider-verified hosted durable
 composition using Neon Postgres, private Vercel Blob, Vercel Queue, GitHub App
 authorization contracts, and Vercel Sandbox. A tiny immutable public source
 canary has completed one control and three clean isolated runs and emitted a
-portable verified bundle. Resilience controls and the account export/deletion
-lifecycle are implemented with local automated/visual evidence, but their
-deployed drills remain open. Local mode remains process-local, and no adapter
-is offered as a hosted or stable API. Live account authorization,
+portable verified bundle. Resilience controls, the account export/deletion
+lifecycle, private operations dashboard, owned alerts, feature kill switches,
+and rollback policy are implemented with local automated/visual evidence, but
+their deployed drills remain open. Local mode remains process-local, and no
+adapter is offered as a hosted or stable API. Live account authorization,
 general/private repository use, a developer-mode ChatGPT app, local plugin
 wrapper, public submission, and the other deferred v2 items are not release
 claims for this source snapshot.

@@ -195,6 +195,7 @@ This key is required only for the current optional standalone Responses route. I
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Hosted operations and recovery runbook](docs/operations.md)
+- [Deployment and rollback policy](docs/deployment-rollback.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
 - [Privacy behavior](docs/privacy.md)
@@ -219,12 +220,13 @@ and provider-verified against Neon Postgres, private Vercel Blob, Vercel Queue,
 and Vercel Sandbox. A tiny immutable public repository canary has completed the
 full isolated path—bounded acquisition, dependency preparation, one control,
 three fresh candidates, deterministic proof, portable bundle, and cleanup.
-Resilience and account export/deletion controls are implemented and locally
-verified, but their deployed recovery and lifecycle drills remain open. Live
-account authorization, general/private repository use, the composed stable
-hosted journey, production hosting, and plugin publication remain intentionally
-unavailable. The synthetic four-case eval and public canary are contract checks,
-not claims of real-world benchmark performance.
+Resilience, account export/deletion, feature kill-switch, aggregate dashboard,
+alert, and rollback-policy controls are implemented and locally verified, but
+their deployed recovery, lifecycle, alert-delivery, and rollback drills remain
+open. Live account authorization, general/private repository use, the composed
+stable hosted journey, production hosting, and plugin publication remain
+intentionally unavailable. The synthetic four-case eval and public canary are
+contract checks, not claims of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

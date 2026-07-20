@@ -77,6 +77,12 @@ The bundle builder can redact exact registered secret values from serialized art
 
 The application defines no first-party analytics or advertising integration. Hosting providers, browsers, proxies, and operators may produce their own infrastructure logs outside this repository's control.
 
+The private operations dashboard is deliberately aggregate-only: it reports
+bounded counts, ages, health states, feature states, and alert status without
+tenant, principal, repository, case, job, provider-resource, source, or object
+identifiers. Structured health logs use an allowlist and credential-shape
+redaction. No Vercel log drain or analytics integration is currently claimed.
+
 ## Evidence assets
 
 Committed screenshots contain only the synthetic trusted sample and local application chrome, including the actual MCP App proof resource rendered by its preview harness. Evidence manifests document capture time, source commit, viewport, sanitization, and provenance. No screenshot is represented as a real ChatGPT-host session unless it was captured in that host.
