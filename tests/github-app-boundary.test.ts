@@ -81,8 +81,12 @@ describe("state-bound GitHub installation callback", () => {
         accountId: 9001,
         accountLogin: "synthetic-owner",
         installationId: 7001,
-        permissions: { contents: "read", issues: "read", metadata: "read" },
-        repositorySelection: "selected",
+        permissions: {
+          contents: "read" as const,
+          issues: "read" as const,
+          metadata: "read" as const,
+        },
+        repositorySelection: "selected" as const,
       })),
     };
     const bind = vi.fn(async () => undefined);

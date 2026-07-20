@@ -109,7 +109,7 @@ secret, callback URL, or unrestricted network policy.
 - [x] `RF-8203` Implement principal/tenant resolution and application authorization policies; remove caller identity from all protected transport inputs.
 - [x] `RF-8204` Upgrade MCP tool schemas, per-tool `securitySchemes`, scope checks, linking/reauthorization challenges, and sanitized unauthenticated/forbidden errors while preserving the no-auth trusted demo.
 - [x] `RF-8205` Add authenticated web session handling and repository-connection UI without placing access or installation tokens in browser storage.
-- [ ] `RF-8206` Create the least-privilege GitHub App manifest/setup specification and implement state-bound installation callbacks and webhook verification.
+- [x] `RF-8206` Create the least-privilege GitHub App manifest/setup specification and implement state-bound installation callbacks and webhook verification.
 - [ ] `RF-8207` Implement installation/repository persistence, live authorization checks, just-in-time installation token minting, and immutable revision resolution behind provider-neutral ports.
 - [ ] `RF-8208` Add revocation/suspension handling, scope-change behavior, token/JWKS rotation tests, and audit events for login, linking, repository access, and authorization denial.
 - [ ] `RF-8209` Add cross-tenant, confused-deputy, callback replay, webhook replay, and secret non-disclosure property tests.
