@@ -1,4 +1,8 @@
-import { Sandbox, type NetworkPolicy } from "@vercel/sandbox";
+import {
+  Sandbox,
+  type NetworkPolicy,
+  type NetworkPolicyRule,
+} from "@vercel/sandbox";
 
 import {
   sandboxCommandSchema,
@@ -69,9 +73,29 @@ function assertSandboxPath(path: string): void {
 }
 
 function toVercelNetworkPolicy(policy: SandboxNetworkPolicy): NetworkPolicy {
-  return policy.kind === "deny-all"
-    ? "deny-all"
-    : { allow: [...policy.allowedHosts] };
+  if (policy.kind === "deny-all") return "deny-all";
+  if (policy.kind === "allow-hosts") {
+    return { allow: [...policy.allowedHosts] };
+  }
+  const allow: Record<string, NetworkPolicyRule[]> = Object.fromEntries(
+    policy.allowedHosts.map((host) => [host, []]),
+  );
+  allow[policy.injection.host] = [
+    {
+      match: {
+        method: [policy.injection.method],
+        path: { exact: policy.injection.path },
+      },
+      transform: [
+        {
+          headers: {
+            authorization: policy.injection.authorizationHeader,
+          },
+        },
+      ],
+    },
+  ];
+  return { allow };
 }
 
 class VercelSandboxSession implements IsolatedSandboxSession {

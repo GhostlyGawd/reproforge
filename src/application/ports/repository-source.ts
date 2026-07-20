@@ -23,3 +23,22 @@ export interface RepositorySourceProvider {
     input: { commitSha: string; repositoryId: string },
   ): Promise<ResolvedRepositoryRevision>;
 }
+
+export type EphemeralRepositoryArchiveCredential = {
+  authorizationHeader: string;
+  expiresAt: string;
+};
+
+export interface RepositoryArchiveCredentialProvider {
+  withArchiveCredential<Result>(
+    principal: AuthorizedPrincipal,
+    input: {
+      commitSha: string;
+      fullName: string;
+      repositoryId: string;
+    },
+    consume: (
+      credential: EphemeralRepositoryArchiveCredential,
+    ) => Promise<Result>,
+  ): Promise<Result>;
+}

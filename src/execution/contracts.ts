@@ -93,25 +93,62 @@ export const sandboxCreateRequestSchema = z
 
 export type SandboxCreateRequest = z.infer<typeof sandboxCreateRequestSchema>;
 
-export const sandboxNetworkPolicySchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("deny-all") }).strict(),
-  z
-    .object({
-      allowedHosts: z
-        .array(
-          z
-            .string()
-            .min(1)
-            .max(253)
-            .regex(/^(?:\*\.)?[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/),
-        )
-        .min(1)
-        .max(16),
-      kind: z.literal("allow-hosts"),
-      phase: z.enum(["github-acquisition", "npm-acquisition"]),
-    })
-    .strict(),
-]);
+const networkHostSchema = z
+  .string()
+  .min(1)
+  .max(253)
+  .regex(/^(?:\*\.)?[A-Za-z0-9](?:[A-Za-z0-9.-]*[A-Za-z0-9])?$/);
+
+export const sandboxNetworkPolicySchema = z
+  .discriminatedUnion("kind", [
+    z.object({ kind: z.literal("deny-all") }).strict(),
+    z
+      .object({
+        allowedHosts: z.array(networkHostSchema).min(1).max(16),
+        kind: z.literal("allow-hosts"),
+        phase: z.enum(["github-acquisition", "npm-acquisition"]),
+      })
+      .strict(),
+    z
+      .object({
+        allowedHosts: z.array(networkHostSchema).min(1).max(16),
+        injection: z
+          .object({
+            authorizationHeader: z
+              .string()
+              .min(8)
+              .max(4_096)
+              .regex(/^Bearer [!-~]+$/),
+            host: networkHostSchema.refine(
+              (host) => !host.startsWith("*."),
+              "credential injection requires an exact host",
+            ),
+            method: z.literal("GET"),
+            path: z
+              .string()
+              .max(1_024)
+              .regex(
+                /^\/repos\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/tarball\/[a-f0-9]{40}$/,
+              ),
+          })
+          .strict(),
+        kind: z.literal("brokered-allow-hosts"),
+        phase: z.literal("github-acquisition"),
+      })
+      .strict(),
+  ])
+  .superRefine((policy, context) => {
+    if (
+      policy.kind === "brokered-allow-hosts" &&
+      !policy.allowedHosts.includes(policy.injection.host)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "credential injection host must be explicitly allowed",
+        path: ["injection", "host"],
+      });
+    }
+  });
 
 export type SandboxNetworkPolicy = z.infer<typeof sandboxNetworkPolicySchema>;
 

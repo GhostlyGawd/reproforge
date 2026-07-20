@@ -20,7 +20,10 @@ function harness() {
     update: vi.fn(async () => undefined),
     writeFiles: vi.fn(async () => undefined),
   };
-  const create = vi.fn(async (_request: unknown) => sandbox);
+  const create = vi.fn(async (request: unknown) => {
+    void request;
+    return sandbox;
+  });
   const provider = new VercelSandboxProvider({ create });
   return { create, finished, provider, sandbox };
 }
@@ -61,10 +64,47 @@ describe("Vercel Sandbox adapter", () => {
       kind: "allow-hosts",
       phase: "github-acquisition",
     });
+    await session.setNetworkPolicy({
+      allowedHosts: ["api.github.com", "codeload.github.com"],
+      injection: {
+        authorizationHeader: "Bearer synthetic-installation-token",
+        host: "api.github.com",
+        method: "GET",
+        path: `/repos/GhostlyGawd/reproforge/tarball/${"a".repeat(40)}`,
+      },
+      kind: "brokered-allow-hosts",
+      phase: "github-acquisition",
+    });
     await session.setNetworkPolicy({ kind: "deny-all" });
 
     expect(fixture.sandbox.update.mock.calls).toEqual([
       [{ networkPolicy: { allow: ["api.github.com", "*.githubusercontent.com"] } }],
+      [
+        {
+          networkPolicy: {
+            allow: {
+              "api.github.com": [
+                {
+                  match: {
+                    method: ["GET"],
+                    path: {
+                      exact: `/repos/GhostlyGawd/reproforge/tarball/${"a".repeat(40)}`,
+                    },
+                  },
+                  transform: [
+                    {
+                      headers: {
+                        authorization: "Bearer synthetic-installation-token",
+                      },
+                    },
+                  ],
+                },
+              ],
+              "codeload.github.com": [],
+            },
+          },
+        },
+      ],
       [{ networkPolicy: "deny-all" }],
     ]);
   });

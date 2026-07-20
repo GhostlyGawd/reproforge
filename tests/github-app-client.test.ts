@@ -190,4 +190,61 @@ describe("GitHub App API client", () => {
       }),
     ).rejects.not.toThrow(/synthetic-client-secret|private-canary/);
   });
+
+  it("leases one repository-scoped archive credential only for the callback", async () => {
+    const requests: Array<{ body: string; url: string }> = [];
+    const request = vi.fn(async (input: string | URL | Request, init?: RequestInit) => {
+      const url = String(input);
+      requests.push({ body: String(init?.body ?? ""), url });
+      if (url.endsWith("/app/installations/7001")) {
+        return json({
+          account: { id: 9001, login: "synthetic-owner" },
+          id: 7001,
+          permissions: { contents: "read", issues: "read", metadata: "read" },
+          repository_selection: "selected",
+          suspended_at: null,
+        });
+      }
+      if (url.endsWith("/app/installations/7001/access_tokens")) {
+        return json(
+          {
+            expires_at: "2026-07-20T00:59:00.000Z",
+            permissions: { contents: "read", issues: "read", metadata: "read" },
+            repository_selection: "selected",
+            token: "ghs_synthetic-archive-token",
+          },
+          201,
+        );
+      }
+      return json({}, 500);
+    });
+    const client = new GitHubAppClient(config, {
+      clock: { now: () => now },
+      fetch: request as typeof fetch,
+    });
+    const consume = vi.fn(async (credential: {
+      authorizationHeader: string;
+      expiresAt: string;
+    }) => {
+      expect(credential).toEqual({
+        authorizationHeader: "Bearer ghs_synthetic-archive-token",
+        expiresAt: "2026-07-20T00:59:00.000Z",
+      });
+      return "archive-acquired";
+    });
+
+    await expect(
+      client.withRepositoryArchiveCredential(
+        { installationId: 7001, providerRepositoryId: 8001 },
+        consume,
+      ),
+    ).resolves.toBe("archive-acquired");
+    expect(consume).toHaveBeenCalledTimes(1);
+    expect(
+      JSON.parse(
+        requests.find((item) => item.url.endsWith("/access_tokens"))?.body ??
+          "{}",
+      ),
+    ).toMatchObject({ repository_ids: [8001] });
+  });
 });

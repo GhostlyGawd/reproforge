@@ -7,6 +7,7 @@ import type {
   VerifiedGitHubRepository,
 } from "@/github/callback";
 import type { GitHubLiveRepositoryClient } from "@/github/repository-provider";
+import type { EphemeralRepositoryArchiveCredential } from "@/application/ports/repository-source";
 
 const API_VERSION = "2026-03-10";
 const REQUESTED_PERMISSIONS = Object.freeze({
@@ -151,7 +152,7 @@ export class GitHubAppClient
       );
       try {
         const repositories = await this.listInstallationRepositories(
-          installationToken,
+          installationToken.token,
         );
         return {
           accountId: installation.account.id,
@@ -165,7 +166,7 @@ export class GitHubAppClient
           repositorySelection: installation.repository_selection,
         };
       } finally {
-        installationToken = "";
+        installationToken = { expiresAt: "", token: "" };
       }
     } finally {
       userToken = "";
@@ -196,7 +197,7 @@ export class GitHubAppClient
       const [owner, repository] = parsed.fullName.split("/") as [string, string];
       const response = await this.apiRequest(
         `/repos/${encodeURIComponent(owner)}/${encodeURIComponent(repository)}/commits/${parsed.commitSha}`,
-        { token: installationToken },
+        { token: installationToken.token },
       );
       if (!response.ok) throw new GitHubProviderError("REVISION_UNAVAILABLE");
       const revision = this.parseResponse(revisionSchema, await response.json());
@@ -205,7 +206,35 @@ export class GitHubAppClient
       }
       return { commitSha: revision.sha };
     } finally {
-      installationToken = "";
+      installationToken = { expiresAt: "", token: "" };
+    }
+  }
+
+  async withRepositoryArchiveCredential<Result>(
+    rawInput: { installationId: number; providerRepositoryId: number },
+    consume: (
+      credential: EphemeralRepositoryArchiveCredential,
+    ) => Promise<Result>,
+  ): Promise<Result> {
+    const input = z
+      .object({
+        installationId: z.number().int().positive().safe(),
+        providerRepositoryId: z.number().int().positive().safe(),
+      })
+      .strict()
+      .parse(rawInput);
+    await this.getLiveInstallation(input.installationId);
+    let installationToken = await this.mintInstallationToken(
+      input.installationId,
+      input.providerRepositoryId,
+    );
+    try {
+      return await consume({
+        authorizationHeader: `Bearer ${installationToken.token}`,
+        expiresAt: installationToken.expiresAt,
+      });
+    } finally {
+      installationToken = { expiresAt: "", token: "" };
     }
   }
 
@@ -271,7 +300,7 @@ export class GitHubAppClient
   private async mintInstallationToken(
     installationId: number,
     providerRepositoryId?: number,
-  ): Promise<string> {
+  ): Promise<{ expiresAt: string; token: string }> {
     const response = await this.apiRequest(
       `/app/installations/${installationId}/access_tokens`,
       {
@@ -295,7 +324,7 @@ export class GitHubAppClient
     if (expiresAt <= now || expiresAt > now + 61 * 60_000) {
       throw new GitHubProviderError("INVALID_PROVIDER_RESPONSE");
     }
-    return result.token;
+    return { expiresAt: result.expires_at, token: result.token };
   }
 
   private async listInstallationRepositories(
