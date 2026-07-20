@@ -1,6 +1,6 @@
 # Milestone 8A specification: durable foundation
 
-- **Status:** implementation complete; green pull-request merge gate pending
+- **Status:** complete — merged in [PR #28](https://github.com/GhostlyGawd/reproforge/pull/28)
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** Milestone 7
 - **Unblocks:** identity, repository authorization, and isolated execution
