@@ -51,7 +51,7 @@ Tracking: [#12](https://github.com/GhostlyGawd/reproforge/issues/12)
 Tracking: [#13](https://github.com/GhostlyGawd/reproforge/issues/13)
 
 - [x] `RF-8001` Select the managed production baseline and provider-neutral seams in [ADR 0002](adr/0002-managed-production-stack.md).
-- [ ] `RF-8002` Complete [8A durable foundation](specs/milestone-8a-durable-foundation.md): Postgres migrations/repositories, private artifacts, transactional outbox, queue, leases, quotas, retention, audit, health, and restore.
+- [x] `RF-8002` Complete [8A durable foundation](specs/milestone-8a-durable-foundation.md): Postgres migrations/repositories, private artifacts, transactional outbox, queue, leases, quotas, retention, audit, health, and restore.
 - [ ] `RF-8003` Complete [8B identity and GitHub authorization](specs/milestone-8b-identity-and-github.md): OAuth 2.1/PKCE, tenant/scopes, GitHub App installation, immutable revision authorization, revocation, and secret-safety proof.
 - [ ] `RF-8004` Complete [8C isolated execution](specs/milestone-8c-isolated-execution.md): safe source/dependency acquisition, disposable microVM runner, deny-all execution, limits, cancellation, proof integration, and sandbox security tests.
 - [ ] `RF-8005` Complete [8D private beta](specs/milestone-8d-private-beta.md): composed staging runtime, resilient async journey, operations, public/private canaries, tenant/abuse audits, and visual evidence.

@@ -1,9 +1,14 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8a",
-  "capturedAt": "2026-07-20T01:56:49.640Z",
+  "capturedAt": "2026-07-20T02:03:08.314Z",
   "implementationCommit": "b844b5725e67e04a9bb70cc78d3092105f35d490",
   "deploymentFixCommit": "212aaa1a3041e31a0ba144ecc1286fe6b82013cb",
+  "merge": {
+    "pullRequest": "https://github.com/GhostlyGawd/reproforge/pull/28",
+    "mergeCommit": "a73d39b65b66ba0805442b4600e761775a2c1daf",
+    "mergedAt": "2026-07-20T02:01:54Z"
+  },
   "scope": "durable trusted-fixture foundation",
   "tasks": {
     "RF-8101": "passed",
