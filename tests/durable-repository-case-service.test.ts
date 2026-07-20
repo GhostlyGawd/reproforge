@@ -3,6 +3,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { AuthorizedPrincipal } from "@/application/authorization";
 import { DurableRepositoryCaseService } from "@/application/durable-repository-case-service";
+import type { QueueMessage } from "@/application/ports/production";
 import { runTrustedSample } from "@/application/sample-case";
 import { repositoryProofResultSchema } from "@/execution/repository-proof";
 import type { IsolatedRepositoryRunner } from "@/execution/isolated-repository-runner";
@@ -69,8 +70,13 @@ const request = {
 
 let database: PGlite;
 let service: DurableRepositoryCaseService;
+let queuedService: DurableRepositoryCaseService;
+let cancellableService: DurableRepositoryCaseService;
+let queuedMessages: QueueMessage[];
 let runnerCalls = 0;
 let runnerExecute: IsolatedRepositoryRunner["execute"];
+let cancellationRunnerStarted: Promise<void>;
+let cancellationAbortObserved = false;
 
 beforeAll(async () => {
   database = new PGlite();
@@ -83,6 +89,7 @@ beforeAll(async () => {
     new MemoryPrivateBlobClient(),
     clock,
   );
+  queuedMessages = [];
   let id = 0;
   runnerExecute = vi.fn(async (input) => {
     runnerCalls += 1;
@@ -137,24 +144,28 @@ beforeAll(async () => {
       },
     });
   });
-  service = new DurableRepositoryCaseService({
+  const outbox = new PostgresOutbox(postgres);
+  const repository = new PostgresDurableReproductionRepository(postgres);
+  const queue = {
+    send: async (message: QueueMessage) => {
+      queuedMessages.push(message);
+      return { messageId: `queue_repository_${queuedMessages.length}` };
+    },
+  };
+  const unitOfWork = new PostgresUnitOfWork(postgres, { "active-jobs": 2 });
+  const common = {
     artifactStore: artifacts,
     clock,
-    identifiers: {
-      nextCaseId: () => `case_repository_${++id}`,
-      nextJobId: () => `job_repository_${id}`,
-      nextWorkerOwnerId: () => `worker_repository_${id}`,
-    },
     leaseSeconds: 90,
-    outbox: new PostgresOutbox(postgres),
+    outbox,
     outboxPolicy: {
       claimSeconds: 30,
       maxAttempts: 5,
       maxBatchSize: 25,
       ownerId: "publisher_repository_service",
     },
-    queue: { send: async () => ({ messageId: "queue_repository_service" }) },
-    repository: new PostgresDurableReproductionRepository(postgres),
+    queue,
+    repository,
     retentionDays: 30,
     runner: { execute: runnerExecute },
     source: {
@@ -165,8 +176,58 @@ beforeAll(async () => {
       }),
       resolveRevision: async () => source,
     },
-    tenantId,
-    unitOfWork: new PostgresUnitOfWork(postgres, { "active-jobs": 2 }),
+    unitOfWork,
+  } as const;
+  service = new DurableRepositoryCaseService({
+    ...common,
+    identifiers: {
+      nextCaseId: () => `case_repository_${++id}`,
+      nextJobId: () => `job_repository_${id}`,
+      nextWorkerOwnerId: () => `worker_repository_${id}`,
+    },
+  });
+  queuedService = new DurableRepositoryCaseService({
+    ...common,
+    executionMode: "queued",
+    identifiers: {
+      nextCaseId: () => `case_repository_queued_${++id}`,
+      nextJobId: () => `job_repository_queued_${id}`,
+      nextWorkerOwnerId: () => `worker_repository_queued_${id}`,
+    },
+  });
+  let markCancellationRunnerStarted!: () => void;
+  cancellationRunnerStarted = new Promise((resolve) => {
+    markCancellationRunnerStarted = resolve;
+  });
+  cancellableService = new DurableRepositoryCaseService({
+    ...common,
+    cancellationPollMs: 10,
+    executionMode: "queued",
+    identifiers: {
+      nextCaseId: () => `case_repository_cancel_${++id}`,
+      nextJobId: () => `job_repository_cancel_${id}`,
+      nextWorkerOwnerId: () => `worker_repository_cancel_${id}`,
+    },
+    runner: {
+      execute: async (input) => {
+        markCancellationRunnerStarted();
+        return new Promise((_, reject) => {
+          const guard = setTimeout(
+            () => reject(new Error("cancellation signal was not streamed")),
+            250,
+          );
+          input.signal?.addEventListener(
+            "abort",
+            () => {
+              cancellationAbortObserved = true;
+              clearTimeout(guard);
+              reject(new Error("synthetic cancelled runner"));
+            },
+            { once: true },
+          );
+        });
+      },
+    },
   });
 });
 
@@ -211,6 +272,77 @@ describe("durable repository case service", () => {
     ).resolves.toMatchObject({
       repositories: [{ fullName: source.fullName }],
       tenantId,
+    });
+  });
+
+  it("returns queued work before the private consumer executes the sandbox", async () => {
+    const callsBeforeStart = runnerCalls;
+    const started = await queuedService.startRepositoryReproduction(principal, {
+      ...request,
+      idempotencyKey: "repository-service-queued-start",
+    });
+
+    expect(started).toMatchObject({
+      reused: false,
+      snapshot: {
+        case: { state: "DRAFT" },
+        job: { state: "QUEUED" },
+        result: null,
+      },
+    });
+    expect(runnerCalls).toBe(callsBeforeStart);
+    const message = queuedMessages.at(-1);
+    expect(message).toMatchObject({
+      caseId: started.snapshot.case.id,
+      jobId: started.snapshot.job.id,
+      kind: "reproduction.requested",
+      tenantId,
+    });
+
+    await expect(
+      queuedService.consumeQueueMessage(message!, "worker_queue_callback"),
+    ).resolves.toMatchObject({ outcome: "completed" });
+    await expect(
+      queuedService.getReproduction(principal, {
+        caseId: started.snapshot.case.id,
+      }),
+    ).resolves.toMatchObject({
+      case: { state: "VERIFIED" },
+      job: { state: "SUCCEEDED" },
+      result: { kind: "repository", summary: { status: "VERIFIED" } },
+    });
+    expect(runnerCalls).toBe(callsBeforeStart + 1);
+  });
+
+  it("streams a durable cancellation request into active repository work", async () => {
+    const started = await cancellableService.startRepositoryReproduction(
+      principal,
+      {
+        ...request,
+        idempotencyKey: "repository-service-cancel-start",
+      },
+    );
+    const message = queuedMessages.at(-1)!;
+    const consuming = cancellableService.consumeQueueMessage(
+      message,
+      "worker_cancellation_callback",
+    );
+    await cancellationRunnerStarted;
+
+    await expect(
+      cancellableService.cancelReproduction(principal, {
+        jobId: started.snapshot.job.id,
+      }),
+    ).resolves.toMatchObject({ disposition: "requested" });
+    await expect(consuming).resolves.toMatchObject({ outcome: "cancelled" });
+    expect(cancellationAbortObserved).toBe(true);
+    await expect(
+      cancellableService.getReproduction(principal, {
+        caseId: started.snapshot.case.id,
+      }),
+    ).resolves.toMatchObject({
+      case: { state: "CANCELLED" },
+      job: { state: "CANCELLED" },
     });
   });
 });

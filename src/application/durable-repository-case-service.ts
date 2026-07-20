@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { z } from "zod";
+
 import type { AuthorizedPrincipal } from "@/application/authorization";
 import {
   BundleNotReadyError,
@@ -7,7 +9,10 @@ import {
   IdempotencyConflictError,
   ReproductionNotFoundError,
 } from "@/application/case-service";
-import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
+import {
+  DurableQueueConsumer,
+  type DurableWorker,
+} from "@/application/durable-queue-consumer";
 import { DurableStartError, reserveDurableStart } from "@/application/durable-start";
 import { OutboxPublisher } from "@/application/outbox-publisher";
 import type {
@@ -51,7 +56,9 @@ type Clock = Readonly<{ now(): Date }>;
 
 type Dependencies = Readonly<{
   artifactStore: ArtifactStore;
+  cancellationPollMs?: number;
   clock: Clock;
+  executionMode?: "inline" | "queued";
   identifiers: Readonly<{
     nextCaseId(): string;
     nextJobId(): string;
@@ -70,7 +77,6 @@ type Dependencies = Readonly<{
   retentionDays: number;
   runner: Pick<IsolatedRepositoryRunner, "execute">;
   source: RepositorySourceProvider;
-  tenantId: string;
   unitOfWork: UnitOfWork;
 }>;
 
@@ -133,8 +139,11 @@ function requestFor(
 }
 
 export class DurableRepositoryCaseService implements RepositoryOperations {
+  private readonly cancellationPollMs: number;
   private readonly consumer: DurableQueueConsumer;
+  private readonly executionMode: "inline" | "queued";
   private readonly publisher: OutboxPublisher;
+  private readonly worker: RepositoryDurableWorker;
 
   constructor(private readonly dependencies: Dependencies) {
     if (
@@ -144,6 +153,13 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     ) {
       throw executionFailure();
     }
+    this.cancellationPollMs = z
+      .number()
+      .int()
+      .min(10)
+      .max(60_000)
+      .parse(dependencies.cancellationPollMs ?? 1_000);
+    this.executionMode = dependencies.executionMode ?? "inline";
     this.publisher = new OutboxPublisher({
       claimSeconds: dependencies.outboxPolicy.claimSeconds,
       clock: dependencies.clock,
@@ -153,16 +169,34 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
       ownerId: dependencies.outboxPolicy.ownerId,
       queue: dependencies.queue,
     });
-    this.consumer = new DurableQueueConsumer({
+    this.worker = new RepositoryDurableWorker({
+      artifactStore: dependencies.artifactStore,
       clock: dependencies.clock,
-      leaseSeconds: dependencies.leaseSeconds,
-      repository: dependencies.repository,
-      worker: new RepositoryDurableWorker({
-        artifactStore: dependencies.artifactStore,
-        clock: dependencies.clock,
-        execute: async ({ lease, record }) => {
-          const request = requestFor(record);
-          return dependencies.runner.execute({
+      execute: async ({ lease, record }) => {
+        const request = requestFor(record);
+        const controller = new AbortController();
+        let checking = false;
+        let stopped = false;
+        const checkCancellation = async () => {
+          if (checking || stopped || controller.signal.aborted) return;
+          checking = true;
+          try {
+            if (await dependencies.repository.isCancellationRequested(lease)) {
+              controller.abort();
+            }
+          } catch {
+            controller.abort();
+          } finally {
+            checking = false;
+          }
+        };
+        await checkCancellation();
+        const cancellationTimer = setInterval(
+          () => void checkCancellation(),
+          this.cancellationPollMs,
+        );
+        try {
+          return await dependencies.runner.execute({
             attemptId: `${record.jobId}.attempt-${lease.attempt}`,
             budget:
               record.requestedBudget ?? {
@@ -178,11 +212,21 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
               tenantId: record.tenantId,
             },
             profile: request.profile,
+            signal: controller.signal,
             source: request.source,
           });
-        },
-        retentionDays: dependencies.retentionDays,
-      }),
+        } finally {
+          stopped = true;
+          clearInterval(cancellationTimer);
+        }
+      },
+      retentionDays: dependencies.retentionDays,
+    });
+    this.consumer = new DurableQueueConsumer({
+      clock: dependencies.clock,
+      leaseSeconds: dependencies.leaseSeconds,
+      repository: dependencies.repository,
+      worker: this.worker,
     });
   }
 
@@ -190,7 +234,6 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     principal: AuthorizedPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ) {
-    this.assertTenant(principal);
     const listed = await this.dependencies.source.listAuthorizedRepositories(
       principal,
       input,
@@ -203,7 +246,6 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     principal: AuthorizedPrincipal,
     rawInput: StartRepositoryReproductionInput,
   ) {
-    this.assertTenant(principal);
     const input = startRepositoryReproductionInputSchema.parse(rawInput);
     const immutableSource = await resolveImmutableRepositorySource(
       this.dependencies.source,
@@ -232,7 +274,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
       if (existing.commandHash !== commandHash) throw new IdempotencyConflictError();
       const record = terminal(existing)
         ? existing
-        : await this.publishAndConsume(existing, false);
+        : await this.publishAndMaybeConsume(existing, false);
       return startResultSchema.parse({ reused: true, snapshot: record.snapshot });
     }
 
@@ -302,7 +344,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     }
     const completed = terminal(reservation.record)
       ? reservation.record
-      : await this.publishAndConsume(
+      : await this.publishAndMaybeConsume(
           reservation.record,
           reservation.created,
         );
@@ -316,7 +358,6 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     principal: AuthorizedPrincipal,
     input: { caseId: string },
   ) {
-    this.assertTenant(principal);
     const record = await this.dependencies.repository.findByCaseId(
       scope(principal),
       input.caseId,
@@ -331,7 +372,6 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     principal: AuthorizedPrincipal,
     input: { jobId: string },
   ) {
-    this.assertTenant(principal);
     const cancelled = await this.dependencies.repository.requestCancellation(
       scope(principal),
       input.jobId,
@@ -382,13 +422,19 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     });
   }
 
-  private assertTenant(principal: AuthorizedPrincipal): void {
-    if (principal.tenantId !== this.dependencies.tenantId) {
-      throw new ReproductionNotFoundError();
-    }
+  consumeQueueMessage(message: QueueMessage, ownerId: string) {
+    return this.consumer.consume(message, ownerId);
   }
 
-  private async publishAndConsume(
+  executeClaimedWork(input: Parameters<DurableWorker["execute"]>[0]) {
+    return this.worker.execute(input);
+  }
+
+  publishPending() {
+    return this.publisher.publishBatch();
+  }
+
+  private async publishAndMaybeConsume(
     record: DurableReproductionRecord,
     requireNewDelivery: boolean,
   ): Promise<DurableReproductionRecord> {
@@ -399,6 +445,18 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
       (requireNewDelivery && published.delivered < 1)
     ) {
       throw executionFailure();
+    }
+    if (this.executionMode === "queued") {
+      const queued = await this.dependencies.repository.findByIdempotencyKey(
+        {
+          callerId: record.callerId,
+          principalId: record.callerId,
+          tenantId: record.tenantId,
+        },
+        record.idempotencyKey,
+      );
+      if (!queued) throw new ReproductionNotFoundError();
+      return queued;
     }
     const outcome = await this.consumer.consume(
       messageFor(record),

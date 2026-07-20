@@ -110,10 +110,12 @@ describe("isolated repository runner", () => {
       }),
     ).rejects.toMatchObject({ code: "EXECUTION_FAILED" });
     expect(fixture.quarantine).toHaveBeenCalledWith({
+      actorId: "principal_42",
       attemptId: "attempt_repository_failure",
       providerResourceId: "prepared",
       reason: "cleanup-failed",
       resourceType: "sandbox",
+      tenantId: "tenant_42",
     });
   });
 });

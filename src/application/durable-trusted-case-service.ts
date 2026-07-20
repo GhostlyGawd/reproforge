@@ -167,7 +167,7 @@ function completedAt(record: DurableReproductionRecord, clock: Clock): Date {
   );
 }
 
-class TrustedFixtureDurableWorker {
+export class TrustedFixtureDurableWorker {
   constructor(
     private readonly artifactStore: ArtifactStore,
     private readonly clock: Clock,

@@ -184,6 +184,14 @@ export class IsolatedRepositoryRunner {
   async execute(rawInput: RunnerInput): Promise<RepositoryProofResult> {
     const { signal, ...candidate } = rawInput;
     const input = runnerInputSchema.parse(candidate);
+    const quarantine: SandboxQuarantineSink = {
+      record: (record) =>
+        this.dependencies.quarantine.record({
+          ...record,
+          actorId: input.principal.principalId,
+          tenantId: input.principal.tenantId,
+        }),
+    };
     const controller = new AbortController();
     let timedOut = false;
     const timeout = setTimeout(() => {
@@ -205,7 +213,7 @@ export class IsolatedRepositoryRunner {
         await stopPrepared;
       } catch {
         try {
-          await this.dependencies.quarantine.record({
+          await quarantine.record({
             attemptId: input.attemptId,
             providerResourceId: prepared.sandboxId,
             reason: "cleanup-failed",
@@ -293,7 +301,7 @@ export class IsolatedRepositoryRunner {
       const coordinator = new SnapshotRunCoordinator({
         attemptTimeoutMs: remaining,
         provider: this.dependencies.provider,
-        quarantine: this.dependencies.quarantine,
+        quarantine,
       });
       stage = "experiments";
       const lifecycle = await coordinator.execute({

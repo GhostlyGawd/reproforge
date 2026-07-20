@@ -29,10 +29,12 @@ export class AttemptLifecycleError extends Error {
 }
 
 export type QuarantineRecord = {
+  actorId?: string;
   attemptId: string;
   providerResourceId: string;
   reason: "cleanup-failed";
   resourceType: "sandbox" | "snapshot";
+  tenantId?: string;
 };
 
 export interface SandboxQuarantineSink {
