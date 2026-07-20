@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8d",
-  "capturedAt": "2026-07-20T23:06:02.549Z",
-  "implementationCommit": "c4cbdede4a7c0bf12b73d8bc4fda9b8bbaa3fd18",
-  "scope": "private-beta runtime health, durable progress, resilience, account data lifecycle, operations-control, and deterministic fault-campaign implementation evidence",
+  "capturedAt": "2026-07-20T23:55:10.671Z",
+  "implementationCommit": "ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89",
+  "scope": "private-beta runtime health, durable progress, authenticated web/REST repository starts, resilience, account data lifecycle, operations-control, and deterministic fault-campaign implementation evidence",
   "status": "in-progress",
   "tasks": {
     "RF-8401": "implementation-passed-live-configuration-pending",
@@ -38,8 +38,8 @@
     "generatedSchedules": 500,
     "propertyTestsPassed": 2,
     "focusedTestsPassed": 13,
-    "bddScenariosPassed": 47,
-    "bddStepsPassed": 339,
+    "bddScenariosPassed": 48,
+    "bddStepsPassed": 345,
     "productionBuild": "passed"
   },
   "resilience": {
@@ -92,6 +92,17 @@
     "generatedRegistryMutations": 500,
     "fixedSeeds": [8406001, 8406002, 8406003, 8406004, 8406005, 8406006, 8406007, 8406008],
     "hostedEvidence": false
+  },
+  "repositoryRestApi": {
+    "schemaVersion": "2.0",
+    "oauthProtectedRoutes": 5,
+    "maximumStartBodyBytes": 16384,
+    "focusedTestFilesPassed": 2,
+    "focusedTestsPassed": 10,
+    "leastPrivilegeScopes": "passed-local",
+    "bearerChallenges": "passed-local",
+    "productionBuild": "passed",
+    "hostedOAuthCanary": "pending"
   },
   "browserVerification": {
     "tool": "agent-browser",
@@ -160,6 +171,13 @@
       "sha256": "08057f96275bb445f06214f105acdc57a11e65319a4516eff0ef13b5d289833d",
       "provenance": "fixed-seed synthetic local resilience campaign summary; not a hosted load or fault-injection result",
       "sanitized": true
+    },
+    {
+      "file": "repository-rest-contract.json",
+      "bytes": 2743,
+      "sha256": "970ef6a35bb0427adacba1984d82a5a71769adab361e81f3d21a758910e68229",
+      "provenance": "exact-commit local OAuth repository REST contract and verification summary; not a hosted OAuth or repository canary",
+      "sanitized": true
     }
   ],
   "redGreenFindings": [
@@ -190,6 +208,10 @@
     {
       "red": "Failure tests were individually useful but lacked one exact, repeatable campaign registry covering every required RF-8406 boundary.",
       "green": "A schema-closed eight-category registry now drives an exact gate across real durable adapters, fixed-seed property schedules, 128-way start/read load, restart reconstruction, duplicate delivery, provider degradation, worker loss, queue lag, storage failure, and sandbox failure."
+    },
+    {
+      "red": "Authorized repository work was available through MCP and internal services but had no complete OAuth-protected REST adapter, and the web repository page could not submit a job.",
+      "green": "The signed-in web journey now submits one same-origin strict failure contract, while five no-store repository REST routes map OAuth subjects to tenant principals, enforce least-privilege scopes and bounded inputs, and share the durable repository operations."
     }
   ],
   "deferred": [

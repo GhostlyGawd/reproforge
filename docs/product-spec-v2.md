@@ -158,8 +158,13 @@ Job state and case state are separate. A job may fail operationally before a cas
 | `GET /api/v2/reproductions/{caseId}` | Read a snapshot | Read-only |
 | `GET /api/v2/jobs/{jobId}` | Poll operational progress | Read-only |
 | `GET /api/v2/reproductions/{caseId}/bundle` | Export a verified bundle | Read-only |
+| `GET /api/v2/repositories` | List OAuth principal's authorized GitHub repositories | Read-only; `repositories:read` |
+| `POST /api/v2/repository-reproductions` | Start/reuse an authorized immutable repository job | Required `Idempotency-Key`; `cases:write` + `repositories:read` |
+| `GET /api/v2/repository-reproductions/{caseId}` | Read tenant-scoped repository progress and proof | Read-only; `cases:read` |
+| `GET /api/v2/repository-reproductions/{caseId}/bundle` | Export a verified repository bundle | Read-only; `bundles:read` |
+| `POST /api/v2/repository-jobs/{jobId}/cancel` | Request cancellation | Idempotent; `cases:write` |
 
-Responses use a versioned envelope with `data`, `error`, `requestId`, and `schemaVersion`. Errors have stable codes: `INVALID_REQUEST`, `UNAUTHORIZED`, `FORBIDDEN`, `NOT_FOUND`, `IDEMPOTENCY_CONFLICT`, `BUNDLE_NOT_READY`, `UNSUPPORTED_SOURCE`, `RUNNER_UNAVAILABLE`, `BUDGET_EXHAUSTED`, `RATE_LIMITED`, and `INTERNAL_ERROR`. Raw exceptions, commands containing secrets, and provider payloads are never returned.
+Responses use a versioned envelope with `data`, `error`, `requestId`, and `schemaVersion`, and authenticated repository responses are `no-store`. OAuth failures return a standards-shaped bearer challenge: missing/invalid credentials are `401`, insufficient scope is `403`, and verifier/provider unavailability is `503`. Repository start bodies are strict `application/json`, limited to 16 KiB, and never accept repository URLs, branches, source bodies, host commands, or provider credentials. Errors have stable codes: `INVALID_REQUEST`, `UNSUPPORTED_MEDIA_TYPE`, `PAYLOAD_TOO_LARGE`, `AUTHENTICATION_REQUIRED`, `INSUFFICIENT_SCOPE`, `AUTHORIZATION_UNAVAILABLE`, `NOT_FOUND`, `IDEMPOTENCY_CONFLICT`, `BUNDLE_NOT_READY`, `UNSUPPORTED_SOURCE`, `RUNNER_UNAVAILABLE`, `BUDGET_EXHAUSTED`, `RATE_LIMITED`, and `INTERNAL_ERROR`. Raw exceptions, commands containing secrets, and provider payloads are never returned.
 
 ### 5.5 MCP tool v1
 

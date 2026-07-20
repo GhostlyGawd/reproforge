@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-20T23:55:10.671Z",
+  "implementationCommit": "ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89",
+  "status": "local-passed-hosted-oauth-canary-pending",
+  "authentication": {
+    "scheme": "OAuth 2.0 bearer",
+    "resourceMetadata": "/.well-known/oauth-protected-resource",
+    "principalMapping": "verified issuer and subject to one active durable tenant principal",
+    "missingTokenStatus": 401,
+    "insufficientScopeStatus": 403,
+    "verificationUnavailableStatus": 503,
+    "rawApiTokenRequired": false
+  },
+  "routes": [
+    {
+      "method": "GET",
+      "path": "/api/v2/repositories",
+      "scopes": ["reproforge:repositories:read"],
+      "behavior": "list only repositories selected through the caller tenant's active GitHub App installation"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/repository-reproductions",
+      "scopes": [
+        "reproforge:cases:write",
+        "reproforge:repositories:read"
+      ],
+      "behavior": "start or reuse one immutable authorized repository job",
+      "idempotencyHeader": "Idempotency-Key"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/repository-reproductions/{caseId}",
+      "scopes": ["reproforge:cases:read"],
+      "behavior": "read one tenant-scoped durable case, job, and shared progress projection"
+    },
+    {
+      "method": "GET",
+      "path": "/api/v2/repository-reproductions/{caseId}/bundle",
+      "scopes": ["reproforge:bundles:read"],
+      "behavior": "export one verified tenant-scoped bundle"
+    },
+    {
+      "method": "POST",
+      "path": "/api/v2/repository-jobs/{jobId}/cancel",
+      "scopes": ["reproforge:cases:write"],
+      "behavior": "request bounded idempotent cancellation"
+    }
+  ],
+  "requestBoundary": {
+    "contentType": "application/json",
+    "maximumStartBodyBytes": 16384,
+    "strictSchemas": true,
+    "immutableLowercaseSha40": true,
+    "hostCommandsAccepted": false,
+    "repositoryUrlsAccepted": false,
+    "branchesAccepted": false
+  },
+  "responseBoundary": {
+    "cacheControl": "no-store",
+    "envelopeSchemaVersion": "2.0",
+    "fields": ["data", "error", "requestId", "schemaVersion"],
+    "providerPayloadsExposed": false,
+    "tenantIdentifiersExposedByRepositoryList": false
+  },
+  "verification": {
+    "focusedTestFilesPassed": 2,
+    "focusedTestsPassed": 10,
+    "bddScenariosPassed": 48,
+    "bddStepsPassed": 345,
+    "typecheck": "passed",
+    "lint": "passed",
+    "productionBuild": "passed",
+    "compiledRepositoryRoutes": 5
+  },
+  "sanitization": "Synthetic identifiers and repository metadata only; no bearer token, Auth0 secret, GitHub credential, private repository name, customer data, or provider resource identifier is present."
+}

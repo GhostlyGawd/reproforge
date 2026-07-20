@@ -11,11 +11,22 @@ Evidence is added incrementally and tied to an exact Git commit in
 ## Current verified slice
 
 Exact implementation commit
-`c4cbdede4a7c0bf12b73d8bc4fda9b8bbaa3fd18` adds a real isolated-runner
+`ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89` adds a real isolated-runner
 capability probe, fail-closed validation of the complete hosted product
 configuration, one durable progress projection shared by REST, MCP, ChatGPT
 widget, and tenant-scoped web views, resilient worker/operator controls, the
 account data lifecycle, and private-beta operations controls.
+
+The latest productization slice adds a signed-in same-origin web start form
+and five real OAuth-protected repository REST routes. The API maps a verified
+Auth0 subject to one active durable tenant principal, advertises standards-
+shaped linking or incremental-consent challenges, enforces distinct read,
+write, bundle, and repository scopes, bounds strict JSON starts to 16 KiB, and
+never accepts raw API tokens, URLs, branches, source bodies, or host commands.
+Its focused gate passed 10 tests; all 48 BDD scenarios and 345 steps passed,
+and TypeScript, ESLint, and the production build passed at the implementation
+commit. The sanitized route/scope record is
+[`repository-rest-contract.json`](repository-rest-contract.json).
 
 The RF-8403 slice blocks new starts during runner degradation while preserving
 reads, recovers expired leases, observes cancellation before the next command,
@@ -49,7 +60,7 @@ restart/retry sequences, 500 malformed-registry cases, and fixed seeds for
 replay. These are local correctness and load-shape results, not hosted latency,
 availability, or provider failure-injection evidence.
 
-At this commit, Cucumber passed 47 scenarios and 339 steps, the account page
+At this commit, Cucumber passed 48 scenarios and 345 steps, the account page
 passed 3 browser tests, TypeScript and ESLint passed, and the production Next.js
 build completed. Production-build browser inspection found no framework error
 overlay, page errors, console output, or horizontal overflow at a 390 × 844

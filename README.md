@@ -78,6 +78,26 @@ GET /api/v2/jobs/{jobId}
 GET /api/v2/reproductions/{caseId}/bundle
 ```
 
+Hosted clients use a separate OAuth-protected repository surface; users link
+their ReproForge account and GitHub App installation instead of supplying an
+OpenAI or GitHub API token:
+
+```text
+GET  /api/v2/repositories
+POST /api/v2/repository-reproductions
+GET  /api/v2/repository-reproductions/{caseId}
+GET  /api/v2/repository-reproductions/{caseId}/bundle
+POST /api/v2/repository-jobs/{jobId}/cancel
+```
+
+These routes verify an OAuth bearer token against the advertised resource,
+map it to one active tenant principal, enforce route-specific least-privilege
+scopes, and return `WWW-Authenticate` linking challenges. Repository starts
+require `application/json`, a caller-generated `Idempotency-Key`, a body no
+larger than 16 KiB, one authorized repository ID, and an exact lowercase
+40-character commit SHA. URLs, branches, source bodies, host commands, and raw
+provider credentials are not accepted.
+
 No OpenAI API key is used. Local `offline` and `test` modes intentionally use
 process-local memory. A fully configured `preview` or `production` runtime
 selects the verified Neon Postgres, private Vercel Blob, and Vercel Queue
