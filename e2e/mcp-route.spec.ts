@@ -2,10 +2,12 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { expect, test } from "@playwright/test";
 
-test("serves the complete keyless MCP flow through the Next route", async () => {
+test("serves the complete keyless MCP flow through the Next route", async ({
+  baseURL,
+}) => {
   const client = new Client({ name: "reproforge-route-e2e", version: "1.0.0" });
   const transport = new StreamableHTTPClientTransport(
-    new URL("http://127.0.0.1:3000/mcp"),
+    new URL("/mcp", baseURL),
   );
 
   try {

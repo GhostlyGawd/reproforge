@@ -1,7 +1,7 @@
 # ChatGPT app and plugin guide
 
 ReproForge 0.2.0 implements the complete local trusted-sample app boundary: a
-stateless Streamable HTTP MCP endpoint at `/mcp`, three narrow tools, and a
+stateless Streamable HTTP MCP endpoint at `/mcp`, five narrow tools, and a
 self-contained MCP App proof widget. ChatGPT users do not provide an OpenAI API
 key. ChatGPT supplies the conversational host under the user's plan;
 ReproForge supplies and ultimately pays for its own server, storage, and runner
@@ -12,21 +12,24 @@ capacity.
 | Boundary | Current state |
 |---|---|
 | MCP endpoint | Implemented at `POST /mcp`; stateless JSON responses; CORS preflight |
-| `start_reproduction` | Runs only `cli-spaces`; caller-scoped and idempotent |
+| `start_reproduction` | Runs keyless `cli-spaces`, or accepts only a server-authorized repository ID plus immutable SHA under OAuth; caller-scoped and idempotent |
+| `list_authorized_repositories` | OAuth-protected, read-only list from the caller's active GitHub App installation |
 | `get_reproduction` | Reads a stable case/proof snapshot |
+| `cancel_reproduction` | OAuth-protected, idempotent cancellation request for active repository work |
 | `export_repro_bundle` | Returns only a machine-verified content-addressed bundle |
 | Embedded widget | MCP Apps bridge, responsive layouts, closed CSP, no external assets |
 | User OpenAI API key | Not accepted or required |
-| Arbitrary repositories | Rejected; no tool input exists for a URL or command |
-| Authentication | `noauth` for public synthetic data only |
+| Arbitrary repositories | Rejected; no tool input exists for a URL, branch, source body, or command |
+| Authentication | `noauth` for the public synthetic fixture; OAuth/scope/principal contracts for protected repository tools, with live account evidence still pending |
 | Persistence | Local memory by default; provider-verified Neon/Blob/Queue composition for fully configured hosted modes |
 | Hosted ChatGPT app | Not created or claimed in this repository |
 | Public plugin | Not submitted or published |
 
 The no-auth endpoint is deliberately useful only for a fixed synthetic fixture.
-Durable storage does not authorize data. Private or customer use still requires
-Milestone 8B OAuth/tenant authorization and Milestone 8C isolated execution,
-followed by private-beta and hosted evidence.
+Durable storage does not authorize data. The 8C isolated runner has direct
+public-canary provider proof, but private or customer use still requires the
+8B live account/install/revocation evidence followed by 8D private-beta and
+hosted evidence.
 
 ## Run and inspect locally
 
@@ -63,12 +66,15 @@ development tool, not a service to expose publicly.
 
 | Tool | Mutation | Inputs | Model-visible result |
 |---|---|---|---|
-| `start_reproduction` | Additive | stable idempotency key, fixed sample ID, bounded budget | case/job IDs, state, proof, evidence counts, hypotheses, sanitized runs |
+| `start_reproduction` | Additive | stable idempotency key, strict trusted-sample or authorized-repository source, bounded budget/profile/oracle | case/job IDs, state, proof, evidence counts, hypotheses, sanitized runs |
+| `list_authorized_repositories` | Read-only | bounded cursor/limit | authorized repository IDs and non-secret metadata |
 | `get_reproduction` | Read-only | case ID | the same schema-versioned reproduction view |
+| `cancel_reproduction` | Destructive, idempotent | job ID | sanitized cancellation state |
 | `export_repro_bundle` | Read-only | case ID | hash, schema version, status, and file names |
 
-Every tool declares `openWorldHint: false`, `destructiveHint: false`, and an
-accurate read/idempotency annotation. The tool schemas have
+Every tool declares `openWorldHint: false` and accurate destructive,
+read-only, and idempotency annotations. Only cancellation has
+`destructiveHint: true`. The tool schemas have
 `additionalProperties: false`. Full bundle files are widget-only metadata on an
 explicit export; they are not placed into model narration.
 
@@ -84,7 +90,7 @@ Once a reviewed HTTPS endpoint exists:
 1. In ChatGPT, open **Settings → Security and login** and enable **Developer mode**.
 2. Open **Settings → Plugins** (or the Plugins page), select the plus button,
    and create a developer-mode app using `https://<host>/mcp`.
-3. Confirm ChatGPT discovers exactly the three documented tools and the
+3. Confirm ChatGPT discovers exactly the five documented tools and the
    `text/html;profile=mcp-app` resource.
 4. Ask ReproForge to run its trusted CLI-spaces demonstration. Confirm the card
    shows `VERIFIED`, 3/3 candidate matches, and a clear control.

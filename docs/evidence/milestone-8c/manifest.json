@@ -1,10 +1,10 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8c",
-  "capturedAt": "2026-07-20T16:38:22.788Z",
-  "implementationCommit": "7d112e1a32c2ba2a51a0bcbbb31cad2497ea6666",
-  "scope": "isolated repository execution provider integration through RF-8311",
-  "status": "partial",
+  "capturedAt": "2026-07-20T17:12:08.196Z",
+  "implementationCommit": "068df00a8f1bd688bd9e54c9c0d73edbe29de1f2",
+  "scope": "isolated repository execution implementation and development-provider evidence through RF-8312",
+  "status": "implementation-complete",
   "tasks": {
     "RF-8301": "passed",
     "RF-8302": "passed",
@@ -17,14 +17,14 @@
     "RF-8309": "passed",
     "RF-8310": "passed",
     "RF-8311": "passed",
-    "RF-8312": "pending"
+    "RF-8312": "passed"
   },
   "providerVerification": {
     "command": "npm run test:providers",
-    "testsPassed": 8,
+    "testsPassed": 9,
     "testsFailed": 0,
     "testsSkipped": 0,
-    "publicCanary": {
+    "acquisitionBoundaryCanary": {
       "repository": "GhostlyGawd/reproforge",
       "commitSha": "fd4c4be62d37fd76167c3b9a71d64c979f33e28e",
       "hostArchiveBounded": true,
@@ -32,14 +32,28 @@
       "sandboxNetworkPolicy": "deny-all"
     },
     "isolatedExecution": {
-      "testsPassed": 2,
+      "testsPassed": 3,
       "outputOriginalBytes": 3145728,
       "outputRetainedBytes": 1048576,
       "outputHashPreserved": true,
       "cancellation": "passed",
       "freshRestores": 2,
       "crossRunMutationObserved": false,
-      "cleanup": "passed"
+      "cleanup": "passed",
+      "publicRepositoryCanary": {
+        "repository": "GhostlyGawd/reproforge",
+        "commitSha": "804d2da174060b40981e6a0437e6b212fc64d36d",
+        "credentialMinted": false,
+        "networkPolicy": "deny-all",
+        "runs": 4,
+        "controlMatched": false,
+        "candidateMatches": 3,
+        "status": "VERIFIED",
+        "cleanup": "clean",
+        "bundlePath": "public-canary-bundle.json",
+        "bundleBytes": 11187,
+        "bundleSha256": "7d6908cfe7a2f34916b739fbde0c46ec71d5dab7872bbcfbc37b7d6ea10eb52f"
+      }
     },
     "durableProviders": {
       "testsPassed": 6,
@@ -54,6 +68,18 @@
     {
       "red": "A repeated trusted supervisor mkdir failed when the directory already existed.",
       "green": "Each experiment now receives a unique supervisor directory and the repeated live gate passes."
+    },
+    {
+      "red": "Five nominal 1 ms reduced-motion React effects exceeded a one-second browser assertion under concurrent load.",
+      "green": "Reduced-motion activation now skips staged animation in one state transition; five focused repetitions and the complete 18-test browser suite pass."
+    },
+    {
+      "red": "The heaviest 500-case adversarial property exceeded Vitest's generic 5-second per-test timeout under aggregate load without an assertion failure.",
+      "green": "The unchanged 500-case property declares a bounded 30-second harness timeout and the complete four-property file passes three consecutive focused runs."
+    },
+    {
+      "red": "Four unrelated Playwright journeys reached the shared test timeout while competing for on-demand Next development compilation after the production build.",
+      "green": "The release browser gate starts the already-built production server on dedicated port 3129; all 18 journeys pass in 15.5 seconds without weakening assertions or timeouts."
     }
   ],
   "propertyVerification": {
@@ -61,12 +87,48 @@
     "properties": 4,
     "runsPerProperty": 500
   },
+  "behaviorVerification": {
+    "bddCommand": "npm run test:bdd",
+    "scenariosPassed": 39,
+    "stepsPassed": 283,
+    "repositoryScenarios": 13,
+    "focusedTestFilesPassed": 4,
+    "focusedTestsPassed": 16
+  },
+  "regressionVerification": {
+    "command": "npm run verify",
+    "vitestFilesPassed": 80,
+    "vitestTestsPassed": 341,
+    "offlineProviderTestsSkipped": 9,
+    "bddScenariosPassed": 39,
+    "bddStepsPassed": 283,
+    "documentationLinksVerified": 110,
+    "productionBuild": "passed",
+    "mcpToolsDiscovered": 5,
+    "evaluationFixturesPassed": 4,
+    "browserTestsPassed": 18,
+    "accessibility": "passed"
+  },
   "visualEvidence": {
-    "applicable": false,
-    "reason": "This backend boundary is materially verified by provider behavior, source hash identity, network denial, bounded output, cancellation, fresh restores, and cleanup. RF-8312 and the launch milestone retain the public-bundle and hosted-journey visual requirements."
+    "productScreenshotApplicable": false,
+    "reason": "This backend boundary is materially verified by provider behavior, source hash identity, network denial, bounded output, cancellation, fresh restores, cleanup, and the portable machine-readable bundle. Hosted browser and ChatGPT visual requirements remain in 8D/9.",
+    "architectureDiagram": {
+      "file": "architecture.png",
+      "source": "../../architecture.svg",
+      "capturedAt": "2026-07-20",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 327565,
+      "sha256": "fdd3271480fad66f5305e91d2b4f44c113e38f6e279719098d8714fb6494ff62",
+      "alt": "ReproForge trust architecture showing the trusted sample and authorized immutable GitHub source entering deterministic proof through a disposable deny-all sandbox.",
+      "caption": "Current trust boundary: proposals remain non-executing, while a provider-verified sandbox path supplies evidence to deterministic verification and portable export.",
+      "provenance": "First-party ReproForge SVG rendered locally with Playwright Chromium and visually inspected; no external product capture, private data, or generated imagery."
+    }
   },
   "deferred": [
-    "RF-8312 executable BDD and public proof bundle",
+    "Milestone 8B live account authorization evidence",
     "live private-repository authorization canary",
     "hosted browser and ChatGPT journey",
     "plugin submission or publication"

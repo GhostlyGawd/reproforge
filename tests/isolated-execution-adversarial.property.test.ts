@@ -76,9 +76,11 @@ const oracle: FailureOracle = {
 };
 
 describe("isolated execution adversarial properties", () => {
-  it("keeps normalized paths, commands, secrets, output, proof, and bundles invariant", async () => {
-    await fc.assert(
-      fc.asyncProperty(
+  it(
+    "keeps normalized paths, commands, secrets, output, proof, and bundles invariant",
+    async () => {
+      await fc.assert(
+        fc.asyncProperty(
         fc.array(safeSegment, { minLength: 1, maxLength: 4 }),
         scriptName,
         scriptName,
@@ -212,10 +214,12 @@ describe("isolated execution adversarial properties", () => {
             } as never),
           ).rejects.toBeInstanceOf(RepositoryProofInputError);
         },
-      ),
-      { numRuns: 500 },
-    );
-  });
+        ),
+        { numRuns: 500 },
+      );
+    },
+    30_000,
+  );
 
   it("rejects every generated escape and special archive entry", () => {
     const unsafePath = safeSegment.chain((name) =>

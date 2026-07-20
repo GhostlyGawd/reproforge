@@ -18,7 +18,9 @@ The implemented v2 slice is API-first internally and plugin-first for distributi
 - **Honest terminal states:** unstable, blocked, and not-reproduced cases are product outcomes rather than hidden failures.
 - **Auditable investigation:** evidence sources, hypothesis priority and history, commands, outputs, oracle version, and minimization decisions remain inspectable.
 - **Portable handoff:** the final reproduction runs without an OpenAI API key or a ReproForge server.
-- **Fail-closed execution:** arbitrary repositories are rejected until a real isolated runner is configured.
+- **Fail-closed execution:** only an authorized immutable GitHub revision with
+  the supported Node/npm profile can reach the isolated runner; arbitrary
+  repositories, URLs, branches, and commands are rejected.
 
 ## Five-minute trusted demo
 
@@ -44,10 +46,13 @@ Run the deterministic protocol journey with:
 npm run mcp:smoke
 ```
 
-It discovers exactly `start_reproduction`, `get_reproduction`, and
-`export_repro_bundle`, then starts, retries, reads, and exports the trusted
-fixture with `OPENAI_API_KEY` absent. The MCP tools do not accept a repository
-URL, arbitrary command, customer code, ChatGPT credential, or OpenAI key.
+It discovers exactly `start_reproduction`, `list_authorized_repositories`,
+`get_reproduction`, `cancel_reproduction`, and `export_repro_bundle`, then
+starts, retries, reads, and exports the trusted fixture with `OPENAI_API_KEY`
+absent. The trusted sample remains no-auth; repository list/start/cancel use
+declared OAuth scopes and server-owned identity. No tool accepts a repository
+URL, arbitrary command, source body, ChatGPT credential, provider token, or
+OpenAI key.
 
 ChatGPT developer mode requires a reachable HTTPS endpoint and a real
 account-created app ID; neither is faked in this repository. See the
@@ -118,10 +123,20 @@ The committed four-case suite covers a verified positive, a negative no-match, a
 1. ChatGPT/MCP, browser, and REST adapters translate requests into the same transport-neutral case-operation commands.
 2. Offline modes use an in-memory repository. Hosted modes atomically reserve tenant-keyed Postgres case/job/idempotency/quota/audit/outbox state, publish an identifier-only Queue intent, execute the trusted worker under a lease, and commit a private content-addressed bundle before success.
 3. An offline or optional GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
-4. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
-5. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
-6. The minimizer accepts only a proposed reduction that preserves the same verification result on fresh runs.
-7. The bundle builder redacts, hashes, serializes, and validates the artifact contract; the MCP App renders but never decides the outcome.
+4. The trusted sample uses its allowlisted runner. The protected repository path
+   verifies OAuth principal/tenant scopes, GitHub App installation membership,
+   and an immutable commit before reserving work.
+5. The trusted host streams a bounded GitHub archive and injects bytes—not a
+   token—into Vercel Sandbox. Dependencies are prepared with lifecycle scripts
+   disabled; repository code runs only under deny-all network policy.
+6. A prepared snapshot produces one clean control and three fresh candidate
+   microVMs under stable time/workspace/output/cancellation/cleanup policy.
+7. A pure oracle engine evaluates captured results. Verification requires every
+   candidate to match and the control not to match.
+8. The minimizer accepts only a proposed reduction that preserves the same
+   verification result on fresh runs.
+9. The bundle builder redacts, hashes, serializes, and validates the artifact
+   contract; the MCP App renders but never decides the outcome.
 
 ![ReproForge trust architecture: the investigator proposes work while deterministic code owns execution, verification, minimization, and packaging](docs/architecture.svg)
 
@@ -174,6 +189,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Headless case/job service evidence](docs/evidence/milestone-6/README.md)
 - [ChatGPT MCP app evidence](docs/evidence/milestone-7/README.md)
 - [Durable provider evidence](docs/evidence/milestone-8a/README.md)
+- [Isolated runner and public-canary evidence](docs/evidence/milestone-8c/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
@@ -182,11 +198,14 @@ ReproForge is a pre-alpha Build Week prototype. The complete bundled
 JavaScript/TypeScript fixture journey works through the browser, REST v2,
 Streamable HTTP MCP, and the embedded proof widget. Offline use remains
 in-memory and credential-free. The hosted durable foundation is implemented
-and provider-verified against Neon Postgres, private Vercel Blob, and Vercel
-Queue, but no stable hosted service is claimed. External repository execution,
-private-repository access, tenant authentication, production hosting, and
-plugin publication remain intentionally unavailable. The synthetic four-case
-eval is a contract check, not a claim of real-world benchmark performance.
+and provider-verified against Neon Postgres, private Vercel Blob, Vercel Queue,
+and Vercel Sandbox. A tiny immutable public repository canary has completed the
+full isolated path—bounded acquisition, dependency preparation, one control,
+three fresh candidates, deterministic proof, portable bundle, and cleanup.
+Live account authorization, general/private repository use, the composed
+stable hosted journey, production hosting, and plugin publication remain
+intentionally unavailable. The synthetic four-case eval and public canary are
+contract checks, not claims of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

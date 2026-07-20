@@ -1,9 +1,9 @@
 # Hosted operations and recovery runbook
 
-This runbook covers the implemented durable trusted-fixture foundation. It is
-not a production-launch guide: OAuth, external repository execution, a hosted
-consumer/runner, domain configuration, alerts, and a public ChatGPT app remain
-later gated milestones.
+This runbook covers the implemented durable foundation and development-provider
+proof for isolated repository execution. It is not a production-launch guide:
+live account authorization, a composed hosted consumer/runner, domain
+configuration, alerts, and a public ChatGPT app remain gated milestones.
 
 ## Runtime modes
 
@@ -31,7 +31,8 @@ Use a dedicated Vercel project and free/development resources. Do not paste
 credentials into source, issues, logs, screenshots, or evidence manifests.
 
 1. Link the repository to the intended Vercel project.
-2. Connect a private Vercel Blob store.
+2. Connect a private Vercel Blob store and ensure the development project can
+   create Vercel Sandbox sessions through its OIDC identity.
 3. Install Neon through Vercel Marketplace, choose the intended region, keep
    built-in application auth disabled for this milestone, and connect it to the
    project.
@@ -47,7 +48,7 @@ credentials into source, issues, logs, screenshots, or evidence manifests.
 
 The canonical defaults are a 90-second job lease, 30-second outbox claim, five
 delivery attempts, 25-event publish batch, two active jobs per tenant,
-seven-day Queue retention, and 30-day customer-data retention. Override only
+24-hour Queue retention, and 30-day customer-data retention. Override only
 through the validated variables documented in [`.env.example`](../.env.example).
 
 ## Migration and provider gate
@@ -74,24 +75,33 @@ silently skipping. It proves:
   job, attempt, execution, Queue identity, and bundle identity;
 - live Postgres serialization collapses concurrent starts and recovers one
   expired lease once;
-- database, artifact, and Queue readiness are healthy while the unsupported
-  external runner remains explicitly unavailable; and
+- database, artifact, and Queue readiness are healthy while the default hosted
+  runner probe remains explicitly unavailable until composed 8D wiring;
 - a complete tenant archive is exported, its source object removed, restored
   into a fresh Neon schema, re-hashed, and independently read from private
   Blob.
+- a bounded public GitHub archive crosses from the trusted host into an
+  always-deny-all sandbox as bytes only, retains its SHA-256, exposes no
+  acquisition credential, enforces output/cancellation policy, and cleans the
+  sandbox;
+- fresh microVMs restored from one prepared snapshot do not share mutations and
+  every sandbox/snapshot is cleaned; and
+- the exact public canary revision runs one control plus three candidates in
+  four fresh microVMs and emits a clean independently validatable `VERIFIED`
+  bundle without minting a GitHub credential.
 
 Provider tests use generated synthetic tenants and schemas. They remove active
 test cases, artifacts, objects, and temporary schemas. The documented sanitized
-postcondition is six applied migrations with zero active test tenants, zero
+postcondition is nine applied migrations with zero active test tenants, zero
 test cases/artifacts, and zero temporary restore schemas.
 
 ## Health and fail-closed behavior
 
-| Route | Meaning | Expected durable-foundation result |
+| Route | Meaning | Expected current result |
 |---|---|---|
 | `/health/live` | process can answer | `200` / `PROCESS_ALIVE` |
 | `/health/ready` | configuration, database, artifact store, and Queue boundary | `200` only when every check is ready |
-| `/health/runner` | external isolated repository execution | `503` / `RUNNER_NOT_CONFIGURED` until Milestone 8C |
+| `/health/runner` | composed isolated repository execution | `503` / `RUNNER_NOT_CONFIGURED` until Milestone 8D wires and verifies the hosted runner probe |
 
 Do not route customer traffic when readiness is unavailable. Do not replace a
 failed hosted dependency with local memory. Health output contains stable codes
@@ -105,6 +115,9 @@ diagnostics after redaction.
 - An expired lease is requeued once per compare-and-swap recovery decision.
   Attempt exhaustion records a sanitized failure and never fabricates
   `VERIFIED`.
+- `BUDGET_EXHAUSTED`, `CANCELLED`, and `UNSUPPORTED_SOURCE` are terminal and
+  non-retryable. A provider interruption or execution failure may consume only
+  the bounded retry policy.
 - A bundle must be private and hash-verified before success commits.
 - Customer-class records and artifacts default to 30 days. Principal, audit,
   quota, and deletion records default to 365 days.
@@ -135,11 +148,17 @@ production operations.
    or verified restore, not migration-file mutation.
 6. Re-run `npm run test:providers`, `npm run verify`, and the exact CI commit
    before declaring recovery complete.
+7. If sandbox stop or snapshot deletion fails, keep the attempt quarantined,
+   record only the sanitized resource identity through the approved sink, and
+   do not change an already computed proof outcome.
 
 ## Evidence and current boundary
 
-The sanitized provider and regression record is in
-[`docs/evidence/milestone-8a`](evidence/milestone-8a/README.md). Backend provider
-work has no meaningful visual state, so its evidence is test output, migration
-catalog state, private-access behavior, and cleanup postconditions. Visual
-evidence becomes mandatory again when a hosted browser/ChatGPT journey exists.
+The durable-provider record is in
+[`docs/evidence/milestone-8a`](evidence/milestone-8a/README.md), and the isolated
+runner/public-canary record is in
+[`docs/evidence/milestone-8c`](evidence/milestone-8c/README.md). Backend provider
+work has no meaningful screenshot state, so its evidence is test output,
+source/bundle hashes, network-denial behavior, migration catalog state,
+private-access behavior, and cleanup postconditions. Visual evidence becomes
+mandatory again for the hosted browser/ChatGPT journey.

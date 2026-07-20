@@ -1,6 +1,6 @@
 # Milestone 8C specification: isolated repository execution
 
-- **Status:** in progress on `agent/isolated-execution`; live merge remains blocked on 8B evidence
+- **Status:** implementation and development-provider evidence complete on `agent/isolated-execution`; merge remains gated by the full PR checks and Milestone 8B live account evidence
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable jobs, private artifacts, authenticated tenant, and live repository authorization
 - **Unblocks:** real public/private repository reproductions
@@ -79,8 +79,9 @@ destination is reachable.
   a clean worktree or snapshot derived from the immutable source.
 - Capture stdout/stderr separately, truncate deterministically, redact before
   persistence, and retain the original byte counts/hashes.
-- Cancellation stops active commands and the sandbox; timeout and provider
-  loss produce truthful retryable/blocked operational states.
+- Cancellation stops active commands and the sandbox; a resource or total-time
+  breach becomes non-retryable `BUDGET_EXHAUSTED`, while provider interruption
+  remains a distinct bounded-retry operational state.
 - Model output may propose typed experiments but cannot execute directly or set
   domain status.
 
@@ -109,7 +110,7 @@ Private-beta defaults are versioned policy, not user-editable raw values:
 | processes | 128 |
 | each command | 120 seconds |
 | complete attempt | 15 minutes |
-| stdout + stderr per run | 2 MiB retained after deterministic truncation |
+| stdout + stderr per run | 2 MiB aggregate, capped at 1 MiB per stream, after deterministic truncation |
 | artifact set | 100 MiB |
 | candidate runs | 3 required, 5 maximum |
 | tool/experiment calls | 12 maximum |
@@ -152,7 +153,7 @@ Required defenses cover:
 - [x] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
 - [x] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
 - [x] `RF-8311` Add sandbox-provider integration tests for trusted-host bounded acquisition, byte-only sandbox injection, execution deny-all, credential absence, limits, cancellation, and cleanup.
-- [ ] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
+- [x] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
 
 ## TDD and property requirements
 
@@ -218,6 +219,10 @@ Feature: Isolated repository reproduction
 - Existing trusted-fixture verification remains unchanged.
 - Full offline and authorized provider gates pass; evidence is sanitized and
   provenance-recorded.
+- The backend boundary has no meaningful screenshot state. The committed
+  machine-readable bundle, provider transcript summary, and updated trust
+  architecture are the applicable evidence; hosted UI/ChatGPT captures remain
+  8D/9 work.
 - The milestone PR is green and merged before 8D begins.
 
 RF-8308 additionally has direct development-provider proof: one prepared
@@ -256,7 +261,21 @@ original byte count and SHA-256 while truncating to the per-stream budget, and
 an active infinite process was cancelled. Two fresh restores preserved the
 immutable marker, excluded the first restore's mutation from the second, and
 cleaned both microVMs and the snapshot. The combined live provider gate passed
-all eight isolated and durable-provider tests.
+all nine tests: three isolated-execution tests and six durable-provider tests.
+
+RF-8312 has executable proof across 13 repository-specific BDD scenarios. The
+complete suite passes 39 scenarios and 283 steps. A real public canary acquired
+the exact `GhostlyGawd/reproforge` revision
+`804d2da174060b40981e6a0437e6b212fc64d36d`, prepared its locked npm
+dependencies with lifecycle scripts disabled, snapshotted the prepared source,
+then ran one negative control and three candidates in four fresh deny-all
+microVMs. The oracle produced `VERIFIED`, cleanup was clean, and the portable
+11,187-byte bundle at
+[`docs/evidence/milestone-8c/public-canary-bundle.json`](../evidence/milestone-8c/public-canary-bundle.json)
+has outer SHA-256
+`7d6908cfe7a2f34916b739fbde0c46ec71d5dab7872bbcfbc37b7d6ea10eb52f`.
+The bundle contains no synthetic canary secret, GitHub/Vercel credential name,
+provider resource identifier, local path, or provider URL.
 
 The provider gate also drove two red-to-green corrections. Vercel's network
 header transformation requires a paid plan, so acquisition was strengthened to

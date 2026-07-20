@@ -21,7 +21,8 @@
     "test:control": "node fixtures/repository-canary/control.mjs",
     "test:reproduce": "node fixtures/repository-canary/reproduce.mjs",
     "test:bdd": "node --no-memory-protection-keys --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
-    "test:browser": "playwright test",
+    "test:browser": "npm run build && npm run test:browser:built",
+    "test:browser:built": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
@@ -29,7 +30,7 @@
     "generate:migrations": "node scripts/generate-migration-manifest.mjs",
     "verify:docs": "node scripts/verify-docs.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run verify:docs && npm run build",
-    "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser"
+    "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser:built"
   },
   "engines": {
     "node": ">=20.9"
