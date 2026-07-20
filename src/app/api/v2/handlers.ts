@@ -6,9 +6,9 @@ import {
   CaseServiceError,
   type CaseOperations,
 } from "@/application/case-service";
+import { TRUSTED_SAMPLE_CALLER_ID } from "@/application/trusted-sample-identity";
 
 const API_SCHEMA_VERSION = "2.0" as const;
-const TRUSTED_CALLER = "rest:anonymous-trusted-sample";
 
 const startBodySchema = z
   .object({
@@ -98,7 +98,7 @@ export function createStartReproductionHandler(
       const body = startBodySchema.parse(await request.json());
       const result = await service.startTrustedReproduction({
         budget: body.budget,
-        callerId: TRUSTED_CALLER,
+        callerId: TRUSTED_SAMPLE_CALLER_ID,
         idempotencyKey,
         sampleId: body.sampleId,
       });
@@ -121,7 +121,10 @@ export function createGetReproductionHandler(
     try {
       const { caseId } = await context.params;
       return success(
-        await service.getReproduction({ callerId: TRUSTED_CALLER, caseId }),
+        await service.getReproduction({
+          callerId: TRUSTED_SAMPLE_CALLER_ID,
+          caseId,
+        }),
         requestId,
       );
     } catch (error) {
@@ -142,7 +145,7 @@ export function createGetJobHandler(
     try {
       const { jobId } = await context.params;
       return success(
-        await service.getJob({ callerId: TRUSTED_CALLER, jobId }),
+        await service.getJob({ callerId: TRUSTED_SAMPLE_CALLER_ID, jobId }),
         requestId,
       );
     } catch (error) {
@@ -163,7 +166,10 @@ export function createExportBundleHandler(
     try {
       const { caseId } = await context.params;
       return success(
-        await service.exportReproBundle({ callerId: TRUSTED_CALLER, caseId }),
+        await service.exportReproBundle({
+          callerId: TRUSTED_SAMPLE_CALLER_ID,
+          caseId,
+        }),
         requestId,
       );
     } catch (error) {

@@ -23,6 +23,7 @@ import type {
   RepositoryOperations,
   RepositorySource,
 } from "@/application/repository-operations";
+import { TRUSTED_SAMPLE_CALLER_ID } from "@/application/trusted-sample-identity";
 import { OAuthVerificationError } from "@/auth/access-token-verifier";
 import { buildBearerChallenge } from "@/auth/challenge";
 import type { OAuthResourceConfig } from "@/config/oauth";
@@ -42,8 +43,6 @@ import {
 import { createReproForgeWidgetHtml } from "@/mcp/widget";
 
 export const REPROFORGE_WIDGET_URI = "ui://reproforge/proof-v1.html";
-
-const TRUSTED_SAMPLE_CALLER_ID = "mcp:trusted-sample";
 
 const READ_ONLY_ANNOTATIONS = {
   destructiveHint: false,
