@@ -153,4 +153,110 @@ describe("Postgres GitHub authorization store", () => {
       ),
     ).rejects.toThrow();
   });
+
+  it("applies installation suspension and removal exactly once per webhook delivery", async () => {
+    await store.bind(actor, installation);
+    const suspended = {
+      deliveryId: "delivery-suspend-1",
+      event: "installation" as const,
+      payload: {
+        action: "suspended",
+        installation: {
+          id: installation.installationId,
+          permissions: installation.permissions,
+          suspended_at: "2026-07-20T00:03:00.000Z",
+        },
+      },
+    };
+
+    await expect(store.processWebhook(suspended)).resolves.toBe("accepted");
+    await expect(store.processWebhook(suspended)).resolves.toBe("duplicate");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "SUSPENDED" });
+
+    await expect(
+      store.processWebhook({
+        deliveryId: "delivery-delete-1",
+        event: "installation",
+        payload: {
+          action: "deleted",
+          installation: {
+            id: installation.installationId,
+            permissions: installation.permissions,
+            suspended_at: null,
+          },
+        },
+      }),
+    ).resolves.toBe("accepted");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "REMOVED" });
+
+    const deliveries = await database.query<{ count: string }>(
+      "SELECT count(*)::text AS count FROM github_webhook_deliveries",
+    );
+    expect(deliveries.rows[0]?.count).toBe("2");
+    const audits = await database.query<{ action: string; outcome: string }>(
+      `SELECT action, outcome
+         FROM audit_events
+        WHERE tenant_id = $1
+        ORDER BY occurred_at, action`,
+      [actor.tenantId],
+    );
+    expect(audits.rows).toEqual(
+      expect.arrayContaining([
+        { action: "github.installation-linked", outcome: "success" },
+        { action: "github.installation-removed", outcome: "success" },
+        { action: "github.installation-suspended", outcome: "success" },
+      ]),
+    );
+    expect(JSON.stringify(audits.rows)).not.toMatch(/token|secret|private_key/i);
+  });
+
+  it("fails closed when a webhook reports permission drift", async () => {
+    await store.bind(actor, installation);
+    await expect(
+      store.processWebhook({
+        deliveryId: "delivery-permissions-1",
+        event: "installation",
+        payload: {
+          action: "new_permissions_accepted",
+          installation: {
+            id: installation.installationId,
+            permissions: {
+              ...installation.permissions,
+              contents: "write",
+            },
+            suspended_at: null,
+          },
+        },
+      }),
+    ).resolves.toBe("accepted");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "SUSPENDED" });
+  });
+
+  it("updates selected repositories idempotently from repository lifecycle events", async () => {
+    await store.bind(actor, installation);
+    await expect(
+      store.processWebhook({
+        deliveryId: "delivery-repositories-1",
+        event: "installation_repositories",
+        payload: {
+          action: "removed",
+          installation: { id: installation.installationId },
+          repositories_added: [],
+          repositories_removed: [{ id: 8001 }],
+        },
+      }),
+    ).resolves.toBe("accepted");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "REMOVED" });
+    await expect(
+      store.findRepository(actor.tenantId, "repo_2"),
+    ).resolves.toMatchObject({ status: "ACTIVE" });
+  });
 });

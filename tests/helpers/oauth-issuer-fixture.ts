@@ -14,12 +14,13 @@ export type OAuthIssuerFixture = Awaited<
 export async function createOAuthIssuerFixture(options?: {
   audience?: string;
   issuer?: string;
+  keyId?: string;
   nowSeconds?: number;
 }) {
   const issuer = options?.issuer ?? "https://issuer.reproforge.test/";
   const audience = options?.audience ?? "https://reproforge.test/mcp";
   const nowSeconds = options?.nowSeconds ?? DEFAULT_NOW_SECONDS;
-  const keyId = "reproforge-test-key-1";
+  const keyId = options?.keyId ?? "reproforge-test-key-1";
   const { privateKey, publicKey } = await generateKeyPair("RS256", {
     extractable: true,
   });
@@ -115,6 +116,12 @@ export async function createOAuthIssuerFixture(options?: {
     issuer,
     jwksUrl,
     nowSeconds,
+    publicJwk: {
+      ...publicJwk,
+      alg: "RS256",
+      kid: keyId,
+      use: "sig",
+    },
     requests,
     sign,
     signUnsupportedAlgorithm,

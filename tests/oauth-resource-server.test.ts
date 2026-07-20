@@ -144,4 +144,29 @@ describe("JWT access-token verification", () => {
       );
     }
   });
+
+  it("refreshes cached JWKS once when the authorization server rotates to a new key", async () => {
+    const first = await createOAuthIssuerFixture({ keyId: "rotation-key-1" });
+    const second = await createOAuthIssuerFixture({ keyId: "rotation-key-2" });
+    let jwksReads = 0;
+    const fetcher: typeof fetch = async (input, init) => {
+      const url = String(input);
+      if (url === first.jwksUrl) {
+        jwksReads += 1;
+        return Response.json({
+          keys: [jwksReads === 1 ? first.publicJwk : second.publicJwk],
+        });
+      }
+      return first.fetcher(input, init);
+    };
+    const verifier = createJwtAccessTokenVerifier({
+      config: parseOAuthResourceConfig(oauthEnvironment),
+      fetcher,
+      now: () => new Date(first.nowSeconds * 1_000),
+    });
+
+    await expect(verifier.verify(`Bearer ${await first.sign()}`)).resolves.toBeTruthy();
+    await expect(verifier.verify(`Bearer ${await second.sign()}`)).resolves.toBeTruthy();
+    expect(jwksReads).toBe(2);
+  });
 });

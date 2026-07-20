@@ -94,4 +94,49 @@ describe("provider-neutral repository authorization", () => {
       ).rejects.toMatchObject({ code: "REPOSITORY_NOT_FOUND" });
     }
   });
+
+  it("audits repository access and denial without repository names or credentials", async () => {
+    const append = vi.fn(async () => undefined);
+    const store = {
+      findRepository: vi
+        .fn()
+        .mockResolvedValueOnce(repository)
+        .mockResolvedValueOnce(null),
+      listRepositories: vi.fn(),
+    };
+    let sequence = 0;
+    const provider = new GitHubRepositoryProvider(
+      store,
+      {
+        assertRepositoryRevision: vi.fn(async ({ commitSha }) => ({ commitSha })),
+      },
+      {
+        audit: { append },
+        clock: { now: () => new Date("2026-07-20T00:00:00.000Z") },
+        eventId: () => `audit_repository_${++sequence}`,
+      },
+    );
+    const input = { commitSha: "c".repeat(40), repositoryId: "repo_alpha" };
+
+    await provider.resolveRevision(principal, input);
+    await expect(provider.resolveRevision(principal, input)).rejects.toMatchObject({
+      code: "REPOSITORY_NOT_FOUND",
+    });
+    expect(append).toHaveBeenCalledTimes(2);
+    expect(append.mock.calls.map(([event]) => event)).toEqual([
+      expect.objectContaining({
+        action: "github.repository-accessed",
+        outcome: "success",
+        targetId: "repo_alpha",
+      }),
+      expect.objectContaining({
+        action: "github.repository-access-denied",
+        outcome: "denied",
+        targetId: "repo_alpha",
+      }),
+    ]);
+    expect(JSON.stringify(append.mock.calls)).not.toMatch(
+      /private-canary|ghs_|authorization|secret/i,
+    );
+  });
 });
