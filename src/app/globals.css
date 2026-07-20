@@ -1369,6 +1369,74 @@ a {
   gap: 10px;
 }
 
+.repository-catalog {
+  margin-top: 22px;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: rgba(7, 17, 15, 0.96);
+  padding: 24px;
+}
+
+.repository-catalog-heading,
+.repository-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.repository-catalog h2 {
+  margin: 7px 0 0;
+  font-size: 18px;
+}
+
+.repository-count,
+.repository-visibility {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--muted-strong);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  padding: 6px 9px;
+  text-transform: uppercase;
+}
+
+.repository-empty {
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.6;
+}
+
+.repository-list {
+  display: grid;
+  gap: 1px;
+  margin: 20px -8px -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.repository-list li {
+  border-top: 1px solid var(--line);
+  padding: 16px 8px;
+}
+
+.repository-list strong,
+.repository-list span {
+  display: block;
+}
+
+.repository-list strong {
+  color: var(--paper);
+  font-size: 14px;
+}
+
+.repository-list li div > span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
 .authorization-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -1414,6 +1482,12 @@ a {
 
   .account-actions {
     justify-content: flex-start;
+  }
+
+  .repository-catalog-heading,
+  .repository-list li {
+    align-items: flex-start;
+    flex-direction: column;
   }
 
   .authorization-grid {

@@ -3,12 +3,17 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { getWebSessionState } from "@/auth/auth0-client";
+import { listWebRepositories } from "@/github/default-services";
 
 export const dynamic = "force-dynamic";
 
 export default async function RepositoriesPage() {
   await connection();
   const session = await getWebSessionState();
+  const repositoryPage =
+    session.status === "signed_in"
+      ? await listWebRepositories(session.identity).catch(() => null)
+      : null;
 
   return (
     <main className="account-shell">
@@ -33,6 +38,7 @@ export default async function RepositoriesPage() {
         </p>
 
         {session.status === "signed_in" ? (
+          <>
           <div className="account-card" data-session-state="signed-in">
             <div>
               <p className="account-label">Signed in as</p>
@@ -51,6 +57,41 @@ export default async function RepositoriesPage() {
               </a>
             </div>
           </div>
+          <section className="repository-catalog" aria-labelledby="connected-heading">
+            <div className="repository-catalog-heading">
+              <div>
+                <p className="account-label">Installation selection</p>
+                <h2 id="connected-heading">Authorized repositories</h2>
+              </div>
+              <span className="repository-count">
+                {repositoryPage?.repositories.length ?? 0} connected
+              </span>
+            </div>
+            {repositoryPage === null ? (
+              <p className="repository-empty">
+                GitHub authorization is not configured for this environment yet.
+              </p>
+            ) : repositoryPage.repositories.length === 0 ? (
+              <p className="repository-empty">
+                Connect the GitHub App, then select the repositories ReproForge may read.
+              </p>
+            ) : (
+              <ul className="repository-list">
+                {repositoryPage.repositories.map((repository) => (
+                  <li key={repository.repositoryId}>
+                    <div>
+                      <strong>{repository.fullName}</strong>
+                      <span>Default branch: {repository.defaultBranch}</span>
+                    </div>
+                    <span className="repository-visibility">
+                      {repository.private ? "Private" : "Public"}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+          </>
         ) : (
           <div
             className="account-card account-card-signed-out"
