@@ -9,6 +9,7 @@ import { runTrustedSample } from "@/application/sample-case";
 import { createCase } from "@/domain/case";
 import { createJob, transitionJob } from "@/domain/job";
 import { repositoryProofResultSchema } from "@/execution/repository-proof";
+import { RepositoryExecutionError } from "@/execution/isolated-repository-runner";
 
 describe("repository durable worker", () => {
   it("uploads and verifies the bundle artifact before returning terminal success", async () => {
@@ -89,6 +90,33 @@ describe("repository durable worker", () => {
         record: fixture.record,
       }),
     ).rejects.toMatchObject({ code: "INVALID_REPOSITORY_PROOF" });
+    expect(fixture.put).not.toHaveBeenCalled();
+  });
+
+  it("preserves a stable runner budget failure for the durable consumer", async () => {
+    const fixture = await harness();
+    const worker = new RepositoryDurableWorker({
+      artifactStore: fixture.artifactStore,
+      clock: { now: () => new Date("2026-07-19T16:01:00.000Z") },
+      execute: async () => {
+        throw new RepositoryExecutionError(
+          "BUDGET_EXHAUSTED",
+          "experiments",
+        );
+      },
+      retentionDays: 30,
+    });
+
+    await expect(
+      worker.execute({
+        lease: fixture.lease,
+        message: fixture.message,
+        record: fixture.record,
+      }),
+    ).rejects.toMatchObject({
+      code: "BUDGET_EXHAUSTED",
+      stage: "experiments",
+    });
     expect(fixture.put).not.toHaveBeenCalled();
   });
 });

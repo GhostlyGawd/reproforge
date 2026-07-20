@@ -130,6 +130,28 @@ describe("snapshot-isolated sandbox lifecycle", () => {
     expect(fixture.sessions[0]?.stop).toHaveBeenCalledTimes(1);
   });
 
+  it("reports execution resource limits as budget exhaustion and cleans resources", async () => {
+    const fixture = harness(1);
+    const coordinator = new SnapshotRunCoordinator({
+      provider: fixture.provider,
+      quarantine: { record: fixture.quarantine },
+    });
+
+    await expect(
+      coordinator.execute({
+        attemptId: "attempt_budget",
+        preparedSession: fixture.prepared,
+        runCount: 1,
+        run: async () => {
+          throw new ExecutionLimitError("WORKSPACE_LIMIT_EXCEEDED");
+        },
+      }),
+    ).rejects.toMatchObject({ code: "BUDGET_EXHAUSTED" });
+    expect(fixture.sessions[0]?.stop).toHaveBeenCalledTimes(1);
+    expect(fixture.snapshot.delete).toHaveBeenCalledTimes(1);
+    expect(fixture.quarantine).not.toHaveBeenCalled();
+  });
+
   it("aborts provider restore at the total attempt deadline without retrying", async () => {
     const fixture = harness(0);
     fixture.provider.createFromSnapshot = vi.fn(

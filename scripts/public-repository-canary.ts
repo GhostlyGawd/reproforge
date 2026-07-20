@@ -1,8 +1,4 @@
-import type {
-  EphemeralRepositoryArchiveCredential,
-  RepositoryArchiveCredentialProvider,
-  RepositoryPrincipal,
-} from "@/application/ports/repository-source";
+import type { RepositoryArchiveCredentialProvider } from "@/application/ports/repository-source";
 import { createCase } from "@/domain/case";
 import type { RepositoryProofResult } from "@/execution/repository-proof";
 import { IsolatedRepositoryRunner } from "@/execution/isolated-repository-runner";
@@ -15,13 +11,7 @@ export const PUBLIC_REPOSITORY_CANARY_SECRET =
   "SYNTHETIC_REPROFORGE_PUBLIC_CANARY_SECRET";
 
 const unavailableCredentialProvider: RepositoryArchiveCredentialProvider = {
-  async withArchiveCredential<Result>(
-    _principal: RepositoryPrincipal,
-    _input: { commitSha: string; fullName: string; repositoryId: string },
-    _consume: (
-      credential: EphemeralRepositoryArchiveCredential,
-    ) => Promise<Result>,
-  ): Promise<Result> {
+  async withArchiveCredential<Result>(): Promise<Result> {
     throw new Error("The public canary must not request a GitHub credential");
   },
 };

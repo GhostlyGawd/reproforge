@@ -12,6 +12,7 @@ import {
   repositoryProofResultSchema,
   type RepositoryProofResult,
 } from "@/execution/repository-proof";
+import { RepositoryExecutionError } from "@/execution/isolated-repository-runner";
 
 type Clock = Readonly<{ now(): Date }>;
 
@@ -133,7 +134,8 @@ export class RepositoryDurableWorker implements DurableWorker {
       result = repositoryProofResultSchema.parse(
         await this.dependencies.execute(input),
       );
-    } catch {
+    } catch (error) {
+      if (error instanceof RepositoryExecutionError) throw error;
       throw new RepositoryDurableWorkerError("INVALID_REPOSITORY_PROOF");
     }
     if (

@@ -113,6 +113,7 @@ type Dependencies = {
 
 export type RepositoryExecutionCode =
   | "ATTEMPT_TIMEOUT"
+  | "BUDGET_EXHAUSTED"
   | "CANCELLED"
   | "EXECUTION_FAILED"
   | "PROVIDER_INTERRUPTED"
@@ -231,7 +232,7 @@ export class IsolatedRepositoryRunner {
     try {
       if (controller.signal.aborted) {
         throw new RepositoryExecutionError(
-          timedOut ? "ATTEMPT_TIMEOUT" : "CANCELLED",
+          timedOut ? "BUDGET_EXHAUSTED" : "CANCELLED",
         );
       }
       prepared = await this.dependencies.provider.create(
@@ -351,13 +352,15 @@ export class IsolatedRepositoryRunner {
       }
       if (controller.signal.aborted) {
         throw new RepositoryExecutionError(
-          timedOut ? "ATTEMPT_TIMEOUT" : "CANCELLED",
+          timedOut ? "BUDGET_EXHAUSTED" : "CANCELLED",
         );
       }
       if (error instanceof AttemptLifecycleError) {
         throw new RepositoryExecutionError(
           error.code === "ATTEMPT_TIMEOUT"
-            ? "ATTEMPT_TIMEOUT"
+            ? "BUDGET_EXHAUSTED"
+            : error.code === "BUDGET_EXHAUSTED"
+              ? "BUDGET_EXHAUSTED"
             : error.code === "CANCELLED"
               ? "CANCELLED"
               : error.code === "PROVIDER_INTERRUPTED"

@@ -14,6 +14,7 @@ import { ExecutionLimitError } from "@/execution/bounded-execution";
 export type CleanupStatus = "clean" | "quarantined";
 export type AttemptLifecycleCode =
   | "ATTEMPT_TIMEOUT"
+  | "BUDGET_EXHAUSTED"
   | "CANCELLED"
   | "EXECUTION_FAILED"
   | "PROVIDER_INTERRUPTED";
@@ -71,6 +72,13 @@ function isProviderInterruption(error: unknown): boolean {
   return (
     error instanceof ExecutionLimitError &&
     error.code === "PROVIDER_INTERRUPTED"
+  );
+}
+
+function isBudgetExhaustion(error: unknown): boolean {
+  return (
+    error instanceof ExecutionLimitError &&
+    error.code !== "PROVIDER_INTERRUPTED"
   );
 }
 
@@ -213,7 +221,12 @@ export class SnapshotRunCoordinator {
             values.push(value);
           } catch (error) {
             if (controller.signal.aborted) throw abortedError();
-            if (
+            if (isBudgetExhaustion(error)) {
+              throw new AttemptLifecycleError(
+                "BUDGET_EXHAUSTED",
+                cleanupStatus,
+              );
+            } else if (
               isProviderInterruption(error) &&
               retries < this.maxProviderRetries
             ) {
