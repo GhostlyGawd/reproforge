@@ -34,10 +34,15 @@ import {
 import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
 import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
 import { durableScope } from "../../tests/helpers/durable-fixture";
+import { databaseClockAt } from "../../tests/helpers/database-clock";
 import { seedVerifiedBackupTenant } from "../../tests/helpers/tenant-backup-fixture";
 import type { ReproForgeWorld } from "../support/world";
 
-const AT = "2026-07-19T20:00:00.000Z";
+const SECOND_IN_MILLISECONDS = 1_000;
+const MINUTE_IN_MILLISECONDS = 60 * SECOND_IN_MILLISECONDS;
+const HOUR_IN_MILLISECONDS = 60 * MINUTE_IN_MILLISECONDS;
+const DAY_IN_MILLISECONDS = 24 * HOUR_IN_MILLISECONDS;
+const AT = databaseClockAt();
 
 function bddRecord(
   overrides: Partial<DurableReproductionRecord> = {},
@@ -90,7 +95,7 @@ function bddStartInput(record: DurableReproductionRecord): DurableStartInput {
     quotaReservation: {
       amount: 1,
       caseId: record.caseId,
-      expiresAt: "2026-07-20T20:00:00.000Z",
+      expiresAt: databaseClockAt(DAY_IN_MILLISECONDS),
       jobId: record.jobId,
       reservationId: `quota_${record.caseId}`,
       resource: "active-jobs",
@@ -484,7 +489,7 @@ When(
       worker: {
         execute: async ({ record }) => {
           this.durableQueueExecutions += 1;
-          const completedAt = new Date("2026-07-19T20:00:01.000Z");
+          const completedAt = new Date(databaseClockAt(SECOND_IN_MILLISECONDS));
           const blockedCase = transitionCase(
             transitionCase(
               record.snapshot.case,
@@ -494,7 +499,7 @@ When(
             ),
             "BLOCKED",
             "BDD terminal completion",
-            new Date("2026-07-19T20:00:02.000Z"),
+            new Date(databaseClockAt(2 * SECOND_IN_MILLISECONDS)),
           );
           return {
             ...record,
@@ -502,7 +507,7 @@ When(
               ...record.snapshot,
               case: blockedCase,
               job: transitionJob(record.snapshot.job, "FAILED", {
-                at: new Date("2026-07-19T20:00:02.000Z"),
+                at: new Date(databaseClockAt(2 * SECOND_IN_MILLISECONDS)),
                 failure: {
                   code: "BDD_TERMINAL",
                   message: "The BDD worker stopped safely",
@@ -511,7 +516,7 @@ When(
                 progressPhase: "BLOCKED",
               }),
             },
-            updatedAt: "2026-07-19T20:00:02.000Z",
+            updatedAt: databaseClockAt(2 * SECOND_IN_MILLISECONDS),
           };
         },
       },
@@ -632,10 +637,12 @@ Given(
     await this.durableDatabase.query(
       `INSERT INTO tenants (
          id, created_at, updated_at, retention_until
-       ) VALUES ($1, '2026-07-19T19:00:00.000Z',
-                    '2026-07-20T20:00:00.000Z',
-                    '2026-07-20T20:00:00.000Z')`,
-      [this.durableRecord.tenantId],
+       ) VALUES ($1, $2, $3, $3)`,
+      [
+        this.durableRecord.tenantId,
+        databaseClockAt(-HOUR_IN_MILLISECONDS),
+        databaseClockAt(DAY_IN_MILLISECONDS),
+      ],
     );
     await reserveDurableStart(
       this.durableUnitOfWork,
@@ -675,7 +682,7 @@ When(
   "the retention deletion worker runs",
   async function (this: ReproForgeWorld) {
     assert(this.durableRetention);
-    const at = "2026-07-22T20:00:00.000Z";
+    const at = databaseClockAt(3 * DAY_IN_MILLISECONDS);
     assert.equal(
       (await this.durableRetention.scheduleDue({ at, limit: 1 })).length,
       1,
@@ -759,7 +766,7 @@ When(
     for (let index = 0; index < 2; index += 1) {
       this.durableRecoverySummaries.push(
         await this.durableRepository.recoverExpiredLeases({
-          at: "2026-07-19T20:02:00.000Z",
+          at: databaseClockAt(2 * MINUTE_IN_MILLISECONDS),
           limit: 10,
         }),
       );
