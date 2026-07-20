@@ -33,7 +33,7 @@ repository-specific source, dependency, execution, outcome, cancellation,
 provider-loss, and secret-safety scenarios. The focused lifecycle/durable suite
 passed 16 tests.
 
-The complete local gate covers 341 passing Vitest tests (with only the 9
+The complete local gate covers 342 passing Vitest tests (with only the 9
 credential-gated live-provider cases skipped in the offline run), 39/39 BDD
 scenarios, 110 documentation links, a production Next.js build, five-tool
 keyless MCP smoke, 4/4 deterministic eval fixtures, and 18/18 Chromium browser,
@@ -104,6 +104,14 @@ passed after both the Next route and `vercel.json` were set to the universally
 Hobby-compatible 60-second ceiling. Documentation now distinguishes the longer
 internal sandbox budget from the effective hosted callback limit; 8D retains
 the obligation to prove or redesign longer-running orchestration.
+
+The next GitHub run crossed the 24-hour boundary embedded in old PGlite test
+timestamps. Quota expiry and outbox claim predicates compared those fixtures
+with a later real `CURRENT_TIMESTAMP`, causing eight durable tests and one BDD
+scenario to fail without a product-code regression. Database-sensitive tests
+and BDD steps now share a runtime-relative epoch while retaining exact offsets
+for ordering assertions. The 15-test focused set, adjacent generated
+properties, all 39 BDD scenarios, and the complete release gate then passed.
 
 ## Evidence boundary
 

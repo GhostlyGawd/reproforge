@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8c",
-  "capturedAt": "2026-07-20T17:12:08.196Z",
+  "capturedAt": "2026-07-20T20:36:51.507Z",
   "implementationCommit": "068df00a8f1bd688bd9e54c9c0d73edbe29de1f2",
-  "evidenceSourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
+  "evidenceSourceCommit": "288187c99659790fb1d51e3fb384343b265849e7",
   "scope": "isolated repository execution implementation and development-provider evidence through RF-8312",
   "status": "implementation-complete",
   "tasks": {
@@ -85,6 +85,10 @@
     {
       "red": "The linked Hobby preview rejected the Queue Function's 900-second maxDuration as outside the plan limit.",
       "green": "A deployment-contract test pins both the Next route and vercel.json to the universally Hobby-compatible 60-second ceiling; longer hosted orchestration remains an explicit 8D gate."
+    },
+    {
+      "red": "GitHub CI crossed the 24-hour boundary embedded in fixed PGlite integration and BDD clocks, so quota expiry and outbox claim predicates evaluated against a later real CURRENT_TIMESTAMP.",
+      "green": "Database-sensitive fixtures now share a runtime-relative epoch with exact scenario offsets; the previously failing 15-test set, adjacent generated properties, all 39 BDD scenarios, and the complete release gate pass."
     }
   ],
   "propertyVerification": {
@@ -102,9 +106,9 @@
   },
   "regressionVerification": {
     "command": "npm run verify",
-    "sourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
-    "vitestFilesPassed": 80,
-    "vitestTestsPassed": 341,
+    "sourceCommit": "288187c99659790fb1d51e3fb384343b265849e7",
+    "vitestFilesPassed": 81,
+    "vitestTestsPassed": 342,
     "offlineProviderTestsSkipped": 9,
     "bddScenariosPassed": 39,
     "bddStepsPassed": 283,
