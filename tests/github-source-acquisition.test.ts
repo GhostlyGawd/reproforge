@@ -74,9 +74,9 @@ function harness(
   const files: SandboxFile[] = [];
   const fetchCalls: FetchCall[] = [];
   const tarListing = [
-    "drwxr-xr-x 0/0 0 2026-07-20 00:00:00.000000000 +0000 GhostlyGawd-reproforge-0123456/",
-    "-rw-r--r-- 0/0 12 2026-07-20 00:00:00.000000000 +0000 GhostlyGawd-reproforge-0123456/package.json",
-    "-rw-r--r-- 0/0 20 2026-07-20 00:00:00.000000000 +0000 GhostlyGawd-reproforge-0123456/package-lock.json",
+    "drwxr-xr-x 0/0 0 2026-07-20 00:00:00.000000000 GhostlyGawd-reproforge-0123456/",
+    "-rw-r--r-- 0/0 12 2026-07-20 00:00:00.000000000 GhostlyGawd-reproforge-0123456/package.json",
+    "-rw-r--r-- 0/0 20 2026-07-20 00:00:00.000000000 GhostlyGawd-reproforge-0123456/package-lock.json",
   ].join("\n");
   const session: IsolatedSandboxSession = {
     makeDirectory: async (path) => {

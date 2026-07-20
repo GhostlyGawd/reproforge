@@ -101,7 +101,7 @@ function parseTarListing(listing: string) {
     throw new SourceAcquisitionError("ARCHIVE_INSPECTION_FAILED");
   }
   return lines.map((line) => {
-    const match = /^([bcdhlps-])\S*\s+\d+\/\d+\s+(\d+)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?\s+[+-]\d{4}\s+(.+)$/u.exec(
+    const match = /^([bcdhlps-])\S*\s+\d+\/\d+\s+(\d+)\s+\d{4}-\d{2}-\d{2}\s+\d{2}:\d{2}:\d{2}(?:\.\d+)?(?:\s+[+-]\d{4})?\s+(.+)$/u.exec(
       line,
     );
     if (!match) {

@@ -16,6 +16,10 @@ import { downloadGitHubArchive } from "@/execution/github-source-acquisition";
 import { SnapshotRunCoordinator } from "@/execution/sandbox-lifecycle";
 import { SOURCE_LIMITS } from "@/execution/source-provenance";
 import { VercelSandboxProvider } from "@/execution/vercel-sandbox";
+import {
+  PUBLIC_REPOSITORY_CANARY_SECRET,
+  runPublicRepositoryCanary,
+} from "../../scripts/public-repository-canary";
 
 vi.setConfig({ hookTimeout: 300_000, testTimeout: 300_000 });
 
@@ -25,6 +29,26 @@ const syntheticSecret =
   "SYNTHETIC_GITHUB_INSTALLATION_SECRET_FOR_REPROFORGE_CANARY";
 
 describe.skipIf(!LIVE)("live isolated execution provider", () => {
+  it("produces a portable verified bundle from an immutable public repository", async () => {
+    requireProviderIdentity();
+    const { proof, quarantine } = await runPublicRepositoryCanary();
+
+    expect(proof).toMatchObject({
+      bundle: expect.objectContaining({ schemaVersion: "1.1" }),
+      case: { state: "VERIFIED" },
+      provenance: {
+        cleanupStatus: "clean",
+        environment: { networkPolicy: "deny-all", provider: "vercel-sandbox" },
+        source: { provider: "github" },
+      },
+      summary: { controlMatched: false, repeatability: 1, status: "VERIFIED" },
+    });
+    expect(proof.runs).toHaveLength(4);
+    expect(Object.keys(proof.files).length).toBeGreaterThan(0);
+    expect(JSON.stringify(proof)).not.toContain(PUBLIC_REPOSITORY_CANARY_SECRET);
+    expect(quarantine).toEqual([]);
+  });
+
   it("injects trusted-host source bytes while enforcing deny-all, limits, and cancellation", async () => {
     requireProviderIdentity();
     const source = await resolvePublicCanarySource();

@@ -344,7 +344,11 @@ export class IsolatedRepositoryRunner {
         sourceProvenance: acquired.provenance,
       });
     } catch (error) {
-      if (error instanceof RepositoryExecutionError) throw error;
+      if (error instanceof RepositoryExecutionError) {
+        throw error.stage === "provisioning" && stage !== "provisioning"
+          ? new RepositoryExecutionError(error.code, stage)
+          : error;
+      }
       if (controller.signal.aborted) {
         throw new RepositoryExecutionError(
           timedOut ? "ATTEMPT_TIMEOUT" : "CANCELLED",
@@ -359,6 +363,7 @@ export class IsolatedRepositoryRunner {
               : error.code === "PROVIDER_INTERRUPTED"
                 ? "PROVIDER_INTERRUPTED"
                 : "EXECUTION_FAILED",
+          stage,
         );
       }
       const code =
