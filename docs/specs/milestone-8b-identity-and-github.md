@@ -1,6 +1,6 @@
 # Milestone 8B specification: identity and GitHub authorization
 
-- **Status:** blocked on 8A completion, otherwise ready
+- **Status:** in progress on `agent/identity-github-authorization`
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable tenant-keyed repositories and audit events
 - **Unblocks:** external source acquisition and authenticated ChatGPT tools
