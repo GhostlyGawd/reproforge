@@ -198,7 +198,7 @@ export const repositoryExecutionPlanSchema = z
     commands: z.array(sandboxCommandSchema).min(4).max(12),
     policyVersion: z.literal("node-npm-v1"),
     profile: nodeRepositoryProfileSchema,
-    requiredRuns: z.number().int().min(1).max(5),
+    requiredRuns: z.number().int().min(3).max(5),
     schemaVersion: z.literal("1.0"),
     source: immutableRepositorySourceSchema,
     totalTimeoutMs: z.number().int().min(1_000).max(900_000),
