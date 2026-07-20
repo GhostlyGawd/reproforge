@@ -3,6 +3,7 @@
   "milestone": "milestone-8c",
   "capturedAt": "2026-07-20T17:12:08.196Z",
   "implementationCommit": "068df00a8f1bd688bd9e54c9c0d73edbe29de1f2",
+  "evidenceSourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
   "scope": "isolated repository execution implementation and development-provider evidence through RF-8312",
   "status": "implementation-complete",
   "tasks": {
@@ -97,6 +98,7 @@
   },
   "regressionVerification": {
     "command": "npm run verify",
+    "sourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
     "vitestFilesPassed": 80,
     "vitestTestsPassed": 341,
     "offlineProviderTestsSkipped": 9,
@@ -115,6 +117,7 @@
     "architectureDiagram": {
       "file": "architecture.png",
       "source": "../../architecture.svg",
+      "sourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
       "capturedAt": "2026-07-20",
       "viewport": {
         "width": 1440,
