@@ -143,13 +143,22 @@ export function createCaseOperationsForRuntime(
   return factories.createOffline();
 }
 
+export function createDeferredRuntimeCaseOperations(
+  loadConfig: () => RuntimeConfig = getRuntimeConfig,
+  factories: RuntimeCaseServiceFactories = defaultFactories,
+): CaseOperations {
+  return new LazyCaseOperations(async () =>
+    createCaseOperationsForRuntime(loadConfig(), factories),
+  );
+}
+
 const serviceGlobal = globalThis as typeof globalThis & {
   __reproForgeCaseService?: CaseOperations;
 };
 
 export const defaultCaseService =
   serviceGlobal.__reproForgeCaseService ??
-  createCaseOperationsForRuntime(getRuntimeConfig());
+  createDeferredRuntimeCaseOperations();
 
 if (process.env.NODE_ENV !== "production") {
   serviceGlobal.__reproForgeCaseService = defaultCaseService;
