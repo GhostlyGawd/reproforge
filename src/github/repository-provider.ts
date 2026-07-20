@@ -3,7 +3,12 @@ import { randomUUID } from "node:crypto";
 import { z } from "zod";
 
 import type { AuthorizedPrincipal } from "@/application/authorization";
-import type { RepositorySourceProvider } from "@/application/ports/repository-source";
+import type {
+  EphemeralRepositoryArchiveCredential,
+  RepositoryArchiveCredentialProvider,
+  RepositoryPrincipal,
+  RepositorySourceProvider,
+} from "@/application/ports/repository-source";
 import type { GitHubAuthorizationStore } from "@/github/authorization-store";
 import type { AuditSink } from "@/application/ports/production";
 
@@ -19,6 +24,15 @@ export interface GitHubLiveRepositoryClient {
     installationId: number;
     providerRepositoryId: number;
   }): Promise<{ commitSha: string }>;
+  withRepositoryArchiveCredential?<Result>(
+    input: {
+      installationId: number;
+      providerRepositoryId: number;
+    },
+    consume: (
+      credential: EphemeralRepositoryArchiveCredential,
+    ) => Promise<Result>,
+  ): Promise<Result>;
 }
 
 export class RepositoryAuthorizationError extends Error {
@@ -61,8 +75,21 @@ const revisionSchema = z
       .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
   })
   .strict();
+const archiveCredentialRequestSchema = z
+  .object({
+    commitSha: z.string().regex(/^[a-f0-9]{40}$/),
+    fullName: z.string().min(3).max(255).regex(/^[^/\s]+\/[^/\s]+$/),
+    repositoryId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
+  })
+  .strict();
 
-export class GitHubRepositoryProvider implements RepositorySourceProvider {
+export class GitHubRepositoryProvider
+  implements RepositorySourceProvider, RepositoryArchiveCredentialProvider
+{
   private readonly audit?: AuditSink;
   private readonly clock: { now(): Date };
   private readonly eventId: () => string;
@@ -84,7 +111,7 @@ export class GitHubRepositoryProvider implements RepositorySourceProvider {
   }
 
   async listAuthorizedRepositories(
-    rawPrincipal: AuthorizedPrincipal,
+    rawPrincipal: RepositoryPrincipal,
     rawInput: { cursor?: string; limit?: number },
   ) {
     const principal = principalSchema.parse(rawPrincipal);
@@ -106,7 +133,7 @@ export class GitHubRepositoryProvider implements RepositorySourceProvider {
   }
 
   async resolveRevision(
-    rawPrincipal: AuthorizedPrincipal,
+    rawPrincipal: RepositoryPrincipal,
     rawInput: { commitSha: string; repositoryId: string },
   ) {
     const principal = principalSchema.parse(rawPrincipal);
@@ -162,6 +189,40 @@ export class GitHubRepositoryProvider implements RepositorySourceProvider {
       provider: "github" as const,
       repositoryId: repository.repositoryId,
     };
+  }
+
+  async withArchiveCredential<Result>(
+    rawPrincipal: RepositoryPrincipal,
+    rawInput: {
+      commitSha: string;
+      fullName: string;
+      repositoryId: string;
+    },
+    consume: (
+      credential: EphemeralRepositoryArchiveCredential,
+    ) => Promise<Result>,
+  ): Promise<Result> {
+    const principal = principalSchema.parse(rawPrincipal);
+    const input = archiveCredentialRequestSchema.parse(rawInput);
+    const repository = await this.catalog.findRepository(
+      principal.tenantId,
+      input.repositoryId,
+    );
+    if (
+      !repository ||
+      repository.status !== "ACTIVE" ||
+      repository.fullName !== input.fullName ||
+      !this.live.withRepositoryArchiveCredential
+    ) {
+      throw new RepositoryAuthorizationError("REPOSITORY_NOT_FOUND");
+    }
+    return this.live.withRepositoryArchiveCredential(
+      {
+        installationId: repository.installationId,
+        providerRepositoryId: repository.providerRepositoryId,
+      },
+      consume,
+    );
   }
 
   private async auditAccess(

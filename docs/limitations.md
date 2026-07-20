@@ -1,18 +1,39 @@
 # Current limitations
 
-ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/TypeScript example. Its boundaries are intentional and user-visible.
+ReproForge is a pre-alpha proof system with one generally available trusted
+JavaScript/TypeScript example and a provider-verified, narrowly constrained
+public repository canary. Its boundaries are intentional and user-visible.
 
 ## Execution
 
-- Arbitrary local or remote repositories cannot be executed.
-- The trusted runner returns validated deterministic results for the bundled fixture; separate subprocess tests prove the exported CLI reproduction itself runs.
-- No Docker or managed sandbox adapter is configured.
-- Dependency acquisition, network permissions, private repositories, and GitHub App authentication are not implemented.
+- Arbitrary local checkouts, repository URLs, branch heads, shell commands,
+  ecosystems, package managers, and lockfiles cannot be executed.
+- The generally available trusted runner remains limited to the bundled fixture.
+  The repository path requires a server-authorized GitHub installation,
+  immutable 40-character commit, exact Node 22/24 + npm +
+  `package-lock.json` profile, declared control/reproduction scripts, and the
+  durable isolated composition.
+- The Vercel Sandbox adapter has direct development-provider proof for a tiny
+  public canary: bounded trusted-host acquisition, dependency preparation with
+  lifecycle scripts disabled, deny-all snapshot restores, one control, three
+  candidate runs, output/cancellation limits, proof, and cleanup. That is not a
+  claim that general public repositories are enabled or safe.
+- Public acquisition mints no GitHub credential. Private source support and
+  GitHub App authorization exist in code, but live Auth0/GitHub account,
+  installation, repository-selection, and revocation evidence is still missing.
+- The extracted workspace is capped at 500 MiB, archive input at 100 MiB,
+  supported lock metadata is deliberately restrictive, and provider/plan
+  limits may be lower. Unsupported sources fail closed.
+- The current Vercel Hobby preview caps its Queue callback at 60 seconds. The
+  15-minute internal attempt budget is therefore not a hosted latency promise;
+  8D must prove the supported canary/profile within the effective callback
+  ceiling or adopt a separately validated durable worker/workflow.
 
 ## Investigation
 
 - The full browser demo always uses the offline investigator.
-- The live GPT-5.6 API path plans through strict, non-executing tools; it does not connect those proposals to an external execution sandbox.
+- The live GPT-5.6 API path plans through strict, non-executing tools. It is not
+  an autonomous repository executor and cannot grant access or set proof status.
 - No live-key smoke evidence is committed because no key was present during milestone verification.
 - Local offline/test cases remain process-local and disappear on restart.
   Preview/production composition is durable across adapter reconstruction and
@@ -21,9 +42,10 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
   concurrency, restart/retry identity, private object access/deletion,
   identifier-only Queue publication, dependency readiness, and tenant
   backup/restore. This is not a hosted availability or production-load claim.
-- Hosted durable operations still use an unauthenticated public synthetic
-  tenant. They are not user identity, authorization, or safe storage for
-  private/customer data.
+- The no-auth trusted sample still uses an anonymous public synthetic tenant.
+  OAuth/principal and GitHub authorization contracts are implemented for the
+  protected path, but they are not safe for private/customer data until the
+  live account and composed hosted gates pass.
 - The ChatGPT/MCP adapter implements the trusted journey and widget, but it has not been connected to a real ChatGPT developer-mode app because no reachable HTTPS endpoint or account-created `plugin_asdk_app…` ID was available.
 - The no-auth MCP endpoint uses one anonymous synthetic-demo caller scope. It is not user identity, tenant isolation, quota enforcement, or authorization.
 - The standalone `/widget-preview` route renders the exact MCP resource with real service data for browser evidence; it is not a screenshot of the widget inside ChatGPT.
@@ -43,7 +65,12 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
 
 ## Product readiness
 
-- REST v2 and MCP are implemented draft contracts for the trusted slice, not stability guarantees. Managed development storage and automatic branch previews exist for provider validation, but there is no stable public application deployment, packaged developer-mode app, published plugin, published package, signed artifact, release tag, service-level agreement, or compatibility guarantee.
+- REST v2 and MCP are implemented draft contracts, not stability guarantees.
+  Managed development storage, Queue, and Sandbox resources plus automatic
+  branch previews exist for provider validation, but there is no stable public
+  application deployment, packaged developer-mode app, published plugin,
+  published package, signed artifact, release tag, service-level agreement, or
+  compatibility guarantee.
 - Security controls required for an internet-facing multi-user service are outside the MVP.
 - Browser automation covers Chromium at desktop and mobile viewports; it is not a cross-browser certification.
 - No license has been selected, so reuse rights have not been granted.

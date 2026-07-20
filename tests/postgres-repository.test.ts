@@ -14,6 +14,7 @@ import { createCase } from "@/domain/case";
 import { createJob } from "@/domain/job";
 import { pglitePostgresDatabase } from "./helpers/pglite-postgres-database";
 import { pgliteMigrationClient } from "./helpers/pglite-migration-client";
+import { databaseClockAt } from "./helpers/database-clock";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
   OptimisticConcurrencyError,
@@ -94,7 +95,7 @@ function startInput(value: DurableReproductionRecord): DurableStartInput {
     quotaReservation: {
       amount: 1,
       caseId: value.caseId,
-      expiresAt: "2026-07-20T20:10:00.000Z",
+      expiresAt: databaseClockAt(10 * 60 * 1_000),
       jobId: value.jobId,
       reservationId: `quota_${value.caseId}`,
       resource: "active-jobs",

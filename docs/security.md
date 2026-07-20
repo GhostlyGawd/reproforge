@@ -2,20 +2,38 @@
 
 ## Current trust boundary
 
-ReproForge is safe to run only with its bundled demonstration fixture. The
-application does not execute arbitrary repositories. `UnavailableExternalRunner`
-rejects every external request, and the trusted fixture runner rejects unknown
-fixture IDs and actions. The hosted durable adapters have real-provider proof,
-but the public synthetic tenant is still unauthenticated; durability is not an
-authorization boundary.
+The bundled demonstration fixture is the only generally available user-facing
+path. Repository execution is implemented only for an authorized immutable
+GitHub source and a narrow Node/npm profile, and always runs in disposable
+Vercel Sandbox microVMs. A public synthetic canary has direct provider proof;
+live private-repository/account authorization and the stable hosted composition
+have not yet passed their separate gates. Arbitrary URLs, branches, commands,
+local repositories, and unsupported profiles remain rejected.
+
+The no-auth trusted sample is an anonymous synthetic scope. Durability is not
+authorization: protected repository operations require OAuth scopes, a mapped
+principal/tenant, and a currently authorized GitHub App installation before
+they can reach the runner.
 
 The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path supplied to it. It intentionally contains a path-truncation defect for demonstration and must not be reused as production CLI code.
 
 ## Controls implemented
 
-- External execution fails closed when no isolated backend exists.
-- The MCP surface exposes exactly three schema-closed tools; none accepts a repository URL, command, source payload, ChatGPT credential, or OpenAI API key.
-- Every MCP tool is closed-world and non-destructive; start is additive and idempotent, while read/export are read-only.
+- Repository execution fails closed when authorization, immutable source,
+  supported profile, durable provider, or isolated runner configuration is
+  missing.
+- The MCP surface exposes exactly five schema-closed tools: start,
+  authorized-repository list, read, cancel, and export. None accepts a
+  repository URL, shell command, source body, ChatGPT credential, provider
+  token, or OpenAI API key.
+- The trusted sample declares `noauth`; repository list/cancel require OAuth,
+  and repository start/read/export enforce their declared no-auth/OAuth
+  alternatives and least-privilege scopes.
+- OAuth access tokens are issuer/audience/signature/expiry/scope checked, then
+  mapped to an active server-owned principal and tenant. Caller-supplied IDs are
+  never accepted as identity.
+- GitHub App state and callback inputs are signed, single-use, time-bounded, and
+  installation/repository scoped. Webhook ordering and revocation are durable.
 - The MCP App resource has an empty external connect/resource/frame allowlist and loads no third-party assets.
 - `/mcp` uses no auth and wildcard CORS only for the public synthetic fixture. It must not be expanded to customer data or arbitrary execution under that policy.
 - Investigator tools are strict data contracts, not shell or filesystem tools.
@@ -33,11 +51,31 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 - Bundle materialization redacts registered secrets before serialization.
 - Canonical hashes cover contract-relevant bundle content and provenance fields.
 - Oracle and lock identifiers must agree before bundle validation succeeds.
+- Public source acquisition mints no credential. Private acquisition uses a
+  short-lived installation credential only on the exact GitHub API request;
+  authorization is not forwarded to the temporary archive host.
+- The trusted host streams at most 100 MiB of compressed archive bytes. Archive
+  traversal, absolute paths, links/special files, excessive entries, and
+  extracted-workspace overflow are rejected before repository commands.
+- Supported npm locks are parsed as data. Dependency preparation disables
+  lifecycle scripts; repository-controlled execution starts only after network
+  policy is deny-all and never reopens it.
+- Every control/candidate run restores a fresh immutable snapshot, receives no
+  ambient credential or host mount, and is bounded by command/attempt time,
+  workspace, output, run, and tool budgets. Cancellation stops active work;
+  cleanup is unconditional and failures enter quarantine.
+- `VERIFIED` still requires the deterministic oracle, a negative control, and
+  all clean candidates. Provider or model output cannot construct proof truth.
 - CI rejects high-severity dependency audit findings and runs the full verification gate.
 
 ## Not yet safe or supported
 
-- Cloning or executing a user-supplied repository.
+- Executing an arbitrary repository URL, branch head, local checkout, shell
+  command, ecosystem, or lockfile.
+- Treating the development public-canary proof as authorization for general
+  public repositories.
+- Private-repository/customer use before live Auth0, GitHub installation,
+  revocation, and composed hosted end-to-end evidence passes.
 - Attaching to a production environment.
 - Supplying production credentials, customer datasets, or private source code.
 - Multi-user or customer-data operation without OAuth principal/tenant resolution, repository authorization, abuse controls, and a deployment review.
@@ -57,9 +95,16 @@ tenants/objects, remove active test data, and verify that temporary restore
 schemas are gone. See the [operations runbook](operations.md) for the exact
 fail-closed setup and recovery gates.
 
-## Requirements for a future external runner
+## Isolated runner boundary
 
-An external adapter must execute in a disposable sandbox as a non-root identity, drop Linux capabilities, impose CPU, memory, disk, process, and time limits, default-deny network after an approved acquisition phase, receive no ambient host secrets, and have no host checkout or container-socket mount. The application must verify runner health and provenance and continue to fail closed on any ambiguity.
+The provider-tested adapter executes in disposable Vercel Sandbox microVMs,
+with explicit CPU/memory/time configuration, bounded filesystem/output policy,
+deny-all repository execution, no ambient host secrets, and no host checkout or
+container-socket mount. Source acquisition and dependency preparation are
+trusted-supervisor phases; repository-controlled code cannot run while GitHub
+or registry access is available. The default hosted runner health probe remains
+unavailable until 8D wires and verifies the composed service, so a web deploy
+alone does not advertise repository readiness.
 
 ## Dependency and model risk
 

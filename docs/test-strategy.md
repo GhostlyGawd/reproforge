@@ -40,15 +40,22 @@ Use Gherkin and Cucumber for user-observable behavior. Scenarios cover:
 - an intermittent candidate becomes unstable;
 - a candidate that never matches becomes not reproduced;
 - a control that matches the same oracle blocks verification;
-- an external repository request without an isolated runner becomes blocked;
+- a repository without an immutable revision or supported lock/profile is
+  rejected before provider execution;
 - an over-reduced reproduction is rejected;
 - a verified case exports a complete, independently valid bundle;
 - a subscription-first trusted start succeeds without an OpenAI API key and reuses retries;
 - another caller cannot read a case it does not own;
 - changed input under the same idempotency key is rejected;
-- ChatGPT discovers exactly three bounded MCP tools with no repository, command, or API-key input;
+- ChatGPT discovers exactly five bounded MCP tools with no repository URL,
+  source body, command, credential, or API-key input;
 - an MCP retry executes the trusted fixture once and returns the same case/job proof; and
-- the MCP App resource uses the required HTML profile with no external network domains.
+- the MCP App resource uses the required HTML profile with no external network domains;
+- authorized public/private sources produce the same proof shape while archive,
+  dependency, network-ordering, budget, cancellation, provider-loss, and
+  secret-safety outcomes remain fail-closed; and
+- only a non-matching control plus every required matching clean repository run
+  can emit a portable verified bundle.
 
 Step definitions invoke application services, not browser selectors. Browser journeys separately prove the UI.
 

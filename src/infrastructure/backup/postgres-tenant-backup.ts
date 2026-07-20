@@ -755,8 +755,13 @@ export class PostgresTenantBackupService {
       const { record } = reproduction;
       const domainState = {
         case: record.snapshot.case,
+        ...(record.snapshot.repositorySource
+          ? { repositorySource: record.snapshot.repositorySource }
+          : {}),
         result: record.snapshot.result,
-        sampleId: record.snapshot.sampleId,
+        ...(record.snapshot.sampleId
+          ? { sampleId: record.snapshot.sampleId }
+          : {}),
         schemaVersion: record.snapshot.schemaVersion,
       };
       await executor.query(

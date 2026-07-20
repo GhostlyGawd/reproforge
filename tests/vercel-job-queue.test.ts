@@ -22,7 +22,7 @@ describe("Vercel Queues adapter", () => {
     const queue = new VercelJobQueue(
       {
         region: "iad1",
-        retentionSeconds: 604_800,
+        retentionSeconds: 86_400,
         topic: "reproforge-jobs-v1",
       },
       { send },
@@ -34,7 +34,7 @@ describe("Vercel Queues adapter", () => {
     expect(send).toHaveBeenCalledWith("reproforge-jobs-v1", message, {
       idempotencyKey: message.eventId,
       region: "iad1",
-      retentionSeconds: 604_800,
+      retentionSeconds: 86_400,
     });
   });
 

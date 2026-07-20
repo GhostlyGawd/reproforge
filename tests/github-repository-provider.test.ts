@@ -142,4 +142,53 @@ describe("provider-neutral repository authorization", () => {
       /private-canary|ghs_|authorization|secret/i,
     );
   });
+
+  it("leases archive credentials only after the tenant repository is rechecked", async () => {
+    const store = {
+      findRepository: vi.fn(async () => repository),
+      listRepositories: vi.fn(),
+    };
+    const leased = vi.fn();
+    const withRepositoryArchiveCredential = async <Result>(
+      input: { installationId: number; providerRepositoryId: number },
+      consumeCredential: (credential: {
+        authorizationHeader: string;
+        expiresAt: string;
+      }) => Promise<Result>,
+    ) => {
+      leased(input, consumeCredential);
+      return consumeCredential({
+          authorizationHeader: "Bearer ghs_synthetic-lease",
+          expiresAt: "2026-07-20T00:59:00.000Z",
+        });
+    };
+    const provider = new GitHubRepositoryProvider(store, {
+      assertRepositoryRevision: vi.fn(),
+      withRepositoryArchiveCredential,
+    });
+    const consume = vi.fn(async () => "acquired");
+
+    await expect(
+      provider.withArchiveCredential(
+        principal,
+        {
+          commitSha: "d".repeat(40),
+          fullName: repository.fullName,
+          repositoryId: repository.repositoryId,
+        },
+        consume,
+      ),
+    ).resolves.toBe("acquired");
+    expect(store.findRepository).toHaveBeenCalledWith(
+      principal.tenantId,
+      repository.repositoryId,
+    );
+    expect(leased).toHaveBeenCalledWith(
+      {
+        installationId: repository.installationId,
+        providerRepositoryId: repository.providerRepositoryId,
+      },
+      consume,
+    );
+  });
 });

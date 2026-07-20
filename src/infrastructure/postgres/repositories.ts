@@ -29,6 +29,7 @@ import {
 import { reproductionSnapshotSchema } from "@/application/reproduction-contracts";
 import { transitionCase } from "@/domain/case";
 import { transitionJob } from "@/domain/job";
+import { resolvedRepositoryExecutionRequestSchema } from "@/execution/contracts";
 
 import {
   runSerializableTransaction,
@@ -197,6 +198,9 @@ function validateRecord(
       tenantId: record.tenantId,
     });
     reproductionSnapshotSchema.parse(record.snapshot);
+    const repositoryRequest = record.repositoryRequest
+      ? resolvedRepositoryExecutionRequestSchema.parse(record.repositoryRequest)
+      : undefined;
     const failure = record.snapshot.job.failure;
     if (
       !/^[a-f0-9]{64}$/.test(record.commandHash) ||
@@ -205,6 +209,12 @@ function validateRecord(
       record.caseId !== record.snapshot.case.id ||
       record.jobId !== record.snapshot.job.id ||
       record.caseId !== record.snapshot.job.caseId ||
+      Boolean(repositoryRequest) !== Boolean(record.snapshot.repositorySource) ||
+      (repositoryRequest !== undefined &&
+        (repositoryRequest.source.commitSha !==
+          record.snapshot.repositorySource?.commitSha ||
+          repositoryRequest.source.repositoryId !==
+            record.snapshot.repositorySource?.repositoryId)) ||
       (record.requestedBudget !== undefined &&
         (!Number.isInteger(record.requestedBudget.maxToolCalls) ||
           record.requestedBudget.maxToolCalls < 1 ||
@@ -237,8 +247,11 @@ function validateRecord(
 function serializeCaseDomain(record: DurableReproductionRecord): string {
   return JSON.stringify({
     case: record.snapshot.case,
+    ...(record.snapshot.repositorySource
+      ? { repositorySource: record.snapshot.repositorySource }
+      : {}),
     result: record.snapshot.result,
-    sampleId: record.snapshot.sampleId,
+    ...(record.snapshot.sampleId ? { sampleId: record.snapshot.sampleId } : {}),
     schemaVersion: record.snapshot.schemaVersion,
   });
 }
@@ -252,6 +265,11 @@ function rowToRecord(row: DurableRow): DurableReproductionRecord {
       requestedBudget === undefined
         ? undefined
         : objectValue(requestedBudget);
+    const rawRepositoryRequest = sourceDescriptor.repositoryRequest;
+    const repositoryRequest =
+      rawRepositoryRequest === undefined
+        ? undefined
+        : resolvedRepositoryExecutionRequestSchema.parse(rawRepositoryRequest);
     const version = integer(row.case_version);
     if (version !== integer(row.job_version)) throw new CorruptDurableRecordError();
     const failure =
@@ -295,6 +313,7 @@ function rowToRecord(row: DurableRow): DurableReproductionRecord {
             },
           }
         : {}),
+      ...(repositoryRequest ? { repositoryRequest } : {}),
       snapshot,
       tenantId: row.tenant_id,
       updatedAt: timestamp(row.updated_at),
@@ -545,7 +564,11 @@ export class PostgresDurableReproductionRepository
       throw new LeaseOwnershipError();
     }
     return this.write(async (repository) => {
-      if (record.snapshot.job.state === "SUCCEEDED") {
+      if (
+        record.snapshot.job.state === "SUCCEEDED" &&
+        (record.snapshot.case.state === "VERIFIED" ||
+          record.snapshot.job.progressPhase === "VERIFIED")
+      ) {
         const artifact = await repository.source.query<{ found: boolean }>(
           `SELECT true AS found
              FROM artifacts
@@ -1165,15 +1188,18 @@ export class PostgresDurableReproductionRepository
       `INSERT INTO cases (
          tenant_id, id, source_kind, source_descriptor, state, domain_state,
          schema_version, version, created_at, updated_at
-       ) VALUES ($1, $2, 'trusted-sample', $3::jsonb, $4, $5::jsonb, $6, 1, $7, $8)`,
+       ) VALUES ($1, $2, $3, $4::jsonb, $5, $6::jsonb, $7, 1, $8, $9)`,
       [
         record.tenantId,
         record.caseId,
+        record.repositoryRequest ? "github" : "trusted-sample",
         JSON.stringify({
           ...(record.requestedBudget
             ? { budget: record.requestedBudget }
             : {}),
-          sampleId: record.snapshot.sampleId,
+          ...(record.repositoryRequest
+            ? { repositoryRequest: record.repositoryRequest }
+            : { sampleId: record.snapshot.sampleId }),
         }),
         record.snapshot.case.state,
         serializeCaseDomain(record),

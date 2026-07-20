@@ -10,6 +10,7 @@ import { reproductionSnapshotSchema } from "@/application/reproduction-contracts
 import { canonicalJson } from "@/domain/bundle";
 import { TERMINAL_CASE_STATES } from "@/domain/case";
 import { JOB_TERMINAL_STATES } from "@/domain/job";
+import { resolvedRepositoryExecutionRequestSchema } from "@/execution/contracts";
 
 const opaqueIdSchema = z
   .string()
@@ -28,6 +29,14 @@ const durableRecordSchema = z
     createdAt: timestampSchema,
     idempotencyKey: z.string().min(1).max(128),
     jobId: opaqueIdSchema,
+    repositoryRequest: resolvedRepositoryExecutionRequestSchema.optional(),
+    requestedBudget: z
+      .object({
+        maxToolCalls: z.number().int().min(1).max(20),
+        requiredRuns: z.number().int().min(1).max(5),
+      })
+      .strict()
+      .optional(),
     snapshot: reproductionSnapshotSchema,
     tenantId: opaqueIdSchema,
     updatedAt: timestampSchema,

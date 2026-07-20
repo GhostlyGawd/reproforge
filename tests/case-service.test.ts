@@ -108,7 +108,7 @@ describe("CaseService", () => {
     });
 
     expect(snapshot.schemaVersion).toBe("2.0");
-    expect(exported.bundle.bundleHash).toBe(snapshot.result?.bundle.bundleHash);
+    expect(exported.bundle.bundleHash).toBe(snapshot.result?.bundle?.bundleHash);
     expect(validateMaterializedBundle(exported.files)).toEqual({
       success: true,
       errors: [],

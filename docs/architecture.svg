@@ -1,6 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-labelledby="title desc">
   <title id="title">ReproForge trust architecture</title>
-  <desc id="desc">A maintainer uses the Next.js interface and case orchestrator. Offline or GPT-5.6 investigators may propose bounded work. A trusted runner, deterministic oracle and verifier, minimizer, and bundle builder own proof and artifacts. External repository execution is disabled.</desc>
+  <desc id="desc">A maintainer uses the Next.js interface and case orchestrator. Offline or GPT-5.6 investigators may propose bounded work. The trusted fixture or a provider-verified isolated GitHub source runner captures evidence, while the deterministic oracle, verifier, minimizer, and bundle builder own proof and artifacts.</desc>
   <defs>
     <linearGradient id="background" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#07120f"/>
@@ -62,7 +62,7 @@
     <text x="98" y="314" class="micro" fill="#69e6ad">INPUT</text>
     <text x="98" y="350" class="label">Maintainer + UI</text>
     <text x="98" y="378" class="copy">Issue evidence</text>
-    <text x="98" y="400" class="copy">Trusted sample action</text>
+    <text x="98" y="400" class="copy">Trusted sample / authorized SHA</text>
   </g>
 
   <g filter="url(#shadow)">
@@ -104,10 +104,10 @@
   <g filter="url(#shadow)">
     <rect x="704" y="520" width="260" height="168" rx="20" fill="url(#card)" stroke="#4f8d76"/>
     <text x="730" y="556" class="micro" fill="#69e6ad">EXECUTION BOUNDARY</text>
-    <text x="730" y="592" class="label">Runner interface</text>
-    <text x="730" y="622" class="copy">Bundled fixture allowlist</text>
-    <rect x="730" y="645" width="208" height="27" rx="13.5" fill="#3a191a" stroke="#b95558"/>
-    <text x="745" y="663" class="micro" fill="#ffb0b2">EXTERNAL: DISABLED</text>
+    <text x="730" y="592" class="label">Fixture + Sandbox</text>
+    <text x="730" y="622" class="copy">Fresh deny-all microVM runs</text>
+    <rect x="730" y="645" width="208" height="27" rx="13.5" fill="#15382b" stroke="#69e6ad"/>
+    <text x="745" y="663" class="micro" fill="#baf7dc">PUBLIC CANARY: VERIFIED</text>
   </g>
 
   <g filter="url(#shadow)">

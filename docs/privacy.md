@@ -33,6 +33,29 @@ the bundled fixture. Active provider-test tenants, cases, artifacts, objects,
 and temporary restore schemas are cleaned after each run. Provider resource
 identifiers and credentials are deliberately omitted from committed evidence.
 
+## Repository source handling
+
+The development-verified repository path accepts a server-authorized GitHub
+repository ID and exact commit, never a pasted URL or source body. For public
+source, no GitHub credential is minted. For the implemented private path, a
+short-lived installation credential is scoped to the exact trusted-host API
+request and is neither forwarded to the temporary archive host nor placed in a
+sandbox, environment, command, file, log, artifact, or bundle.
+
+The trusted host buffers only a bounded compressed archive long enough to hash
+and inject its bytes into a disposable sandbox. Raw repository source is not a
+durable application artifact. The sandbox prepares the supported lock, runs
+under deny-all, and is stopped; snapshots are deleted or quarantined for
+operator cleanup. Durable evidence may retain sanitized command/output hashes,
+bounded redacted output, immutable source provenance, and the resulting private
+Repro Bundle under the documented retention policy.
+
+Committed repository evidence comes only from the public synthetic canary and
+has been scanned for the planted secret, credential names, provider resource
+identifiers, local paths, and provider URLs. No private-repository provider test
+or live user-consent/account flow is claimed yet; do not submit private or
+customer code until those gates pass.
+
 ## Optional live investigator
 
 Live mode is separate and explicit. When a caller selects `live` and configures `OPENAI_API_KEY`, the submitted repository metadata, issue text, and supplied evidence are sent to the OpenAI Responses API. ReproForge sets `store: false`, but use of that service remains subject to the applicable OpenAI terms and data controls.

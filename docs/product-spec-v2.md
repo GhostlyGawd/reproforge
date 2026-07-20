@@ -165,11 +165,17 @@ Responses use a versioned envelope with `data`, `error`, `requestId`, and `schem
 
 | Tool | Behavior | Annotations |
 |---|---|---|
-| `start_reproduction` | Start/reuse the trusted sample job | `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
+| `start_reproduction` | Start/reuse the trusted sample or an authorized immutable repository job | `readOnlyHint: false`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
+| `list_authorized_repositories` | List server-authorized GitHub repositories | `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
 | `get_reproduction` | Read a case/job proof snapshot | `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
+| `cancel_reproduction` | Request cancellation of authorized active work | `readOnlyHint: false`, `destructiveHint: true`, `idempotentHint: true`, `openWorldHint: false` |
 | `export_repro_bundle` | Read the validated bundle for a verified case | `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false` |
 
-Each tool has one job, strict input and output schemas, bounded descriptions, machine-readable identifiers, and accurate status text. Start is idempotent because hosts may retry calls. All three tools return useful text and `structuredContent` without a widget. `start_reproduction` and `get_reproduction` point to `ui://reproforge/proof-v1.html` for the richer view.
+Each tool has one job, strict input and output schemas, bounded descriptions,
+machine-readable identifiers, and accurate status text. Start and cancellation
+are idempotent because hosts may retry calls. All five tools return useful text
+and `structuredContent` without a widget. `start_reproduction` and
+`get_reproduction` point to `ui://reproforge/proof-v1.html` for the richer view.
 
 Model-readable `structuredContent` contains only sanitized case state, proof summaries, and reusable identifiers. Rich widget-only display data may use result `_meta`, but secrets and undisclosed personal data are forbidden there too.
 
@@ -192,7 +198,8 @@ Tokens stay server-side and are never returned through `content`, `structuredCon
 
 ## 7. Execution safety
 
-The existing fail-closed runner invariant remains mandatory. Production repository work requires a separate disposable execution service with:
+The fail-closed runner invariant remains mandatory. The development-provider-
+verified adapter implements a disposable execution service with:
 
 - immutable repository revision input and no host checkout mount;
 - non-root identity, dropped capabilities, no container socket, and read-only base image;
@@ -202,7 +209,10 @@ The existing fail-closed runner invariant remains mandatory. Production reposito
 - signed/hashed runner and environment provenance; and
 - cancellation, cleanup, quarantine, and health behavior that fails closed.
 
-Until these controls pass provider and product-consumer validation, external repositories return `RUNNER_UNAVAILABLE` or `UNSUPPORTED_SOURCE`.
+The public canary has passed provider validation. Until live account and
+product-consumer validation plus the composed hosted health gate pass, general
+repository use still returns an authorization, `RUNNER_UNAVAILABLE`, or
+`UNSUPPORTED_SOURCE` outcome rather than falling back to a weaker runner.
 
 ## 8. Data, privacy, and retention
 

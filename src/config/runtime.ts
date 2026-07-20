@@ -36,13 +36,13 @@ const policySchema = z
       .number()
       .int()
       .min(60)
-      .max(604_800)
-      .default(604_800),
+      .max(86_400)
+      .default(86_400),
     queueTopic: z
       .string()
       .min(1)
       .max(128)
-      .regex(/^[A-Za-z0-9_-]+$/)
+      .regex(/^reproforge-[A-Za-z0-9_-]+$/)
       .default("reproforge-jobs-v1"),
     retentionDays: z.coerce.number().int().min(1).max(365).default(30),
   })

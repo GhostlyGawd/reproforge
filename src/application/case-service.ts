@@ -234,7 +234,11 @@ export class CaseService implements CaseOperations {
 
   async exportReproBundle(rawQuery: GetReproduction): Promise<ExportResult> {
     const snapshot = await this.getReproduction(rawQuery);
-    if (!snapshot.result || snapshot.result.summary.status !== "VERIFIED") {
+    if (
+      !snapshot.result ||
+      snapshot.result.summary.status !== "VERIFIED" ||
+      !snapshot.result.bundle
+    ) {
       throw new BundleNotReadyError();
     }
     return exportResultSchema.parse({

@@ -65,7 +65,7 @@ export class VercelJobQueue implements JobQueue {
       options.region.length < 1 ||
       !Number.isInteger(options.retentionSeconds) ||
       options.retentionSeconds < 60 ||
-      options.retentionSeconds > 604_800
+      options.retentionSeconds > 86_400
     ) {
       throw new Error("Invalid Vercel Queue configuration");
     }

@@ -12,4 +12,10 @@ Do not include real credentials or customer data. Use a synthetic proof of conce
 
 ## Current boundary
 
-Only the bundled trusted fixture is supported. External repository execution is deliberately disabled. See the complete [security model](docs/security.md) and [limitations](docs/limitations.md) before running or deploying the application.
+The bundled trusted fixture is the only generally available path. Source code
+also contains a narrow immutable-GitHub/Node/npm runner with direct public-
+canary proof in disposable deny-all Vercel Sandbox microVMs, but live account
+authorization and a stable hosted service are not yet complete. Do not use it
+for arbitrary or private/customer repositories. See the complete
+[security model](docs/security.md) and [limitations](docs/limitations.md) before
+running or deploying the application.
