@@ -1,0 +1,75 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8c",
+  "capturedAt": "2026-07-20T16:38:22.788Z",
+  "implementationCommit": "7d112e1a32c2ba2a51a0bcbbb31cad2497ea6666",
+  "scope": "isolated repository execution provider integration through RF-8311",
+  "status": "partial",
+  "tasks": {
+    "RF-8301": "passed",
+    "RF-8302": "passed",
+    "RF-8303": "passed",
+    "RF-8304": "passed",
+    "RF-8305": "passed",
+    "RF-8306": "passed",
+    "RF-8307": "passed",
+    "RF-8308": "passed",
+    "RF-8309": "passed",
+    "RF-8310": "passed",
+    "RF-8311": "passed",
+    "RF-8312": "pending"
+  },
+  "providerVerification": {
+    "command": "npm run test:providers",
+    "testsPassed": 8,
+    "testsFailed": 0,
+    "testsSkipped": 0,
+    "publicCanary": {
+      "repository": "GhostlyGawd/reproforge",
+      "commitSha": "fd4c4be62d37fd76167c3b9a71d64c979f33e28e",
+      "hostArchiveBounded": true,
+      "sandboxHashMatched": true,
+      "sandboxNetworkPolicy": "deny-all"
+    },
+    "isolatedExecution": {
+      "testsPassed": 2,
+      "outputOriginalBytes": 3145728,
+      "outputRetainedBytes": 1048576,
+      "outputHashPreserved": true,
+      "cancellation": "passed",
+      "freshRestores": 2,
+      "crossRunMutationObserved": false,
+      "cleanup": "passed"
+    },
+    "durableProviders": {
+      "testsPassed": 6,
+      "cleanup": "passed"
+    }
+  },
+  "redGreenFindings": [
+    {
+      "red": "Vercel network header transformation was unavailable on the Hobby plan.",
+      "green": "Trusted-host bounded download now injects bytes into an always-deny-all sandbox without forwarding authorization to the temporary archive URL."
+    },
+    {
+      "red": "A repeated trusted supervisor mkdir failed when the directory already existed.",
+      "green": "Each experiment now receives a unique supervisor directory and the repeated live gate passes."
+    }
+  ],
+  "propertyVerification": {
+    "generatedCases": 2000,
+    "properties": 4,
+    "runsPerProperty": 500
+  },
+  "visualEvidence": {
+    "applicable": false,
+    "reason": "This backend boundary is materially verified by provider behavior, source hash identity, network denial, bounded output, cancellation, fresh restores, and cleanup. RF-8312 and the launch milestone retain the public-bundle and hosted-journey visual requirements."
+  },
+  "deferred": [
+    "RF-8312 executable BDD and public proof bundle",
+    "live private-repository authorization canary",
+    "hosted browser and ChatGPT journey",
+    "plugin submission or publication"
+  ],
+  "sanitization": "No credentials, provider resource IDs, session IDs, database identifiers, object keys, provider URLs, response headers, private source content, customer data, or personal data are committed."
+}

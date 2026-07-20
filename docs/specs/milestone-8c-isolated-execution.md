@@ -41,12 +41,15 @@ Repositories without an exact supported lockfile/profile return
 1. Recheck tenant, installation, repository, and exact 40-character commit SHA.
 2. Reserve quota and create an attempt/lease before provisioning compute.
 3. Create a fresh sandbox with no inherited environment credentials.
-4. Set network policy to GitHub-only acquisition endpoints.
-5. Mint a short-lived, repository-scoped installation token in the application
-   service and use it only for the clone/archive fetch process.
-6. Verify the checked-out `HEAD`, archive digest, path root, file/byte limits,
-   and absence of unsafe archive traversal.
-7. Destroy the token reference and verify it is absent from environment,
+4. Keep the sandbox deny-all from creation. In the trusted application service,
+   mint a short-lived, repository-scoped installation token and use it only for
+   GitHub's exact immutable archive endpoint.
+5. Accept only GitHub's HTTPS `codeload.github.com` temporary redirect, never
+   forward authorization to it, stream at most 100 MiB, discard the token, and
+   inject only the compressed archive bytes into the sandbox.
+6. Verify the archive digest, exact revision, path root, file/byte limits, and
+   absence of unsafe archive traversal before extraction.
+7. Verify the token is absent from environment,
    process arguments visible to later commands, Git config, remotes, files,
    logs, and collected output.
 
@@ -148,7 +151,7 @@ Required defenses cover:
 - [x] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
 - [x] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
 - [x] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
-- [ ] `RF-8311` Add sandbox-provider integration tests for acquisition-only egress, execution deny-all, credential absence, limits, cancellation, and cleanup.
+- [x] `RF-8311` Add sandbox-provider integration tests for trusted-host bounded acquisition, byte-only sandbox injection, execution deny-all, credential absence, limits, cancellation, and cleanup.
 - [ ] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
 
 ## TDD and property requirements
@@ -200,8 +203,10 @@ Feature: Isolated repository reproduction
 
 - Official current Sandbox SDK calls are verified against a development Vercel
   project; guessed or mock-only API behavior cannot close provider tasks.
-- Network observations prove GitHub-only acquisition, registry-only cache
-  population with scripts disabled, and deny-all repository execution.
+- Network observations prove source acquisition occurs only in the trusted host,
+  the sandbox never receives a GitHub credential or GitHub egress, registry-only
+  cache population runs with scripts disabled, and repository execution is
+  deny-all.
 - A synthetic secret planted in acquisition is absent from every later
   observable surface.
 - Resource, output, timeout, cancellation, and cleanup tests pass in real
@@ -240,4 +245,23 @@ network phase ordering, exact secret removal, deterministic output truncation
 and original hashes, forged provider verification fields, stable bundle
 identity, and duplicate/cancellation/failure sequences that converge on one
 terminal and cleanup decision.
+
+RF-8311 has direct development-provider proof. A public repository's exact
+commit archive was resolved and downloaded through GitHub's documented
+temporary redirect on the trusted host, bounded before upload, injected into a
+deny-all Vercel Sandbox, hash-matched across the boundary, and parsed by `tar`
+inside the microVM. GitHub egress remained denied, no GitHub or Vercel identity
+variable appeared in observable sandbox surfaces, a 3 MiB output retained its
+original byte count and SHA-256 while truncating to the per-stream budget, and
+an active infinite process was cancelled. Two fresh restores preserved the
+immutable marker, excluded the first restore's mutation from the second, and
+cleaned both microVMs and the snapshot. The combined live provider gate passed
+all eight isolated and durable-provider tests.
+
+The provider gate also drove two red-to-green corrections. Vercel's network
+header transformation requires a paid plan, so acquisition was strengthened to
+keep the sandbox deny-all and inject bytes after trusted-host download. Vercel
+also rejects creating an existing directory, so every experiment now receives
+a unique trusted-supervisor directory. Neither correction requires an OpenAI
+API key or a Vercel plan upgrade.
 
