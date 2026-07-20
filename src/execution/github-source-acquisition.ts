@@ -264,29 +264,33 @@ export class GitHubArchiveAcquirer {
     await session.makeDirectory(SOURCE_WORKSPACE);
     let archiveBytes: Uint8Array;
     try {
-      archiveBytes =
-        await this.dependencies.credentialProvider.withArchiveCredential(
-          principal,
-          {
-            commitSha: source.commitSha,
-            fullName: source.fullName,
-            repositoryId: source.repositoryId,
-          },
-          (credential) => {
-            const expiresAt = Date.parse(credential.expiresAt);
-            if (
-              !Number.isFinite(expiresAt) ||
-              expiresAt <= this.clock.now().getTime() + 30_000
-            ) {
-              throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");
-            }
-            return downloadGitHubArchive({
-              authorizationHeader: credential.authorizationHeader,
-              fetcher: this.dependencies.fetcher,
-              source,
-            });
-          },
-        );
+      archiveBytes = source.private
+        ? await this.dependencies.credentialProvider.withArchiveCredential(
+            principal,
+            {
+              commitSha: source.commitSha,
+              fullName: source.fullName,
+              repositoryId: source.repositoryId,
+            },
+            (credential) => {
+              const expiresAt = Date.parse(credential.expiresAt);
+              if (
+                !Number.isFinite(expiresAt) ||
+                expiresAt <= this.clock.now().getTime() + 30_000
+              ) {
+                throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");
+              }
+              return downloadGitHubArchive({
+                authorizationHeader: credential.authorizationHeader,
+                fetcher: this.dependencies.fetcher,
+                source,
+              });
+            },
+          )
+        : await downloadGitHubArchive({
+            fetcher: this.dependencies.fetcher,
+            source,
+          });
     } catch (error) {
       if (error instanceof SourceAcquisitionError) throw error;
       throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");

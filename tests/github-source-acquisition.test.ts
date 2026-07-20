@@ -183,6 +183,19 @@ function harness(
 }
 
 describe("GitHub archive acquisition", () => {
+  it("does not mint a repository credential for an already-authorized public source", async () => {
+    const fixture = harness();
+    await fixture.acquirer.acquire({
+      principal,
+      session: fixture.session,
+      source: { ...source, private: false },
+    });
+
+    expect(fixture.leaseCalls).toEqual([]);
+    expect(header(fixture.fetchCalls[0]!, "authorization")).toBeNull();
+    expect(fixture.policies).toEqual([{ kind: "deny-all" }]);
+  });
+
   it("downloads a bounded archive on the trusted host and injects only bytes into deny-all", async () => {
     const fixture = harness();
     const acquired = await fixture.acquirer.acquire({
