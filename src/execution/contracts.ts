@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { failureOracleSchema } from "@/domain/oracle";
+
 export const SANDBOX_ROOT = "/vercel/sandbox" as const;
 export const SANDBOX_WORKSPACE_ROOT = `${SANDBOX_ROOT}/workspaces` as const;
 export const SANDBOX_SNAPSHOT_MIN_EXPIRATION_MS = 86_400_000;
@@ -82,6 +84,26 @@ export const immutableRepositorySourceSchema = z
 
 export type ImmutableRepositorySource = z.infer<
   typeof immutableRepositorySourceSchema
+>;
+
+export const repositoryIssueEvidenceSchema = z
+  .object({
+    number: z.number().int().positive().max(2_147_483_647),
+    title: z.string().min(1).max(256).optional(),
+  })
+  .strict();
+
+export const resolvedRepositoryExecutionRequestSchema = z
+  .object({
+    issueEvidence: repositoryIssueEvidenceSchema.optional(),
+    oracle: failureOracleSchema,
+    profile: nodeRepositoryProfileSchema,
+    source: immutableRepositorySourceSchema,
+  })
+  .strict();
+
+export type ResolvedRepositoryExecutionRequest = z.infer<
+  typeof resolvedRepositoryExecutionRequestSchema
 >;
 
 export const sandboxCreateRequestSchema = z

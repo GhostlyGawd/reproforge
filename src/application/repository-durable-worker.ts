@@ -48,7 +48,9 @@ function artifactId(tenantId: string, caseId: string, digest: string): string {
     .slice(0, 48)}`;
 }
 
-function bundleBytes(result: RepositoryProofResult): Uint8Array {
+export function repositoryBundleBytes(
+  result: RepositoryProofResult,
+): Uint8Array {
   if (!result.bundle) throw new RepositoryDurableWorkerError("INVALID_REPOSITORY_PROOF");
   return new TextEncoder().encode(
     canonicalJson({
@@ -59,7 +61,7 @@ function bundleBytes(result: RepositoryProofResult): Uint8Array {
   );
 }
 
-function bundleDescriptor(input: {
+export function repositoryBundleDescriptor(input: {
   bytes: Uint8Array;
   caseId: string;
   createdAt: string;
@@ -143,8 +145,8 @@ export class RepositoryDurableWorker implements DurableWorker {
     }
 
     if (result.bundle) {
-      const bytes = bundleBytes(result);
-      const descriptor = bundleDescriptor({
+      const bytes = repositoryBundleBytes(result);
+      const descriptor = repositoryBundleDescriptor({
         bytes,
         caseId: record.caseId,
         createdAt: record.createdAt,

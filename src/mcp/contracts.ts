@@ -4,6 +4,7 @@ import type {
   ExportResult,
   ReproductionSnapshot,
 } from "@/application/reproduction-contracts";
+import { repositoryStartSourceSchema } from "@/application/repository-operations";
 import { evidenceClassificationSchema, hypothesisStatusSchema } from "@/domain/evidence";
 
 const trustedSourceSchema = z
@@ -13,36 +14,7 @@ const trustedSourceSchema = z
   })
   .strict();
 
-export const repositorySourceSchema = z
-  .object({
-    commitSha: z
-      .string()
-      .regex(/^[a-f0-9]{40}$/)
-      .describe("Immutable 40-character Git commit SHA selected from GitHub."),
-    executionProfile: z
-      .object({
-        ecosystem: z.literal("node"),
-        networkPolicy: z.literal("none"),
-        packageManager: z.literal("npm"),
-        testEntrypoint: z.literal("npm-test"),
-      })
-      .strict(),
-    issueEvidence: z
-      .object({
-        number: z.number().int().positive().max(2_147_483_647),
-        title: z.string().min(1).max(256).optional(),
-      })
-      .strict()
-      .optional(),
-    kind: z.literal("github"),
-    repositoryId: z
-      .string()
-      .min(1)
-      .max(128)
-      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/)
-      .describe("Server-issued identifier from list_authorized_repositories."),
-  })
-  .strict();
+export const repositorySourceSchema = repositoryStartSourceSchema;
 
 export const startReproductionInputSchema = z
   .object({
@@ -69,13 +41,26 @@ export const startReproductionInputSchema = z
       .string()
       .min(1)
       .max(128)
-      .describe("Stable retry key for this same trusted-sample request."),
+      .describe("Stable retry key for this same reproduction request."),
     source: z.discriminatedUnion("kind", [
       trustedSourceSchema,
       repositorySourceSchema,
     ]),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (
+      input.source.kind === "github" &&
+      input.budget !== undefined &&
+      input.budget.requiredRuns < 3
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "repository proof requires at least three clean candidate runs",
+        path: ["budget", "requiredRuns"],
+      });
+    }
+  });
 
 export const caseInputSchema = z
   .object({

@@ -1,7 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type {
-  ArtifactDescriptor,
   ArtifactStore,
   DurableReproductionRecord,
 } from "@/application/ports/production";
