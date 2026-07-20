@@ -159,3 +159,19 @@ export async function listWebRepositories(identity: WebIdentity) {
   const actor = await resolved.webPrincipals.resolve(identity);
   return resolved.store.listRepositories({ limit: 100, tenantId: actor.tenantId });
 }
+
+export async function getWebRepositoryCase(
+  identity: WebIdentity,
+  caseId: string,
+) {
+  const resolved = await getDefaultGitHubServices();
+  const actor = await resolved.webPrincipals.resolve(identity);
+  return resolved.repositoryOperations.getReproduction(
+    {
+      callerId: actor.principalId,
+      principalId: actor.principalId,
+      tenantId: actor.tenantId,
+    },
+    { caseId },
+  );
+}

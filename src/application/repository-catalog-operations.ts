@@ -1,5 +1,7 @@
-import type { AuthorizedPrincipal } from "@/application/authorization";
-import type { RepositorySourceProvider } from "@/application/ports/repository-source";
+import type {
+  RepositoryPrincipal,
+  RepositorySourceProvider,
+} from "@/application/ports/repository-source";
 import type {
   ListAuthorizedRepositoriesInput,
   RepositoryOperations,
@@ -19,14 +21,14 @@ export class RepositoryCatalogOperations implements RepositoryOperations {
   constructor(private readonly source: RepositorySourceProvider) {}
 
   listAuthorizedRepositories(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ) {
     return this.source.listAuthorizedRepositories(principal, input);
   }
 
   async startRepositoryReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: StartRepositoryReproductionInput,
   ): Promise<never> {
     await this.source.resolveRevision(principal, {

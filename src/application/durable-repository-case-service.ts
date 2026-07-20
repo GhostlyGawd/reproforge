@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import type { AuthorizedPrincipal } from "@/application/authorization";
 import {
   BundleNotReadyError,
   CaseServiceError,
@@ -25,7 +24,10 @@ import type {
   TenantScope,
   UnitOfWork,
 } from "@/application/ports/production";
-import type { RepositorySourceProvider } from "@/application/ports/repository-source";
+import type {
+  RepositoryPrincipal,
+  RepositorySourceProvider,
+} from "@/application/ports/repository-source";
 import {
   repositoryBundleBytes,
   repositoryBundleDescriptor,
@@ -80,7 +82,7 @@ type Dependencies = Readonly<{
   unitOfWork: UnitOfWork;
 }>;
 
-function scope(principal: AuthorizedPrincipal): TenantScope {
+function scope(principal: RepositoryPrincipal): TenantScope {
   return {
     callerId: principal.callerId,
     principalId: principal.principalId,
@@ -231,7 +233,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async listAuthorizedRepositories(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ) {
     const listed = await this.dependencies.source.listAuthorizedRepositories(
@@ -243,7 +245,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async startRepositoryReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     rawInput: StartRepositoryReproductionInput,
   ) {
     const input = startRepositoryReproductionInputSchema.parse(rawInput);
@@ -355,7 +357,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async getReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ) {
     const record = await this.dependencies.repository.findByCaseId(
@@ -369,7 +371,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async cancelReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { jobId: string },
   ) {
     const cancelled = await this.dependencies.repository.requestCancellation(
@@ -382,7 +384,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async exportReproBundle(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ) {
     const snapshot = await this.getReproduction(principal, input);

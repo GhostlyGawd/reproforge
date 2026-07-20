@@ -182,6 +182,12 @@ describe("ReproForge MCP app contract", () => {
         caseState: "VERIFIED",
         jobState: "SUCCEEDED",
         kind: "reproduction",
+        progress: {
+          cancellable: false,
+          phase: "VERIFIED",
+          state: "SUCCEEDED",
+          terminal: true,
+        },
         proof: {
           bundleReady: true,
           candidateMatches: 3,
@@ -191,6 +197,7 @@ describe("ReproForge MCP app contract", () => {
         },
         sampleId: "cli-spaces",
         schemaVersion: "1.0",
+        webPath: "/cases/mcp-case-1",
       });
       expect(secondView.caseId).toBe(firstView.caseId);
       expect(secondView.jobId).toBe(firstView.jobId);
