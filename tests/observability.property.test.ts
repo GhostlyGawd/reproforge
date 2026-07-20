@@ -4,7 +4,7 @@ import { describe, expect, it } from "vitest";
 import { JsonOperationalLogger } from "@/infrastructure/operations/observability";
 
 describe("structured observability properties", () => {
-  it("redacts every registered and credential-shaped value over 250 generated events", () => {
+  it("redacts every registered and credential-shaped value over 300 generated events", () => {
     fc.assert(
       fc.property(
         fc.stringMatching(/^[A-Za-z0-9_-]{16,48}$/),
@@ -41,7 +41,7 @@ describe("structured observability properties", () => {
           });
         },
       ),
-      { numRuns: 250 },
+      { numRuns: 300 },
     );
   });
 
