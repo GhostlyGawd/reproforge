@@ -6,7 +6,7 @@
 - **Decision:** [API-first core with plugin-first distribution](adr/0001-api-first-plugin-first.md)
 - **Delivery plan:** [v2 roadmap](roadmap-v2.md)
 - **Remaining execution specs:** [ordered delivery plan](specs/README.md)
-- **Implementation:** trusted REST and MCP slices complete through Milestone 7; account-side developer-mode smoke and production boundaries remain gated
+- **Implementation:** trusted REST/MCP slices and the Milestone 8A durable provider foundation are complete on their reviewed branches; identity, repository execution, hosted ChatGPT smoke, and publication remain gated
 
 ## 1. Product promise
 

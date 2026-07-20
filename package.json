@@ -18,13 +18,14 @@
     "test:operations": "vitest run tests/health-service.test.ts tests/observability.property.test.ts tests/health-route.test.ts tests/runtime-health.test.ts",
     "test:backup": "vitest run tests/tenant-backup.test.ts tests/tenant-backup.property.test.ts tests/postgres-migrations.test.ts",
     "test:providers": "node --env-file=.env.local scripts/run-provider-tests.mjs",
-    "test:bdd": "node --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
+    "test:bdd": "node --no-memory-protection-keys --import tsx ./node_modules/@cucumber/cucumber/bin/cucumber.js --config cucumber.mjs",
     "test:browser": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
     "generate:migrations": "node scripts/generate-migration-manifest.mjs",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build",
+    "verify:docs": "node scripts/verify-docs.mjs",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run verify:docs && npm run build",
     "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser"
   },
   "engines": {

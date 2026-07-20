@@ -19,13 +19,14 @@ capacity.
 | User OpenAI API key | Not accepted or required |
 | Arbitrary repositories | Rejected; no tool input exists for a URL or command |
 | Authentication | `noauth` for public synthetic data only |
-| Persistence | Process-local memory only |
+| Persistence | Local memory by default; provider-verified Neon/Blob/Queue composition for fully configured hosted modes |
 | Hosted ChatGPT app | Not created or claimed in this repository |
 | Public plugin | Not submitted or published |
 
 The no-auth endpoint is deliberately useful only for a fixed synthetic fixture.
-Private or customer data requires the OAuth, tenant-isolation, persistence, and
-sandbox work in Milestone 8.
+Durable storage does not authorize data. Private or customer use still requires
+Milestone 8B OAuth/tenant authorization and Milestone 8C isolated execution,
+followed by private-beta and hosted evidence.
 
 ## Run and inspect locally
 
