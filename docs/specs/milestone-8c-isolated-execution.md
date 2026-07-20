@@ -1,6 +1,6 @@
 # Milestone 8C specification: isolated repository execution
 
-- **Status:** blocked on 8B completion, otherwise ready
+- **Status:** in progress on `agent/isolated-execution`; live merge remains blocked on 8B evidence
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable jobs, private artifacts, authenticated tenant, and live repository authorization
 - **Unblocks:** real public/private repository reproductions
@@ -138,7 +138,7 @@ Required defenses cover:
 
 ## Ordered task list
 
-- [ ] `RF-8301` Write failing source/profile/execution-plan schemas and provider-neutral acquisition/sandbox contracts.
+- [x] `RF-8301` Write failing source/profile/execution-plan schemas and provider-neutral acquisition/sandbox contracts.
 - [ ] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
 - [ ] `RF-8303` Implement the Vercel Sandbox adapter using the current SDK with explicit creation, command, file, network, usage, and stop behavior.
 - [ ] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
