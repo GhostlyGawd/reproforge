@@ -1,0 +1,10 @@
+{
+  "name": "reproforge-public-repository-canary",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "test:control": "node control.mjs",
+    "test:reproduce": "node reproduce.mjs"
+  }
+}
+
