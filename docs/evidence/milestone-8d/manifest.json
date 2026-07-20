@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8d",
+  "capturedAt": "2026-07-20T21:20:57.088Z",
+  "implementationCommit": "8f4464c4dfefd00e6ccff79f1e8796688828e669",
+  "scope": "private-beta runtime health and durable progress parity implementation evidence",
+  "status": "in-progress",
+  "tasks": {
+    "RF-8401": "implementation-passed-live-configuration-pending",
+    "RF-8402": "implementation-passed-hosted-journey-pending",
+    "RF-8403": "pending",
+    "RF-8404": "pending",
+    "RF-8405": "pending",
+    "RF-8406": "pending",
+    "RF-8407": "pending",
+    "RF-8408": "pending",
+    "RF-8409": "pending",
+    "RF-8410": "pending",
+    "RF-8411": "pending"
+  },
+  "runtimeHealth": {
+    "isolatedRunnerCapabilityProbe": "passed",
+    "networkPolicy": "deny-all",
+    "sandboxCleanup": "passed",
+    "cacheAndRequestCoalescing": "passed",
+    "hostedConfigIncludes": [
+      "runtime",
+      "web-authentication",
+      "oauth-resource",
+      "github-app"
+    ],
+    "canonicalOriginRequired": true,
+    "missingConfigurationFailsBeforeProviderAccess": true
+  },
+  "progressParity": {
+    "sharedSchemaVersion": "1.0",
+    "surfaces": ["REST", "MCP", "ChatGPT widget", "web"],
+    "generatedSchedules": 500,
+    "propertyTestsPassed": 2,
+    "focusedTestsPassed": 13,
+    "bddScenariosPassed": 40,
+    "bddStepsPassed": 289,
+    "productionBuild": "passed"
+  },
+  "browserVerification": {
+    "tool": "agent-browser",
+    "pageContent": "passed",
+    "frameworkOverlay": "absent",
+    "pageErrors": 0,
+    "horizontalOverflowAt390px": false,
+    "interactiveWidgetSnapshot": "passed",
+    "console": "Next.js development and HMR notices only"
+  },
+  "visualEvidence": [
+    {
+      "file": "local-case-auth-boundary-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 187938,
+      "sha256": "31093601f370d7ed7cb442c1378015b387726c806879209539f28fff546fe4f7",
+      "alt": "Desktop ReproForge case page showing the tenant-scoped identity boundary while Auth0 is not configured."
+    },
+    {
+      "file": "local-case-auth-boundary-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 138026,
+      "sha256": "b062685fe3de4f7eaf784352daa0cfe2bfae32b1fa5d269acf7442f756e05388",
+      "alt": "Mobile ReproForge case page showing the tenant-scoped identity boundary without horizontal overflow."
+    },
+    {
+      "file": "local-widget-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 70362,
+      "sha256": "d67dfee51ce30b99d0b34449325e579b66dfec41fdff3a1478676ab92fe8e1f6",
+      "alt": "Desktop ReproForge ChatGPT widget preview showing verified proof, evidence, runs, and bundle state."
+    },
+    {
+      "file": "local-widget-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 63710,
+      "sha256": "41c7a12a9ed2c1e1ca483033388738e335f4d20669eb2d4690ed09bfd3089b3d",
+      "alt": "Mobile ReproForge ChatGPT widget preview showing verified proof without horizontal overflow."
+    }
+  ],
+  "redGreenFindings": [
+    {
+      "red": "Hosted runner health always returned RUNNER_NOT_CONFIGURED even though isolated execution was composed.",
+      "green": "A bounded real Node 24 sandbox probe now proves deny-all execution, validates a marker, stops the sandbox, and exposes only stable health codes."
+    },
+    {
+      "red": "A hosted preview could report durable providers ready while Auth0, OAuth resource, or GitHub App configuration was absent.",
+      "green": "Hosted readiness now validates all product configuration and canonical origins before any provider probe runs."
+    },
+    {
+      "red": "REST, MCP, widget, and web surfaces had independent or implicit progress representations.",
+      "green": "All four surfaces now consume one strict durable progress projection, covered by 500 generated schedules and an executable BDD journey."
+    }
+  ],
+  "deferred": [
+    "live Auth0 tenant and OAuth linking",
+    "live GitHub App installation and repository selection",
+    "hosted signed-in case-page capture",
+    "public and private deployed canaries",
+    "RF-8403 through RF-8411"
+  ],
+  "sanitization": "Evidence contains only the trusted synthetic fixture and a synthetic inaccessible case identifier; no credentials, sessions, private repository names, customer data, or provider resource identifiers are committed."
+}
