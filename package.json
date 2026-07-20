@@ -25,6 +25,7 @@
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
+    "evidence:public-canary": "node --env-file=.env.local --import tsx scripts/write-public-canary-evidence.ts",
     "generate:migrations": "node scripts/generate-migration-manifest.mjs",
     "verify:docs": "node scripts/verify-docs.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run verify:docs && npm run build",
