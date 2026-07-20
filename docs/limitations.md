@@ -49,6 +49,10 @@ public repository canary. Its boundaries are intentional and user-visible.
 - The aggregate operations dashboard, owned alert thresholds, kill switches,
   and rollback policy are locally verified. Alert delivery, an early hosted log
   scan, and an actual deployment/rollback rehearsal remain unproven.
+- The deterministic RF-8406 harness passes eight fixed-seed campaigns locally,
+  including 128-way concurrent starts and reads plus generated duplicate/restart
+  schedules. It proves correctness and a repeatable load shape, not hosted
+  latency, availability, capacity, or real provider failure recovery.
 - The no-auth trusted sample still uses an anonymous public synthetic tenant.
   OAuth/principal and GitHub authorization contracts are implemented for the
   protected path, but they are not safe for private/customer data until the

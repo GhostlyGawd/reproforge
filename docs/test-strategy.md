@@ -32,6 +32,18 @@ Use fast-check for invariants with large input spaces:
 
 Each property runs at least 100 generated cases locally and in CI. Higher counts are appropriate for small pure functions.
 
+RF-8406 has an additional exact gate:
+
+```bash
+npm run test:resilience
+```
+
+Its schema-closed registry requires load, duplicate-delivery, restart,
+dependency-outage, worker-loss, queue-lag, storage-failure, and sandbox-failure
+campaigns with fixed replay seeds. Local results establish deterministic
+correctness and load shape only; hosted performance and provider failure
+injection remain separate acceptance evidence.
+
 ### Executable BDD
 
 Use Gherkin and Cucumber for user-observable behavior. Scenarios cover:

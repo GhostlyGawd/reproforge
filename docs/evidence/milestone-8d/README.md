@@ -11,7 +11,7 @@ Evidence is added incrementally and tied to an exact Git commit in
 ## Current verified slice
 
 Exact implementation commit
-`7c75a8f0131f85ac1987737e5370e49deaa10b7f` adds a real isolated-runner
+`c4cbdede4a7c0bf12b73d8bc4fda9b8bbaa3fd18` adds a real isolated-runner
 capability probe, fail-closed validation of the complete hosted product
 configuration, one durable progress projection shared by REST, MCP, ChatGPT
 widget, and tenant-scoped web views, resilient worker/operator controls, the
@@ -40,7 +40,16 @@ admission combinations and 500 generated dashboard metric sets. The deployment
 policy verifier pins migration `0009_github_event_ordering`, compatibility with
 the immediately previous additive schema, and application-only rollback.
 
-At this commit, Cucumber passed 46 scenarios and 333 steps, the account page
+The RF-8406 slice adds one schema-closed registry and exact command for eight
+deterministic campaigns: load, duplicate delivery, restart, dependency outage,
+worker loss, queue lag, storage failure, and sandbox failure. The gate passed
+44 tests across 13 files. It includes 128 simultaneous starts plus 128 reads
+collapsing to one durable execution, 250 duplicate-delivery schedules, 250
+restart/retry sequences, 500 malformed-registry cases, and fixed seeds for
+replay. These are local correctness and load-shape results, not hosted latency,
+availability, or provider failure-injection evidence.
+
+At this commit, Cucumber passed 47 scenarios and 339 steps, the account page
 passed 3 browser tests, TypeScript and ESLint passed, and the production Next.js
 build completed. Production-build browser inspection found no framework error
 overlay, page errors, console output, or horizontal overflow at a 390 × 844
@@ -54,6 +63,10 @@ exact schema-validated synthetic dashboard aggregate used for sanitized local
 evidence. It contains no tenant, principal, repository, case, job, provider
 resource, source, or object identity. It is not a hosted snapshot and does not
 prove alert delivery or a rollback rehearsal.
+
+[`local-resilience-report.json`](local-resilience-report.json) is the
+checksummed, fixed-seed RF-8406 campaign summary. It contains synthetic counts
+only and does not substitute for the deployed load and failure campaign.
 
 ## Local visual evidence
 

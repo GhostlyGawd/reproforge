@@ -81,6 +81,10 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
   ambient credential or host mount, and is bounded by command/attempt time,
   workspace, output, run, and tool budgets. Cancellation stops active work;
   cleanup is unconditional and failures enter quarantine.
+- The exact local resilience gate covers eight fixed-seed load and failure
+  categories against real application/durable adapter boundaries; its report is
+  synthetic and is not represented as hosted penetration, load, or availability
+  evidence.
 - `VERIFIED` still requires the deterministic oracle, a negative control, and
   all clean candidates. Provider or model output cannot construct proof truth.
 - CI rejects high-severity dependency audit findings and runs the full verification gate.

@@ -196,6 +196,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Hosted operations and recovery runbook](docs/operations.md)
 - [Deployment and rollback policy](docs/deployment-rollback.md)
+- [Deterministic resilience harness](docs/resilience-testing.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
 - [Privacy behavior](docs/privacy.md)
@@ -221,9 +222,11 @@ and Vercel Sandbox. A tiny immutable public repository canary has completed the
 full isolated path—bounded acquisition, dependency preparation, one control,
 three fresh candidates, deterministic proof, portable bundle, and cleanup.
 Resilience, account export/deletion, feature kill-switch, aggregate dashboard,
-alert, and rollback-policy controls are implemented and locally verified, but
-their deployed recovery, lifecycle, alert-delivery, and rollback drills remain
-open. Live account authorization, general/private repository use, the composed
+alert, and rollback-policy controls are implemented and locally verified. An
+exact eight-campaign resilience gate covers fixed-seed load, duplicate, restart,
+dependency, worker, queue, storage, and sandbox failures; hosted load and fault
+injection plus the recovery, lifecycle, alert-delivery, and rollback drills
+remain open. Live account authorization, general/private repository use, the composed
 stable hosted journey, production hosting, and plugin publication remain
 intentionally unavailable. The synthetic four-case eval and public canary are
 contract checks, not claims of real-world benchmark performance.

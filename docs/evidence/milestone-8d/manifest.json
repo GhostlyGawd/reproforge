@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8d",
-  "capturedAt": "2026-07-20T22:56:06.742Z",
-  "implementationCommit": "7c75a8f0131f85ac1987737e5370e49deaa10b7f",
-  "scope": "private-beta runtime health, durable progress, resilience, account data lifecycle, and operations-control implementation evidence",
+  "capturedAt": "2026-07-20T23:06:02.549Z",
+  "implementationCommit": "c4cbdede4a7c0bf12b73d8bc4fda9b8bbaa3fd18",
+  "scope": "private-beta runtime health, durable progress, resilience, account data lifecycle, operations-control, and deterministic fault-campaign implementation evidence",
   "status": "in-progress",
   "tasks": {
     "RF-8401": "implementation-passed-live-configuration-pending",
@@ -11,7 +11,7 @@
     "RF-8403": "implementation-passed-hosted-operations-pending",
     "RF-8404": "implementation-passed-hosted-lifecycle-pending",
     "RF-8405": "implementation-passed-hosted-rehearsal-pending",
-    "RF-8406": "pending",
+    "RF-8406": "implementation-passed-hosted-fault-campaign-pending",
     "RF-8407": "pending",
     "RF-8408": "pending",
     "RF-8409": "pending",
@@ -38,8 +38,8 @@
     "generatedSchedules": 500,
     "propertyTestsPassed": 2,
     "focusedTestsPassed": 13,
-    "bddScenariosPassed": 46,
-    "bddStepsPassed": 333,
+    "bddScenariosPassed": 47,
+    "bddStepsPassed": 339,
     "productionBuild": "passed"
   },
   "resilience": {
@@ -77,6 +77,21 @@
     "deploymentPolicyVerifier": "passed",
     "productionBuild": "passed",
     "hostedAlertAndRollbackRehearsal": "pending"
+  },
+  "resilienceHarness": {
+    "schemaVersion": "1.0",
+    "campaigns": 8,
+    "testFilesPassed": 13,
+    "testsPassed": 44,
+    "durationSeconds": 48.9,
+    "simultaneousStarts": 128,
+    "concurrentReads": 128,
+    "durableExecutions": 1,
+    "generatedDuplicateDeliverySchedules": 250,
+    "generatedRestartRetrySequences": 250,
+    "generatedRegistryMutations": 500,
+    "fixedSeeds": [8406001, 8406002, 8406003, 8406004, 8406005, 8406006, 8406007, 8406008],
+    "hostedEvidence": false
   },
   "browserVerification": {
     "tool": "agent-browser",
@@ -138,6 +153,13 @@
       "sha256": "8b5e5210879a2d8dbdffe155e8dfd70ce67848d6d45ce51b7dd78bf3f78665d6",
       "provenance": "schema-validated synthetic local aggregate; not a hosted operations snapshot",
       "sanitized": true
+    },
+    {
+      "file": "local-resilience-report.json",
+      "bytes": 1858,
+      "sha256": "08057f96275bb445f06214f105acdc57a11e65319a4516eff0ef13b5d289833d",
+      "provenance": "fixed-seed synthetic local resilience campaign summary; not a hosted load or fault-injection result",
+      "sanitized": true
     }
   ],
   "redGreenFindings": [
@@ -164,6 +186,10 @@
     {
       "red": "Private-beta operations had health primitives but no aggregate dashboard, owned alert thresholds, feature kill switches, or executable rollback compatibility contract.",
       "green": "A schema-closed identifier-free dashboard evaluates eight owned alerts, three fail-closed switches deny only new repository work, and an executable policy pins the additive schema window and application-only rollback procedure."
+    },
+    {
+      "red": "Failure tests were individually useful but lacked one exact, repeatable campaign registry covering every required RF-8406 boundary.",
+      "green": "A schema-closed eight-category registry now drives an exact gate across real durable adapters, fixed-seed property schedules, 128-way start/read load, restart reconstruction, duplicate delivery, provider degradation, worker loss, queue lag, storage failure, and sandbox failure."
     }
   ],
   "deferred": [
@@ -174,7 +200,8 @@
     "hosted RF-8403 recovery and quarantine exercise",
     "hosted RF-8404 retention, deletion, and backup/restore exercise",
     "hosted RF-8405 alert delivery, deployment, and rollback rehearsal",
-    "RF-8406 through RF-8411"
+    "hosted RF-8406 load and failure-injection campaign",
+    "RF-8407 through RF-8411"
   ],
-  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, the signed-out/unconfigured account-data state, and an identifier-free synthetic operations aggregate; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
+  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, the signed-out/unconfigured account-data state, an identifier-free synthetic operations aggregate, and fixed-seed synthetic resilience counts; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
 }
