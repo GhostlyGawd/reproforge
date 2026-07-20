@@ -1,7 +1,7 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8a",
-  "capturedAt": "2026-07-20T01:28:40.956Z",
+  "capturedAt": "2026-07-20T01:36:32.939Z",
   "implementationCommit": "b844b5725e67e04a9bb70cc78d3092105f35d490",
   "scope": "durable trusted-fixture foundation",
   "tasks": {
@@ -70,8 +70,8 @@
     "ci": {
       "workflow": "Verify trusted product contract",
       "status": "passed",
-      "verifiedCommit": "b844b5725e67e04a9bb70cc78d3092105f35d490",
-      "run": "https://github.com/GhostlyGawd/reproforge/actions/runs/29710314370"
+      "verifiedCommit": "989f71f95fc94123e2ab1ceae7a5be4e780f9117",
+      "run": "https://github.com/GhostlyGawd/reproforge/actions/runs/29711067435"
     }
   },
   "visualEvidence": {
