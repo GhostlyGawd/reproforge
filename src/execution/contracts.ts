@@ -187,7 +187,7 @@ export const sandboxCommandSchema = z
       "artifact-export",
       "cleanup",
     ]),
-    timeoutMs: z.number().int().min(1).max(120_000),
+    timeoutMs: z.number().int().min(1).max(125_000),
   })
   .strict();
 

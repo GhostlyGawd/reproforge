@@ -144,7 +144,7 @@ Required defenses cover:
 - [x] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
 - [x] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
 - [x] `RF-8306` Implement typed command planning, clean control/candidate workspaces, separated executable/args invocation, and immutable environment provenance.
-- [ ] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
+- [x] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
 - [ ] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
 - [ ] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
 - [ ] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
