@@ -48,6 +48,13 @@ export const repositoryStartSourceSchema = z
 
 export type RepositorySource = z.infer<typeof repositoryStartSourceSchema>;
 
+export interface RepositoryStartAdmission {
+  assertAllowed(
+    principal: RepositoryPrincipal,
+    source: RepositorySource,
+  ): Promise<void>;
+}
+
 export const startRepositoryReproductionInputSchema = z
   .object({
     budget: z

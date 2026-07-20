@@ -32,7 +32,8 @@ export type CaseServiceErrorCode =
   | "BUNDLE_NOT_READY"
   | "IDEMPOTENCY_CONFLICT"
   | "INTERNAL_ERROR"
-  | "NOT_FOUND";
+  | "NOT_FOUND"
+  | "RUNNER_UNAVAILABLE";
 
 export class CaseServiceError extends Error {
   constructor(
@@ -67,6 +68,17 @@ export class BundleNotReadyError extends CaseServiceError {
   constructor() {
     super("BUNDLE_NOT_READY", "The Repro Bundle is not ready", true);
     this.name = "BundleNotReadyError";
+  }
+}
+
+export class RepositoryStartUnavailableError extends CaseServiceError {
+  constructor() {
+    super(
+      "RUNNER_UNAVAILABLE",
+      "Repository starts are temporarily unavailable",
+      true,
+    );
+    this.name = "RepositoryStartUnavailableError";
   }
 }
 

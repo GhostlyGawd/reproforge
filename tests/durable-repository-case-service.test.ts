@@ -2,6 +2,7 @@ import { PGlite } from "@electric-sql/pglite";
 import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import type { AuthorizedPrincipal } from "@/application/authorization";
+import { RepositoryStartUnavailableError } from "@/application/case-service";
 import { DurableRepositoryCaseService } from "@/application/durable-repository-case-service";
 import type { QueueMessage } from "@/application/ports/production";
 import { runTrustedSample } from "@/application/sample-case";
@@ -72,6 +73,7 @@ let database: PGlite;
 let service: DurableRepositoryCaseService;
 let queuedService: DurableRepositoryCaseService;
 let cancellableService: DurableRepositoryCaseService;
+let degradedService: DurableRepositoryCaseService;
 let queuedMessages: QueueMessage[];
 let runnerCalls = 0;
 let runnerExecute: IsolatedRepositoryRunner["execute"];
@@ -229,6 +231,19 @@ beforeAll(async () => {
       },
     },
   });
+  degradedService = new DurableRepositoryCaseService({
+    ...common,
+    identifiers: {
+      nextCaseId: () => `case_repository_degraded_${++id}`,
+      nextJobId: () => `job_repository_degraded_${id}`,
+      nextWorkerOwnerId: () => `worker_repository_degraded_${id}`,
+    },
+    startAdmission: {
+      assertAllowed: async () => {
+        throw new RepositoryStartUnavailableError();
+      },
+    },
+  });
 });
 
 afterAll(async () => {
@@ -343,6 +358,35 @@ describe("durable repository case service", () => {
     ).resolves.toMatchObject({
       case: { state: "CANCELLED" },
       job: { state: "CANCELLED" },
+    });
+  });
+
+  it("blocks a new start during runner degradation while completed cases and retries remain readable", async () => {
+    const completedRequest = {
+      ...request,
+      idempotencyKey: "repository-service-before-degradation",
+    };
+    const completed = await service.startRepositoryReproduction(
+      principal,
+      completedRequest,
+    );
+
+    await expect(
+      degradedService.startRepositoryReproduction(principal, completedRequest),
+    ).resolves.toEqual({ reused: true, snapshot: completed.snapshot });
+    await expect(
+      degradedService.getReproduction(principal, {
+        caseId: completed.snapshot.case.id,
+      }),
+    ).resolves.toEqual(completed.snapshot);
+    await expect(
+      degradedService.startRepositoryReproduction(principal, {
+        ...request,
+        idempotencyKey: "repository-service-during-degradation",
+      }),
+    ).rejects.toMatchObject({
+      code: "RUNNER_UNAVAILABLE",
+      retryable: true,
     });
   });
 });

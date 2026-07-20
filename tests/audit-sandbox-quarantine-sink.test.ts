@@ -25,9 +25,9 @@ describe("sandbox quarantine audit sink", () => {
       actorId: "principal_quarantine",
       eventId: expect.stringMatching(/^audit_quarantine_[a-f0-9]{48}$/),
       metadata: {
-        providerResourceId: "sbx_quarantine",
+        cleanupKind: "sandbox",
+        providerId: "sbx_quarantine",
         reason: "cleanup-failed",
-        resourceType: "sandbox",
       },
       occurredAt: "2026-07-21T18:00:00.000Z",
       outcome: "failure",

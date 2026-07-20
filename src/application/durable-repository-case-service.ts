@@ -37,6 +37,7 @@ import {
   startRepositoryReproductionInputSchema,
   type ListAuthorizedRepositoriesInput,
   type RepositoryOperations,
+  type RepositoryStartAdmission,
   type StartRepositoryReproductionInput,
 } from "@/application/repository-operations";
 import {
@@ -79,6 +80,7 @@ type Dependencies = Readonly<{
   retentionDays: number;
   runner: Pick<IsolatedRepositoryRunner, "execute">;
   source: RepositorySourceProvider;
+  startAdmission?: RepositoryStartAdmission;
   unitOfWork: UnitOfWork;
 }>;
 
@@ -279,6 +281,11 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
         : await this.publishAndMaybeConsume(existing, false);
       return startResultSchema.parse({ reused: true, snapshot: record.snapshot });
     }
+
+    await this.dependencies.startAdmission?.assertAllowed(
+      principal,
+      input.source,
+    );
 
     const createdAt = this.dependencies.clock.now();
     const caseId = this.dependencies.identifiers.nextCaseId();

@@ -31,6 +31,8 @@ import {
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
+import { createSandboxRunnerHealthProbe } from "@/infrastructure/operations/runtime-health";
+import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
 
 const REPOSITORY_LEASE_SECONDS = 1_200;
 
@@ -83,10 +85,14 @@ async function createServices(): Promise<DefaultGitHubServices> {
     clock,
   );
   const repository = new PostgresDurableReproductionRepository(database);
+  const sandboxProvider = new VercelSandboxProvider();
+  const runnerProbe = createSandboxRunnerHealthProbe({
+    provider: sandboxProvider,
+  });
   const runner = new IsolatedRepositoryRunner({
     clock,
     credentialProvider: provider,
-    provider: new VercelSandboxProvider(),
+    provider: sandboxProvider,
     quarantine: new AuditSandboxQuarantineSink(audit, clock),
   });
   const repositoryRuntime = new DurableRepositoryCaseService({
@@ -115,6 +121,10 @@ async function createServices(): Promise<DefaultGitHubServices> {
     retentionDays: runtime.retentionDays,
     runner,
     source: provider,
+    startAdmission: new SandboxRunnerStartAdmission({
+      audit,
+      probe: runnerProbe,
+    }),
     unitOfWork: new PostgresUnitOfWork(database, {
       "active-jobs": runtime.maxActiveJobsPerTenant,
     }),

@@ -58,9 +58,9 @@ export class AuditSandboxQuarantineSink implements SandboxQuarantineSink {
       actorId: record.actorId,
       eventId: eventId(record),
       metadata: {
-        providerResourceId: record.providerResourceId,
+        cleanupKind: record.resourceType,
+        providerId: record.providerResourceId,
         reason: record.reason,
-        resourceType: record.resourceType,
       },
       occurredAt: this.clock.now().toISOString(),
       outcome: "failure",

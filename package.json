@@ -24,6 +24,7 @@
     "test:browser": "npm run build && npm run test:browser:built",
     "test:browser:built": "playwright test",
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
+    "ops": "tsx scripts/run-operations.ts",
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
     "evidence:public-canary": "node --env-file=.env.local --import tsx scripts/write-public-canary-evidence.ts",

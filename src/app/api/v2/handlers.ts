@@ -34,6 +34,8 @@ function errorStatus(error: CaseServiceError): number {
     case "IDEMPOTENCY_CONFLICT":
     case "BUNDLE_NOT_READY":
       return 409;
+    case "RUNNER_UNAVAILABLE":
+      return 503;
     case "INTERNAL_ERROR":
       return 500;
   }

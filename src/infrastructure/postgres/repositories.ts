@@ -173,6 +173,17 @@ function recoveryEventId(
     .slice(0, 40)}`;
 }
 
+function recoveryAuditEventId(
+  tenantId: string,
+  jobId: string,
+  attempt: number,
+): string {
+  return `audit_lease_recovery_${createHash("sha256")
+    .update(`${tenantId}:${jobId}:${attempt}`)
+    .digest("hex")
+    .slice(0, 40)}`;
+}
+
 function objectValue(value: unknown): Record<string, unknown> {
   if (typeof value === "string") {
     try {
@@ -839,6 +850,24 @@ export class PostgresDurableReproductionRepository
           retryable: true,
         });
         summary[disposition] += 1;
+        await new PostgresAuditSink(repository.source).append({
+          action: "job.lease-recovered",
+          actorId: "operator:lease-recovery",
+          eventId: recoveryAuditEventId(
+            lease.tenantId,
+            lease.jobId,
+            lease.attempt,
+          ),
+          metadata: {
+            attempt: lease.attempt,
+            disposition,
+          },
+          occurredAt: at,
+          outcome: disposition === "exhausted" ? "failure" : "success",
+          targetId: lease.jobId,
+          targetType: "job",
+          tenantId: lease.tenantId,
+        });
       }
       return summary;
     });
