@@ -258,6 +258,7 @@ export type SandboxUsage = {
 
 export interface IsolatedSandboxSession {
   readonly sandboxId: string;
+  makeDirectory(path: string): Promise<void>;
   readFile(path: string): Promise<Uint8Array | null>;
   run(
     command: SandboxCommand,
