@@ -14,6 +14,7 @@ import {
   type ProgressView,
 } from "@/application/progress";
 import type { ReproductionSnapshot } from "@/application/reproduction-contracts";
+import type { RepositoryOperations } from "@/application/repository-operations";
 import { parsePortableTenantBackup } from "@/application/tenant-backup";
 import { createCase, transitionCase } from "@/domain/case";
 import { createJob, transitionJob } from "@/domain/job";
@@ -34,6 +35,7 @@ import {
 } from "@/infrastructure/postgres/repositories";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { toReproductionView } from "@/mcp/contracts";
+import { createWebRepositoryStartHandler } from "@/github/repository-start-route";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
 import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
@@ -70,6 +72,14 @@ type PrivateBetaScenarioState = {
     deleteCount: number;
     operator: PostgresSandboxQuarantineOperator;
     results: Array<{ changed: boolean }>;
+  };
+  webStart?: {
+    calls: Array<{
+      input: Parameters<RepositoryOperations["startRepositoryReproduction"]>[1];
+      principal: Parameters<RepositoryOperations["startRepositoryReproduction"]>[0];
+    }>;
+    handler: (request: Request) => Promise<Response>;
+    response?: Response;
   };
 };
 
@@ -147,6 +157,91 @@ Then(
     assert.equal(expected.phase, "EXPERIMENTING");
     assert.equal(expected.state, "RUNNING");
     assert.equal(expected.terminal, false);
+  },
+);
+
+Given(
+  "a signed-in authorized repository web form",
+  function (this: ReproForgeWorld) {
+    const calls: NonNullable<PrivateBetaScenarioState["webStart"]>["calls"] = [];
+    const principal = {
+      callerId: "principal_private_beta_web",
+      principalId: "principal_private_beta_web",
+      tenantId: "tenant_private_beta_web",
+    };
+    scenarioState(this).webStart = {
+      calls,
+      handler: createWebRepositoryStartHandler({
+        actor: async () => principal,
+        baseUrl: "https://reproforge.example/",
+        operations: {
+          startRepositoryReproduction: async (actor, input) => {
+            calls.push({ input, principal: actor });
+            return {
+              reused: false,
+              snapshot: { case: { id: "case_private_beta_web" } },
+            } as Awaited<
+              ReturnType<RepositoryOperations["startRepositoryReproduction"]>
+            >;
+          },
+        },
+      }),
+    };
+  },
+);
+
+When(
+  "the user submits an exact same-origin failure contract",
+  async function (this: ReproForgeWorld) {
+    const webStart = scenarioState(this).webStart;
+    assert.ok(webStart);
+    webStart.response = await webStart.handler(
+      new Request(
+        "https://reproforge.example/api/repositories/reproductions",
+        {
+          body: new URLSearchParams({
+            commitSha: "a".repeat(40),
+            controlScript: "test:control",
+            expectedExitCode: "1",
+            failureOutput: "REPROFORGE_CANARY_FAILURE",
+            failureStream: "stderr",
+            idempotencyKey: "private-beta-web-start",
+            issueNumber: "13",
+            issueTitle: "Deterministic web canary",
+            nodeVersion: "24",
+            reproductionScript: "test:reproduce",
+            repositoryId: "repository_private_beta_web",
+          }),
+          headers: {
+            "Content-Type": "application/x-www-form-urlencoded",
+            Origin: "https://reproforge.example/",
+          },
+          method: "POST",
+        },
+      ),
+    );
+  },
+);
+
+Then(
+  "one repository command is accepted and the web redirects to durable progress",
+  function (this: ReproForgeWorld) {
+    const webStart = scenarioState(this).webStart;
+    assert.ok(webStart?.response);
+    assert.equal(webStart.response.status, 303);
+    assert.equal(
+      webStart.response.headers.get("location"),
+      "https://reproforge.example/cases/case_private_beta_web",
+    );
+    assert.equal(webStart.calls.length, 1);
+    assert.equal(
+      webStart.calls[0]?.input.source.repositoryId,
+      "repository_private_beta_web",
+    );
+    const root = webStart.calls[0]?.input.source.failureOracle.root as {
+      type?: unknown;
+    };
+    assert.equal(root.type, "all");
   },
 );
 

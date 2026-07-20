@@ -1446,6 +1446,98 @@ a {
   font-size: 11px;
 }
 
+.repository-start-form {
+  margin-top: 26px;
+  border-top: 1px solid var(--line);
+  padding-top: 26px;
+}
+
+.repository-form-heading,
+.repository-form-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+}
+
+.repository-form-heading > span {
+  border: 1px solid var(--line-strong);
+  border-radius: 999px;
+  color: var(--forge);
+  font-family: var(--font-mono), monospace;
+  font-size: 10px;
+  padding: 6px 9px;
+  text-transform: uppercase;
+}
+
+.repository-form-error {
+  margin: 18px 0 0;
+  border: 1px solid rgba(255, 157, 146, 0.32);
+  border-radius: 10px;
+  background: rgba(255, 157, 146, 0.08);
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.5;
+  padding: 11px 13px;
+}
+
+.repository-form-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.repository-form-grid label {
+  display: grid;
+  min-width: 0;
+  gap: 8px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 570;
+}
+
+.repository-form-grid input,
+.repository-form-grid select {
+  width: 100%;
+  min-height: 44px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  outline: none;
+  background: rgba(4, 12, 10, 0.76);
+  color: var(--paper);
+  font: inherit;
+  padding: 10px 12px;
+}
+
+.repository-form-grid input:focus,
+.repository-form-grid select:focus {
+  border-color: rgba(146, 242, 181, 0.58);
+  box-shadow: 0 0 0 4px rgba(146, 242, 181, 0.08);
+}
+
+.repository-signature-field {
+  grid-column: 1 / -1;
+}
+
+.repository-form-footer {
+  align-items: flex-end;
+  margin-top: 22px;
+}
+
+.repository-form-footer p {
+  max-width: 42rem;
+  margin: 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.65;
+}
+
+.repository-form-footer code {
+  color: var(--muted-strong);
+  font-family: var(--font-mono), monospace;
+}
+
 .case-identity {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1793,10 +1885,16 @@ a {
   }
 
   .repository-catalog-heading,
-  .repository-list li {
+  .repository-list li,
+  .repository-form-heading,
+  .repository-form-footer {
     align-items: flex-start;
     flex-direction: column;
   }
+
+  .repository-form-grid { grid-template-columns: 1fr; }
+
+  .repository-signature-field { grid-column: auto; }
 
   .authorization-grid {
     grid-template-columns: 1fr;

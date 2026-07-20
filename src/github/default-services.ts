@@ -209,3 +209,13 @@ export async function getWebRepositoryCase(
     { caseId },
   );
 }
+
+export async function resolveWebRepositoryPrincipal(identity: WebIdentity) {
+  const resolved = await getDefaultGitHubServices();
+  const actor = await resolved.webPrincipals.resolve(identity);
+  return {
+    callerId: actor.principalId,
+    principalId: actor.principalId,
+    tenantId: actor.tenantId,
+  };
+}

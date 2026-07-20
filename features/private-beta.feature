@@ -6,6 +6,11 @@ Feature: Private-beta ReproForge
     When REST, MCP, widget, and web progress views are projected
     Then every product surface reports the same durable progress
 
+  Scenario: A signed-in user starts an authorized repository from the web
+    Given a signed-in authorized repository web form
+    When the user submits an exact same-origin failure contract
+    Then one repository command is accepted and the web redirects to durable progress
+
   Scenario: A worker loss recovers an expired lease
     Given an empty durable Postgres store for a tenant
     When the caller reserves a durable reproduction
