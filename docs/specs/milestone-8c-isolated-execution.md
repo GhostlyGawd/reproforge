@@ -147,7 +147,7 @@ Required defenses cover:
 - [x] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
 - [x] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
 - [x] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
-- [ ] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
+- [x] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
 - [ ] `RF-8311` Add sandbox-provider integration tests for acquisition-only egress, execution deny-all, credential absence, limits, cancellation, and cleanup.
 - [ ] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
 
@@ -232,4 +232,12 @@ durable cancellation request aborts active runner work before committing one
 `CANCELLED` terminal state. The production build composes the same worker with
 Neon, private Vercel Blob, Vercel Queues, the GitHub App credential broker, and
 Vercel Sandbox; no OpenAI API credential is present in this execution path.
+
+RF-8310 has 2,000 generated adversarial executions across four 500-run
+properties. They cover normalized and escaping archive paths, symlinks,
+hardlinks and special files, arbitrary package metadata and command separation,
+network phase ordering, exact secret removal, deterministic output truncation
+and original hashes, forged provider verification fields, stable bundle
+identity, and duplicate/cancellation/failure sequences that converge on one
+terminal and cleanup decision.
 
