@@ -11,6 +11,8 @@ const unusedTools: OperatorCommandTools = {
   backupExport: async () => ({}),
   backupRestore: async () => ({}),
   backupVerify: async () => ({}),
+  checkAlerts: async () => ({}),
+  dashboardSnapshot: async () => ({}),
   executeRetention: async () => null,
   listQuarantine: async () => [],
   publishOutbox: async () => ({
@@ -41,6 +43,8 @@ describe("operator command properties", () => {
               "backup:export",
               "backup:restore",
               "backup:verify",
+              "alerts:check",
+              "dashboard:snapshot",
               "quarantine:list",
               "quarantine:resolve",
               "retention:execute",

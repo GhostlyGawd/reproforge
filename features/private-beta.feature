@@ -25,6 +25,12 @@ Feature: Private-beta ReproForge
     Then the completed case remains readable during runner degradation
     And the new start is denied with a sanitized runner audit
 
+  Scenario: A kill switch blocks new starts without hiding existing evidence
+    Given a completed private-beta repository case and the global start kill switch
+    When the user reads the completed case and attempts a kill-switched repository start
+    Then the completed case remains readable during the start kill switch
+    And the new start is denied with a sanitized feature-policy audit
+
   Scenario: An operator safely resolves a quarantined sandbox
     Given an audited private-beta sandbox quarantine
     When the operator resolves the exact sandbox twice

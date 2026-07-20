@@ -9,6 +9,7 @@ import type {
 } from "@/application/reproduction-contracts";
 import { failureOracleSchema } from "@/domain/oracle";
 import {
+  type ImmutableRepositorySource,
   nodeRepositoryProfileSchema,
   repositoryIssueEvidenceSchema,
 } from "@/execution/contracts";
@@ -52,6 +53,7 @@ export interface RepositoryStartAdmission {
   assertAllowed(
     principal: RepositoryPrincipal,
     source: RepositorySource,
+    resolvedSource: ImmutableRepositorySource,
   ): Promise<void>;
 }
 

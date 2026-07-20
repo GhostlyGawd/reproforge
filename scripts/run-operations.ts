@@ -5,6 +5,7 @@ import {
   formatOperatorFailure,
   runOperatorCommand,
 } from "@/application/operator-command";
+import { buildOperationsDashboard } from "@/application/operations-dashboard";
 import { OutboxPublisher } from "@/application/outbox-publisher";
 import {
   parsePortableTenantBackup,
@@ -14,7 +15,13 @@ import { getRuntimeConfig } from "@/config/runtime";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
 import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
 import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
+import {
+  InMemoryOperationalMetrics,
+  JsonOperationalLogger,
+} from "@/infrastructure/operations/observability";
+import { PostgresOperationsDashboardSource } from "@/infrastructure/operations/postgres-operations-dashboard";
 import { PostgresSandboxQuarantineOperator } from "@/infrastructure/operations/postgres-sandbox-quarantine-operator";
+import { createRuntimeHealthService } from "@/infrastructure/operations/runtime-health";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
   createNeonPostgresDatabase,
@@ -66,6 +73,40 @@ async function main(): Promise<void> {
       clock,
       database,
     });
+    const dashboardSource = new PostgresOperationsDashboardSource(database);
+    const dashboardSnapshot = async () => {
+      const generatedAt = clock.now().toISOString();
+      const health = createRuntimeHealthService({
+        clock,
+        environment: process.env,
+        logger: new JsonOperationalLogger({
+          secrets: [
+            process.env.DATABASE_URL,
+            process.env.BLOB_READ_WRITE_TOKEN,
+            process.env.VERCEL_OIDC_TOKEN,
+          ].filter((value): value is string => Boolean(value)),
+          sink: {
+            error: (line) => process.stderr.write(`${line}\n`),
+            info: (line) => process.stderr.write(`${line}\n`),
+          },
+        }),
+        metrics: new InMemoryOperationalMetrics(),
+      });
+      const [durable, readiness, runner] = await Promise.all([
+        dashboardSource.read({ at: generatedAt }),
+        health.readiness(),
+        health.runner(),
+      ]);
+      return buildOperationsDashboard({
+        at: generatedAt,
+        durable,
+        features: runtime,
+        health: {
+          readiness: readiness.status,
+          runner: runner.status,
+        },
+      });
+    };
     const result = await runOperatorCommand(process.argv.slice(2), {
       backupExport: async ({ outputPath, tenantId }) => {
         const archive = await backup.exportTenant(tenantId);
@@ -100,6 +141,19 @@ async function main(): Promise<void> {
           verified: true,
         };
       },
+      checkAlerts: async () => {
+        const dashboard = await dashboardSnapshot();
+        const alerts = dashboard.alerts.filter(
+          ({ status }) => status === "firing",
+        );
+        return {
+          active: alerts.length,
+          alerts,
+          generatedAt: dashboard.generatedAt,
+          schemaVersion: dashboard.schemaVersion,
+        };
+      },
+      dashboardSnapshot,
       executeRetention: () =>
         retention.executeNext({ at: clock.now().toISOString() }),
       listQuarantine: (input) => quarantine.listOpen(input),

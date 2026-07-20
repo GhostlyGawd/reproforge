@@ -153,6 +153,8 @@ configuration loaded.
 ```bash
 npm run ops -- leases:recover --limit 100
 npm run ops -- outbox:publish
+npm run ops -- dashboard:snapshot
+npm run ops -- alerts:check
 npm run ops -- retention:schedule --limit 100
 npm run ops -- retention:execute
 npm run ops -- backup:export --tenant-id tenant_example --output tenant-example.json
@@ -174,6 +176,88 @@ commands remain operator primitives rather than public administration
 endpoints. A scheduled control plane, alerts, dashboards, and a separately
 authenticated operator surface remain private-beta tasks; until then these
 commands must not be represented as automated production operations.
+
+## Private operations dashboard and alerts
+
+`dashboard:snapshot` emits one schema-closed, global aggregate with readiness,
+runner capability, kill-switch state, job counts/age, expired leases, outbox
+count/lag, deletion failures, and open quarantines. It contains no tenant,
+principal, repository, case, job, provider-resource, source, or object identity.
+`alerts:check` returns only firing alerts. Every alert is owned by
+`platform-on-call`, carries its threshold and test procedure, and links back to
+this runbook.
+
+Health checks also emit allowlisted structured JSON to Vercel runtime logs.
+Because the current project uses the Hobby plan, the primary hosted view is the
+Vercel deployment Logs tab or a bounded `vercel logs <deployment-url> --level
+error --since 1h` query; no log drain is claimed. A future paid-plan drain must
+verify Vercel's signature over the raw body before accepting telemetry.
+
+### Alert: dependency readiness unavailable
+
+Fires whenever canonical configuration, Postgres, private Blob, or Queue
+readiness is unavailable. Keep traffic closed, inspect the stable component
+code and structured runtime log, restore the dependency, then rerun
+`npm run test:operations` and readiness. Never fall back to memory.
+
+### Alert: runner unavailable
+
+Fires whenever the real deny-all sandbox probe is unavailable. Disable new
+repository starts, preserve reads/cancellation, inspect provider health and
+cleanup state, then run `tests/runtime-runner-health.test.ts` and the live
+runner probe before re-enabling starts.
+
+### Alert: queued job age high
+
+Fires at 240 seconds so operators can act before the five-minute private-beta
+queue-age ceiling. Check outbox publication, Queue delivery, worker capacity,
+and kill-switch state; do not create a duplicate case.
+
+### Alert: outbox lag high
+
+Fires when the oldest pending/sending durable outbox intent reaches 120
+seconds. Run the bounded outbox publisher, inspect only stable failure codes,
+and verify one delivery identity before clearing the alert.
+
+### Alert: expired leases present
+
+Fires when any running job has an expired lease. Run bounded lease recovery and
+outbox publication, then prove the compare-and-swap result did not duplicate a
+run or bundle.
+
+### Alert: outbox dead present
+
+Fires when any outbox event exhausts delivery. Keep its job non-successful,
+inspect the sanitized failure code, repair the dependency or forward state, and
+use a reviewed recovery action rather than editing the event.
+
+### Alert: deletion failure present
+
+Fires when provider-first account deletion fails. Preserve the suspended
+tenant and retryable request, restore Blob deletion capability, and rerun the
+single deletion executor. Never purge database rows ahead of private objects.
+
+### Alert: sandbox quarantine present
+
+Fires for every unresolved sandbox or snapshot cleanup failure. List open
+resources, match the exact tenant/attempt/type/provider identity, run the exact
+quarantine resolution, and require provider deletion before the resolution
+audit appears.
+
+## Feature kill switches and rollback
+
+The three environment switches documented in [`.env.example`](../.env.example)
+disable all new repository starts, only private-repository starts, or selected
+`node22`/`node24` profiles. They never hide existing cases or block reads,
+exports, or cancellation. Values are schema-closed; invalid configuration fails
+startup. Apply them through a reviewed deployment so the exact configuration
+change is attributable.
+
+The executable compatibility window, deployment gate, rollback triggers, and
+application-only rollback procedure are in the
+[deployment and rollback policy](deployment-rollback.md). Database schemas move
+forward only; rollback promotes the last verified application while retaining
+the current additive schema.
 
 ## Incident rules
 

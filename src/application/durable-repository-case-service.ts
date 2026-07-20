@@ -285,6 +285,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
     await this.dependencies.startAdmission?.assertAllowed(
       principal,
       input.source,
+      immutableSource,
     );
 
     const createdAt = this.dependencies.clock.now();

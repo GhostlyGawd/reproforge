@@ -36,6 +36,10 @@ import {
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { PostgresAccountExportQuota } from "@/infrastructure/operations/postgres-account-export-quota";
+import {
+  CompositeRepositoryStartAdmission,
+  FeatureFlagRepositoryStartAdmission,
+} from "@/infrastructure/operations/feature-start-admission";
 import { createSandboxRunnerHealthProbe } from "@/infrastructure/operations/runtime-health";
 import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
 
@@ -140,10 +144,10 @@ async function createServices(): Promise<DefaultGitHubServices> {
     retentionDays: runtime.retentionDays,
     runner,
     source: provider,
-    startAdmission: new SandboxRunnerStartAdmission({
-      audit,
-      probe: runnerProbe,
-    }),
+    startAdmission: new CompositeRepositoryStartAdmission([
+      new FeatureFlagRepositoryStartAdmission({ audit, flags: runtime }),
+      new SandboxRunnerStartAdmission({ audit, probe: runnerProbe }),
+    ]),
     unitOfWork: new PostgresUnitOfWork(database, {
       "active-jobs": runtime.maxActiveJobsPerTenant,
     }),

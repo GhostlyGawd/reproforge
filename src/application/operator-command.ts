@@ -84,6 +84,8 @@ export type OperatorCommandTools = Readonly<{
     inputPath: string;
   }): Promise<unknown>;
   backupVerify(input: { inputPath: string }): Promise<unknown>;
+  checkAlerts(): Promise<unknown>;
+  dashboardSnapshot(): Promise<unknown>;
   executeRetention(): Promise<unknown>;
   listQuarantine(input: { limit: number }): Promise<QuarantineResourceView[]>;
   publishOutbox(): Promise<OutboxPublishSummary>;
@@ -148,6 +150,14 @@ export async function runOperatorCommand(
   if (command === "outbox:publish") {
     if (rawFlags.length > 0) throw new OperatorCommandError();
     return { command, result: await tools.publishOutbox() };
+  }
+  if (command === "dashboard:snapshot") {
+    if (rawFlags.length > 0) throw new OperatorCommandError();
+    return { command, result: await tools.dashboardSnapshot() };
+  }
+  if (command === "alerts:check") {
+    if (rawFlags.length > 0) throw new OperatorCommandError();
+    return { command, result: await tools.checkAlerts() };
   }
   if (command === "retention:schedule") {
     const input = parseOrThrow(recoverFlags, flags(rawFlags));

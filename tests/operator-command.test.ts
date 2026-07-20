@@ -12,6 +12,8 @@ function tools(): OperatorCommandTools {
     backupExport: vi.fn().mockResolvedValue({ manifestSha256: "a".repeat(64) }),
     backupRestore: vi.fn().mockResolvedValue({ restored: true }),
     backupVerify: vi.fn().mockResolvedValue({ verified: true }),
+    checkAlerts: vi.fn().mockResolvedValue({ active: 0, alerts: [] }),
+    dashboardSnapshot: vi.fn().mockResolvedValue({ schemaVersion: "1.0" }),
     executeRetention: vi.fn().mockResolvedValue({ requestId: "delete_1" }),
     listQuarantine: vi.fn().mockResolvedValue([
       {
@@ -73,6 +75,25 @@ describe("operator command", () => {
     });
     expect(operations.publishOutbox).toHaveBeenCalledOnce();
     expect(operations.recoverExpiredLeases).not.toHaveBeenCalled();
+  });
+
+  it("renders the private dashboard and evaluates owned alerts", async () => {
+    const operations = tools();
+
+    await expect(
+      runOperatorCommand(["dashboard:snapshot"], operations),
+    ).resolves.toEqual({
+      command: "dashboard:snapshot",
+      result: { schemaVersion: "1.0" },
+    });
+    await expect(
+      runOperatorCommand(["alerts:check"], operations),
+    ).resolves.toEqual({
+      command: "alerts:check",
+      result: { active: 0, alerts: [] },
+    });
+    expect(operations.dashboardSnapshot).toHaveBeenCalledOnce();
+    expect(operations.checkAlerts).toHaveBeenCalledOnce();
   });
 
   it("lists and resolves only an exact quarantined provider resource", async () => {
@@ -187,6 +208,8 @@ describe("operator command", () => {
     { argv: ["quarantine:resolve", "--tenant-id", "tenant_1"] },
     { argv: ["backup:export", "--tenant-id", "tenant_1"] },
     { argv: ["backup:restore", "--input", "archive.json"] },
+    { argv: ["dashboard:snapshot", "--tenant-id", "tenant_1"] },
+    { argv: ["alerts:check", "--token", "never-print-this"] },
   ])("fails closed with stable, sanitized errors for %#", async ({ argv }) => {
     await expect(runOperatorCommand(argv, tools())).rejects.toBeInstanceOf(
       OperatorCommandError,

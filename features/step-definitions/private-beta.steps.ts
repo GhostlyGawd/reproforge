@@ -19,6 +19,7 @@ import { createJob, transitionJob } from "@/domain/job";
 import { AuditSandboxQuarantineSink } from "@/infrastructure/execution/audit-sandbox-quarantine-sink";
 import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
 import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
+import { FeatureFlagRepositoryStartAdmission } from "@/infrastructure/operations/feature-start-admission";
 import {
   PostgresSandboxQuarantineOperator,
   type QuarantineResource,
@@ -271,6 +272,152 @@ Then(
         tenantId: "tenant_private_beta",
       },
     ]);
+  },
+);
+
+Given(
+  "a completed private-beta repository case and the global start kill switch",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    let reproductionCase = createCase("case_private_beta_kill_switch", AT);
+    const transitions = [
+      "INGESTING",
+      "INSPECTING",
+      "HYPOTHESIZING",
+      "EXPERIMENTING",
+      "VERIFYING",
+      "MINIMIZING",
+      "PACKAGING",
+      "VERIFIED",
+    ] as const;
+    transitions.forEach((next, index) => {
+      reproductionCase = transitionCase(
+        reproductionCase,
+        next,
+        `private beta kill-switch ${next.toLowerCase()}`,
+        new Date(AT.getTime() + (index + 1) * 1_000),
+      );
+    });
+    let job = transitionJob(
+      createJob("job_private_beta_kill_switch", reproductionCase.id, AT),
+      "RUNNING",
+      {
+        at: new Date(AT.getTime() + 1_000),
+        progressPhase: "INGESTING",
+      },
+    );
+    job = transitionJob(job, "SUCCEEDED", {
+      at: new Date(AT.getTime() + 9_000),
+      progressPhase: "VERIFIED",
+    });
+    current.completedSnapshot = {
+      case: reproductionCase,
+      job,
+      result: null,
+      sampleId: "cli-spaces",
+      schemaVersion: "2.0",
+    };
+  },
+);
+
+When(
+  "the user reads the completed case and attempts a kill-switched repository start",
+  async function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    assert(current.completedSnapshot);
+    current.completedRead = structuredClone(current.completedSnapshot);
+    const admission = new FeatureFlagRepositoryStartAdmission({
+      audit: {
+        append: async (event) => {
+          current.denialAudits.push(structuredClone(event));
+        },
+      },
+      clock: { now: () => new Date("2026-07-20T12:40:00.000Z") },
+      eventId: () => "audit_private_beta_feature_denied",
+      flags: {
+        disablePrivateRepositories: false,
+        disableRepositoryStarts: true,
+        disabledExecutionProfiles: [],
+      },
+    });
+    const source = {
+      commitSha: "b".repeat(40),
+      executionProfile: {
+        controlScript: "test:control",
+        ecosystem: "node" as const,
+        lockfile: "package-lock.json" as const,
+        nodeVersion: "24" as const,
+        packageManager: "npm" as const,
+        reproductionScript: "test:reproduce",
+      },
+      failureOracle: {
+        id: "oracle-private-beta-kill-switch",
+        root: { expected: 1, type: "exit_code" as const },
+        version: 1,
+      },
+      kind: "github" as const,
+      repositoryId: "repo_private_beta_disabled",
+    };
+    try {
+      await admission.assertAllowed(
+        {
+          callerId: "principal_private_beta",
+          principalId: "principal_private_beta",
+          tenantId: "tenant_private_beta",
+        },
+        source,
+        {
+          commitSha: source.commitSha,
+          fullName: "synthetic-owner/private-beta-disabled",
+          private: true,
+          provider: "github",
+          repositoryId: source.repositoryId,
+        },
+      );
+    } catch (error) {
+      current.denialCode =
+        error && typeof error === "object" && "code" in error
+          ? String(error.code)
+          : "UNEXPECTED_ERROR";
+    }
+  },
+);
+
+Then(
+  "the completed case remains readable during the start kill switch",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    assert.deepEqual(current.completedRead, current.completedSnapshot);
+    assert.equal(current.completedRead?.case.state, "VERIFIED");
+  },
+);
+
+Then(
+  "the new start is denied with a sanitized feature-policy audit",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    assert.equal(current.denialCode, "REPOSITORY_STARTS_DISABLED");
+    assert.deepEqual(current.denialAudits, [
+      {
+        action: "repository.start-denied",
+        actorId: "principal_private_beta",
+        eventId: "audit_private_beta_feature_denied",
+        metadata: {
+          code: "REPOSITORY_STARTS_DISABLED",
+          executionProfile: "node24",
+          repositoryId: "repo_private_beta_disabled",
+        },
+        occurredAt: "2026-07-20T12:40:00.000Z",
+        outcome: "denied",
+        targetId: "repo_private_beta_disabled",
+        targetType: "repository",
+        tenantId: "tenant_private_beta",
+      },
+    ]);
+    assert.doesNotMatch(
+      JSON.stringify(current.denialAudits),
+      /private-beta-disabled/,
+    );
   },
 );
 

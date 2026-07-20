@@ -1,0 +1,111 @@
+{
+  "alerts": [
+    {
+      "code": "DEPENDENCY_READINESS_UNAVAILABLE",
+      "observed": "ready",
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-dependency-readiness-unavailable",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test:operations",
+      "threshold": "readiness != ready"
+    },
+    {
+      "code": "RUNNER_UNAVAILABLE",
+      "observed": "ready",
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-runner-unavailable",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/runtime-runner-health.test.ts",
+      "threshold": "runner != ready"
+    },
+    {
+      "code": "QUEUED_JOB_AGE_HIGH",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-queued-job-age-high",
+      "severity": "warning",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/operations-dashboard.test.ts",
+      "threshold": ">= 240 seconds"
+    },
+    {
+      "code": "OUTBOX_LAG_HIGH",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-outbox-lag-high",
+      "severity": "warning",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/operations-dashboard.test.ts",
+      "threshold": ">= 120 seconds"
+    },
+    {
+      "code": "EXPIRED_LEASES_PRESENT",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-expired-leases-present",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/job-lease-recovery.test.ts",
+      "threshold": "> 0 leases"
+    },
+    {
+      "code": "OUTBOX_DEAD_PRESENT",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-outbox-dead-present",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/outbox-publisher.test.ts",
+      "threshold": "> 0 events"
+    },
+    {
+      "code": "DELETION_FAILURE_PRESENT",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-deletion-failure-present",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/retention-deletion.test.ts",
+      "threshold": "> 0 requests"
+    },
+    {
+      "code": "SANDBOX_QUARANTINE_PRESENT",
+      "observed": 0,
+      "owner": "platform-on-call",
+      "runbook": "docs/operations.md#alert-sandbox-quarantine-present",
+      "severity": "critical",
+      "status": "ok",
+      "testProcedure": "npm run test -- tests/sandbox-quarantine-operator.test.ts",
+      "threshold": "> 0 resources"
+    }
+  ],
+  "durable": {
+    "deletions": { "failed": 0, "pending": 0 },
+    "jobs": {
+      "cancelled": 0,
+      "expiredLeases": 0,
+      "failed": 0,
+      "oldestQueuedAgeSeconds": null,
+      "queued": 0,
+      "running": 0,
+      "succeeded": 1
+    },
+    "outbox": {
+      "dead": 0,
+      "oldestPendingAgeSeconds": null,
+      "pending": 0
+    },
+    "quarantinedResources": 0
+  },
+  "features": {
+    "node22": "enabled",
+    "node24": "enabled",
+    "privateRepositories": "enabled",
+    "repositoryStarts": "enabled"
+  },
+  "generatedAt": "2026-07-20T23:10:00.000Z",
+  "health": { "readiness": "ready", "runner": "ready" },
+  "schemaVersion": "1.0"
+}
