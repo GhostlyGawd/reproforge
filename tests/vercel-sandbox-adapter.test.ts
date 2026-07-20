@@ -9,6 +9,10 @@ function harness() {
     stderr: vi.fn(async () => "failure\n"),
     stdout: vi.fn(async () => "output\n"),
   };
+  const snapshot = {
+    delete: vi.fn(async () => undefined),
+    snapshotId: "snap_synthetic_1",
+  };
   const sandbox = {
     activeCpuUsageMs: 41,
     mkDir: vi.fn(async () => undefined),
@@ -16,6 +20,7 @@ function harness() {
     networkTransfer: { egress: 13, ingress: 29 },
     readFileToBuffer: vi.fn(async () => Buffer.from("contents")),
     runCommand: vi.fn(async () => finished),
+    snapshot: vi.fn(async () => snapshot),
     stop: vi.fn(async () => undefined),
     update: vi.fn(async () => undefined),
     writeFiles: vi.fn(async () => undefined),
@@ -25,7 +30,7 @@ function harness() {
     return sandbox;
   });
   const provider = new VercelSandboxProvider({ create });
-  return { create, finished, provider, sandbox };
+  return { create, finished, provider, sandbox, snapshot };
 }
 
 describe("Vercel Sandbox adapter", () => {
@@ -198,5 +203,56 @@ describe("Vercel Sandbox adapter", () => {
 
     await Promise.all([session.stop(), session.stop(), session.stop()]);
     expect(fixture.sandbox.stop).toHaveBeenCalledTimes(1);
+  });
+
+  it("snapshots a prepared VM and restores fresh deny-all sessions", async () => {
+    const fixture = harness();
+    const controller = new AbortController();
+    const prepared = await fixture.provider.create({
+      networkPolicy: "deny-all",
+      runtime: "node24",
+      timeoutMs: 60_000,
+      vcpus: 2,
+    });
+    const snapshot = await prepared.snapshot(86_400_000, {
+      signal: controller.signal,
+    });
+    const restored = await fixture.provider.createFromSnapshot({
+      networkPolicy: "deny-all",
+      snapshotId: snapshot.snapshotId,
+      timeoutMs: 180_000,
+      vcpus: 2,
+    }, {
+      signal: controller.signal,
+    });
+
+    expect(fixture.sandbox.snapshot).toHaveBeenCalledWith({
+      expiration: 86_400_000,
+      signal: controller.signal,
+    });
+    expect(fixture.create).toHaveBeenLastCalledWith({
+      networkPolicy: "deny-all",
+      persistent: false,
+      resources: { vcpus: 2 },
+      signal: controller.signal,
+      source: { snapshotId: "snap_synthetic_1", type: "snapshot" },
+      timeout: 180_000,
+    });
+    expect(restored.sandboxId).toBe("rf-opaque-sandbox");
+    await snapshot.delete();
+    expect(fixture.snapshot.delete).toHaveBeenCalledTimes(1);
+  });
+
+  it("rejects snapshot retention below the provider minimum before an API call", async () => {
+    const fixture = harness();
+    const prepared = await fixture.provider.create({
+      networkPolicy: "deny-all",
+      runtime: "node24",
+      timeoutMs: 180_000,
+      vcpus: 2,
+    });
+
+    await expect(prepared.snapshot(300_000)).rejects.toThrow();
+    expect(fixture.sandbox.snapshot).not.toHaveBeenCalled();
   });
 });

@@ -2,6 +2,8 @@ import { z } from "zod";
 
 export const SANDBOX_ROOT = "/vercel/sandbox" as const;
 export const SANDBOX_WORKSPACE_ROOT = `${SANDBOX_ROOT}/workspaces` as const;
+export const SANDBOX_SNAPSHOT_MIN_EXPIRATION_MS = 86_400_000;
+export const SANDBOX_SNAPSHOT_MAX_EXPIRATION_MS = 7 * 86_400_000;
 
 const noControlCharacters = (value: string) =>
   !/[\u0000-\u001f\u007f]/u.test(value);
@@ -92,6 +94,19 @@ export const sandboxCreateRequestSchema = z
   .strict();
 
 export type SandboxCreateRequest = z.infer<typeof sandboxCreateRequestSchema>;
+
+export const sandboxSnapshotCreateRequestSchema = z
+  .object({
+    networkPolicy: z.literal("deny-all"),
+    snapshotId: z.string().min(1).max(128).regex(/^[A-Za-z0-9_-]+$/),
+    timeoutMs: z.number().int().min(1_000).max(900_000),
+    vcpus: z.literal(2),
+  })
+  .strict();
+
+export type SandboxSnapshotCreateRequest = z.infer<
+  typeof sandboxSnapshotCreateRequestSchema
+>;
 
 const networkHostSchema = z
   .string()
@@ -302,11 +317,27 @@ export interface IsolatedSandboxSession {
     options?: { signal?: AbortSignal },
   ): Promise<SandboxCommandResult>;
   setNetworkPolicy(policy: SandboxNetworkPolicy): Promise<void>;
+  snapshot(
+    expirationMs: number,
+    options?: { signal?: AbortSignal },
+  ): Promise<IsolatedSandboxSnapshot>;
   stop(): Promise<void>;
   usage(): Promise<SandboxUsage>;
   writeFiles(files: SandboxFile[]): Promise<void>;
 }
 
+export interface IsolatedSandboxSnapshot {
+  readonly snapshotId: string;
+  delete(): Promise<void>;
+}
+
 export interface IsolatedSandboxProvider {
-  create(request: SandboxCreateRequest): Promise<IsolatedSandboxSession>;
+  create(
+    request: SandboxCreateRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<IsolatedSandboxSession>;
+  createFromSnapshot(
+    request: SandboxSnapshotCreateRequest,
+    options?: { signal?: AbortSignal },
+  ): Promise<IsolatedSandboxSession>;
 }

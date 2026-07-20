@@ -309,6 +309,10 @@ function harness(options: { onlineFailure?: boolean } = {}) {
         `policy:${policy.kind === "deny-all" ? policy.kind : policy.phase}`,
       );
     },
+    snapshot: async () => ({
+      delete: async () => undefined,
+      snapshotId: "snap_test",
+    }),
     stop: async () => undefined,
     usage: async () => ({
       activeCpuMs: null,

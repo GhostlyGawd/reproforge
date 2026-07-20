@@ -219,6 +219,10 @@ function harness(options: { copyFailure?: boolean } = {}) {
     },
     sandboxId: "sandbox_1",
     setNetworkPolicy: async () => undefined,
+    snapshot: async () => ({
+      delete: async () => undefined,
+      snapshotId: "snap_test",
+    }),
     stop: async () => undefined,
     usage: async () => ({
       activeCpuMs: null,

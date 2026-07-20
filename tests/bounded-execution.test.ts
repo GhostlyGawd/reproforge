@@ -202,6 +202,10 @@ function harness(options: { termination?: string } = {}) {
     },
     sandboxId: "sandbox_1",
     setNetworkPolicy: async () => undefined,
+    snapshot: async () => ({
+      delete: async () => undefined,
+      snapshotId: "snap_test",
+    }),
     stop: async () => undefined,
     usage: async () => ({
       activeCpuMs: 10,

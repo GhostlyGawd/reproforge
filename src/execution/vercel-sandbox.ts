@@ -3,19 +3,25 @@ import {
   type NetworkPolicy,
   type NetworkPolicyRule,
 } from "@vercel/sandbox";
+import { z } from "zod";
 
 import {
   sandboxCommandSchema,
   sandboxCreateRequestSchema,
   sandboxNetworkPolicySchema,
+  sandboxSnapshotCreateRequestSchema,
   SANDBOX_ROOT,
+  SANDBOX_SNAPSHOT_MAX_EXPIRATION_MS,
+  SANDBOX_SNAPSHOT_MIN_EXPIRATION_MS,
   type IsolatedSandboxProvider,
   type IsolatedSandboxSession,
+  type IsolatedSandboxSnapshot,
   type SandboxCommand,
   type SandboxCommandResult,
   type SandboxCreateRequest,
   type SandboxFile,
   type SandboxNetworkPolicy,
+  type SandboxSnapshotCreateRequest,
   type SandboxUsage,
 } from "@/execution/contracts";
 
@@ -24,7 +30,12 @@ type VercelCreateRequest = {
   persistent: false;
   resources: { vcpus: 2 };
   runtime: "node22" | "node24";
+  signal?: AbortSignal;
   timeout: number;
+};
+
+type VercelSnapshotCreateRequest = Omit<VercelCreateRequest, "runtime"> & {
+  source: { snapshotId: string; type: "snapshot" };
 };
 
 type VercelCommandFinished = {
@@ -47,6 +58,10 @@ type VercelSandboxHandle = {
     signal?: AbortSignal;
     timeoutMs: number;
   }): Promise<VercelCommandFinished>;
+  snapshot(input: { expiration: number; signal?: AbortSignal }): Promise<{
+    delete(): Promise<unknown>;
+    snapshotId: string;
+  }>;
   stop(): Promise<unknown>;
   update(input: { networkPolicy: NetworkPolicy }): Promise<void>;
   writeFiles(
@@ -55,7 +70,7 @@ type VercelSandboxHandle = {
 };
 
 type VercelSandboxFactory = (
-  request: VercelCreateRequest,
+  request: VercelCreateRequest | VercelSnapshotCreateRequest,
 ) => Promise<VercelSandboxHandle>;
 
 function assertSandboxPath(path: string): void {
@@ -149,6 +164,31 @@ class VercelSandboxSession implements IsolatedSandboxSession {
     await this.sandbox.update({ networkPolicy: toVercelNetworkPolicy(policy) });
   }
 
+  async snapshot(
+    expirationMs: number,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<IsolatedSandboxSnapshot> {
+    const expiration = z
+      .number()
+      .int()
+      .min(SANDBOX_SNAPSHOT_MIN_EXPIRATION_MS)
+      .max(SANDBOX_SNAPSHOT_MAX_EXPIRATION_MS)
+      .parse(expirationMs);
+    const snapshot = await this.sandbox.snapshot({
+      expiration,
+      ...(options.signal ? { signal: options.signal } : {}),
+    });
+    this.stopPromise ??= Promise.resolve();
+    let deletePromise: Promise<void> | undefined;
+    return {
+      delete: () => {
+        deletePromise ??= snapshot.delete().then(() => undefined);
+        return deletePromise;
+      },
+      snapshotId: snapshot.snapshotId,
+    };
+  }
+
   stop(): Promise<void> {
     this.stopPromise ??= this.sandbox.stop().then(() => undefined);
     return this.stopPromise;
@@ -182,13 +222,33 @@ export class VercelSandboxProvider implements IsolatedSandboxProvider {
       (async (request) => Sandbox.create(request));
   }
 
-  async create(rawRequest: SandboxCreateRequest): Promise<IsolatedSandboxSession> {
+  async create(
+    rawRequest: SandboxCreateRequest,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<IsolatedSandboxSession> {
     const request = sandboxCreateRequestSchema.parse(rawRequest);
     const sandbox = await this.createSandbox({
       networkPolicy: "deny-all",
       persistent: false,
       resources: { vcpus: request.vcpus },
       runtime: request.runtime,
+      ...(options.signal ? { signal: options.signal } : {}),
+      timeout: request.timeoutMs,
+    });
+    return new VercelSandboxSession(sandbox);
+  }
+
+  async createFromSnapshot(
+    rawRequest: SandboxSnapshotCreateRequest,
+    options: { signal?: AbortSignal } = {},
+  ): Promise<IsolatedSandboxSession> {
+    const request = sandboxSnapshotCreateRequestSchema.parse(rawRequest);
+    const sandbox = await this.createSandbox({
+      networkPolicy: "deny-all",
+      persistent: false,
+      resources: { vcpus: request.vcpus },
+      ...(options.signal ? { signal: options.signal } : {}),
+      source: { snapshotId: request.snapshotId, type: "snapshot" },
       timeout: request.timeoutMs,
     });
     return new VercelSandboxSession(sandbox);

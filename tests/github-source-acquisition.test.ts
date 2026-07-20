@@ -91,6 +91,10 @@ function harness(options: { curlFailure?: boolean } = {}) {
     setNetworkPolicy: async (policy) => {
       policies.push(policy);
     },
+    snapshot: async () => ({
+      delete: async () => undefined,
+      snapshotId: "snap_test",
+    }),
     stop: vi.fn(),
     usage: async () => ({
       activeCpuMs: null,

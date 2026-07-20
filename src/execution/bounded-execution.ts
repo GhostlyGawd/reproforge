@@ -220,6 +220,7 @@ export class BoundedExperimentExecutor {
     plan: RepositoryExecutionPlan;
     secrets: string[];
     session: IsolatedSandboxSession;
+    signal?: AbortSignal;
   }): Promise<BoundedExperimentResult> {
     if (
       input.networkPolicy !== "deny-all" ||
@@ -241,6 +242,9 @@ export class BoundedExperimentExecutor {
     const runs: BoundedRun[] = [];
     let totalDurationMs = 0;
     for (const [index, command] of experimentCommands.entries()) {
+      if (input.signal?.aborted) {
+        throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
+      }
       const id = command.phase === "control" ? "control-1" : `candidate-${index}`;
       const configPath = `${SUPERVISOR_DIRECTORY}/${id}.config.json`;
       const resultPath = `${SUPERVISOR_DIRECTORY}/${id}.result.json`;
@@ -282,6 +286,7 @@ export class BoundedExperimentExecutor {
             phase: command.phase,
             timeoutMs: 125_000,
           }),
+          { signal: input.signal },
         );
       } catch {
         throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
