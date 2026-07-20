@@ -77,7 +77,7 @@ function tokenVerifier(scopes: Array<
 const principals: PrincipalDirectory = {
   resolve: vi.fn(async () => ({
     principalId: "principal-alpha",
-    status: "ACTIVE",
+    status: "ACTIVE" as const,
     tenantId: "tenant-alpha",
   })),
 };
@@ -246,7 +246,7 @@ describe("MCP v2 authorization contract", () => {
           principalId: "principal-alpha",
           tenantId: "tenant-alpha",
         }),
-        {},
+        { limit: 50 },
       );
     } finally {
       await allowed.close();

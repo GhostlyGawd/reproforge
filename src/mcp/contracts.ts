@@ -6,6 +6,44 @@ import type {
 } from "@/application/reproduction-contracts";
 import { evidenceClassificationSchema, hypothesisStatusSchema } from "@/domain/evidence";
 
+const trustedSourceSchema = z
+  .object({
+    kind: z.literal("trusted_sample"),
+    sampleId: z.literal("cli-spaces"),
+  })
+  .strict();
+
+export const repositorySourceSchema = z
+  .object({
+    commitSha: z
+      .string()
+      .regex(/^[a-f0-9]{40}$/)
+      .describe("Immutable 40-character Git commit SHA selected from GitHub."),
+    executionProfile: z
+      .object({
+        ecosystem: z.literal("node"),
+        networkPolicy: z.literal("none"),
+        packageManager: z.literal("npm"),
+        testEntrypoint: z.literal("npm-test"),
+      })
+      .strict(),
+    issueEvidence: z
+      .object({
+        number: z.number().int().positive().max(2_147_483_647),
+        title: z.string().min(1).max(256).optional(),
+      })
+      .strict()
+      .optional(),
+    kind: z.literal("github"),
+    repositoryId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/)
+      .describe("Server-issued identifier from list_authorized_repositories."),
+  })
+  .strict();
+
 export const startReproductionInputSchema = z
   .object({
     budget: z
@@ -16,7 +54,7 @@ export const startReproductionInputSchema = z
           .min(1)
           .max(20)
           .default(6)
-          .describe("Maximum investigation tool calls for the trusted sample."),
+          .describe("Maximum bounded investigation tool calls."),
         requiredRuns: z
           .number()
           .int()
@@ -32,16 +70,70 @@ export const startReproductionInputSchema = z
       .min(1)
       .max(128)
       .describe("Stable retry key for this same trusted-sample request."),
-    sampleId: z
-      .literal("cli-spaces")
-      .default("cli-spaces")
-      .describe("The only enabled input is ReproForge's trusted synthetic CLI fixture."),
+    source: z.discriminatedUnion("kind", [
+      trustedSourceSchema,
+      repositorySourceSchema,
+    ]),
   })
   .strict();
 
 export const caseInputSchema = z
   .object({
     caseId: z.string().min(1).max(128).describe("Case ID returned by start_reproduction."),
+  })
+  .strict();
+
+export const cancelReproductionInputSchema = z
+  .object({
+    jobId: z.string().min(1).max(128),
+  })
+  .strict();
+
+export const listAuthorizedRepositoriesInputSchema = z
+  .object({
+    cursor: z
+      .string()
+      .min(1)
+      .max(256)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional(),
+    limit: z.number().int().min(1).max(100).default(50).optional(),
+  })
+  .strict();
+
+export const repositoryViewSchema = z
+  .object({
+    defaultBranch: z.string().min(1).max(255),
+    fullName: z
+      .string()
+      .min(3)
+      .max(255)
+      .regex(/^[^/\s]+\/[^/\s]+$/),
+    private: z.boolean(),
+    repositoryId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
+  })
+  .strict();
+
+export const repositoryListViewSchema = z
+  .object({
+    kind: z.literal("repository_list"),
+    nextCursor: z.string().min(1).max(256).nullable(),
+    repositories: z.array(repositoryViewSchema).max(100),
+    schemaVersion: z.literal("1.0"),
+  })
+  .strict();
+
+export const cancellationViewSchema = z
+  .object({
+    caseId: z.string().min(1).max(128),
+    changed: z.boolean(),
+    disposition: z.enum(["cancelled", "requested"]),
+    kind: z.literal("cancellation"),
+    schemaVersion: z.literal("1.0"),
   })
   .strict();
 
@@ -137,6 +229,7 @@ export const reproductionWidgetMetaSchema = z
 export type ReproductionView = z.infer<typeof reproductionViewSchema>;
 export type BundleView = z.infer<typeof bundleViewSchema>;
 export type ReproductionWidgetMeta = z.infer<typeof reproductionWidgetMetaSchema>;
+export type RepositoryListView = z.infer<typeof repositoryListViewSchema>;
 
 function countEvidence(snapshot: ReproductionSnapshot) {
   const counts = { inferred: 0, observed: 0, reported: 0, unknown: 0 };

@@ -1,7 +1,11 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
 import type { CaseOperations } from "@/application/case-service";
-import { createReproForgeMcpServer } from "@/mcp/server";
+import type { RepositoryOperations } from "@/application/repository-operations";
+import {
+  createReproForgeMcpServer,
+  type McpAuthorizationDependencies,
+} from "@/mcp/server";
 
 const CORS_HEADERS = {
   "Access-Control-Allow-Headers": [
@@ -16,7 +20,10 @@ const CORS_HEADERS = {
 };
 
 type McpHttpOptions = {
-  callerId: string;
+  authorization?: (
+    request: Request,
+  ) => McpAuthorizationDependencies | Promise<McpAuthorizationDependencies>;
+  repositoryService?: RepositoryOperations;
   service: CaseOperations;
 };
 
@@ -51,7 +58,8 @@ function methodNotAllowed(): Response {
 }
 
 export function createReproForgeMcpHttpHandler({
-  callerId,
+  authorization,
+  repositoryService,
   service,
 }: McpHttpOptions): (request: Request) => Promise<Response> {
   return async (request: Request) => {
@@ -60,7 +68,11 @@ export function createReproForgeMcpHttpHandler({
     }
     if (request.method !== "POST") return methodNotAllowed();
 
-    const server = createReproForgeMcpServer({ callerId, service });
+    const server = createReproForgeMcpServer({
+      authorization: authorization ? await authorization(request) : undefined,
+      repositoryService,
+      service,
+    });
     const transport = new WebStandardStreamableHTTPServerTransport({
       enableJsonResponse: true,
       sessionIdGenerator: undefined,

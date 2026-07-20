@@ -5,7 +5,6 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const handle = createReproForgeMcpHttpHandler({
-  callerId: "mcp:anonymous-trusted-sample",
   service: defaultCaseService,
 });
 

@@ -28,7 +28,6 @@ function createService() {
 
 async function connect(service: CaseService) {
   const server = createReproForgeMcpServer({
-    callerId: "mcp:test",
     service,
   });
   const client = new Client(
@@ -60,7 +59,7 @@ afterEach(() => {
 });
 
 describe("ReproForge MCP app contract", () => {
-  it("publishes exactly three bounded tools with explicit safety annotations", async () => {
+  it("publishes exactly five bounded tools with explicit safety annotations", async () => {
     const { service } = createService();
     const connection = await connect(service);
 
@@ -68,7 +67,9 @@ describe("ReproForge MCP app contract", () => {
       const listed = await connection.client.listTools();
       expect(listed.tools.map((tool) => tool.name)).toEqual([
         "start_reproduction",
+        "list_authorized_repositories",
         "get_reproduction",
+        "cancel_reproduction",
         "export_repro_bundle",
       ]);
       expect(listed.tools).toEqual(
@@ -106,7 +107,7 @@ describe("ReproForge MCP app contract", () => {
       const serializedInputs = JSON.stringify(
         listed.tools.map((tool) => tool.inputSchema),
       ).toLowerCase();
-      expect(serializedInputs).not.toContain("repository");
+      expect(serializedInputs).not.toContain("repositoryurl");
       expect(serializedInputs).not.toContain("command");
       expect(serializedInputs).not.toContain("api_key");
       expect(serializedInputs).not.toContain("openai");
@@ -159,7 +160,10 @@ describe("ReproForge MCP app contract", () => {
     vi.stubEnv("OPENAI_API_KEY", "");
     const { executeTrustedSample, service } = createService();
     const connection = await connect(service);
-    const args = { idempotencyKey: "mcp-retry", sampleId: "cli-spaces" };
+    const args = {
+      idempotencyKey: "mcp-retry",
+      source: { kind: "trusted_sample", sampleId: "cli-spaces" },
+    };
 
     try {
       const first = await connection.client.callTool({
@@ -205,7 +209,7 @@ describe("ReproForge MCP app contract", () => {
       const started = await connection.client.callTool({
         arguments: {
           idempotencyKey: "mcp-export",
-          sampleId: "cli-spaces",
+          source: { kind: "trusted_sample", sampleId: "cli-spaces" },
         },
         name: "start_reproduction",
       });

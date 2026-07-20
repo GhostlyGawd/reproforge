@@ -71,7 +71,7 @@ Feature: Evidence-backed reproduction outcomes
     Given a subscription-first ReproForge MCP app
     And no OpenAI API key is configured
     When ChatGPT discovers the ReproForge tools
-    Then only 3 bounded ReproForge tools are exposed
+    Then only 5 bounded ReproForge tools are exposed
     And no MCP tool accepts a repository URL, arbitrary command, or API key
 
   Scenario: ChatGPT retries a trusted reproduction without duplicate execution

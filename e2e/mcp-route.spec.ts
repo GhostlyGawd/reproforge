@@ -13,13 +13,15 @@ test("serves the complete keyless MCP flow through the Next route", async () => 
     const tools = await client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toEqual([
       "start_reproduction",
+      "list_authorized_repositories",
       "get_reproduction",
+      "cancel_reproduction",
       "export_repro_bundle",
     ]);
     const result = await client.callTool({
       arguments: {
         idempotencyKey: `playwright-mcp-${Date.now()}`,
-        sampleId: "cli-spaces",
+        source: { kind: "trusted_sample", sampleId: "cli-spaces" },
       },
       name: "start_reproduction",
     });

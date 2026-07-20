@@ -193,7 +193,7 @@ describe("durable trusted fixture orchestration", () => {
     const readBody = await readResponse.json();
     const exportBody = await exportResponse.json();
 
-    const server = createReproForgeMcpServer({ callerId: REST_CALLER, service });
+    const server = createReproForgeMcpServer({ service });
     const client = new Client(
       { name: "durable-surface-test", version: "1.0.0" },
       { capabilities: {} },
