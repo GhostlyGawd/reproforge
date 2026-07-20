@@ -78,7 +78,7 @@ describe("operations dashboard properties", () => {
           expect(new Set(one.alerts.map(({ code }) => code)).size).toBe(8);
         },
       ),
-      { numRuns: 500 },
+      { numRuns: 500, seed: 8_406_006 },
     );
   });
 });

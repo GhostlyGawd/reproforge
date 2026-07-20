@@ -258,7 +258,7 @@ describe("durable trusted fixture orchestration", () => {
           );
         }
       }),
-      { numRuns: 250 },
+      { numRuns: 250, seed: 8_406_003 },
     );
 
     expect(fixture.executeTrustedSample).toHaveBeenCalledTimes(1);

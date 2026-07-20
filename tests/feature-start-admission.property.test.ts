@@ -77,7 +77,7 @@ describe("repository feature-policy admission properties", () => {
           expect(append).toHaveBeenCalledTimes(disabled ? 1 : 0);
         },
       ),
-      { numRuns: 500 },
+      { numRuns: 500, seed: 8_406_004 },
     );
   });
 });

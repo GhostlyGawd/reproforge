@@ -13,6 +13,11 @@ Feature: Private-beta ReproForge
     Then exactly one recovery intent requeues the durable job
     And exactly one sanitized lease recovery audit is durable
 
+  Scenario: Restart and duplicate delivery preserve one durable outcome
+    Given an active private-beta job survives adapter reconstruction
+    When the same durable queue message is delivered twice
+    Then exactly one worker execution reaches one terminal job
+
   Scenario: A user cancels an active repository job
     Given an active cancellable repository experiment
     When the repository experiment is cancelled

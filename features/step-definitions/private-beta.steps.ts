@@ -7,6 +7,7 @@ import {
   ACCOUNT_DELETION_CONFIRMATION,
   AccountDataService,
 } from "@/application/account-data-service";
+import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
 import type { AuditEvent } from "@/application/ports/production";
 import {
   toReproductionProgress,
@@ -27,12 +28,20 @@ import {
 import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
 import { PostgresAccountExportQuota } from "@/infrastructure/operations/postgres-account-export-quota";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
-import { PostgresAuditSink } from "@/infrastructure/postgres/repositories";
+import {
+  PostgresAuditSink,
+  PostgresDurableReproductionRepository,
+} from "@/infrastructure/postgres/repositories";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { toReproductionView } from "@/mcp/contracts";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
 import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
+import {
+  DURABLE_AT,
+  durableRecord as createDurableRecord,
+  queueMessage,
+} from "../../tests/helpers/durable-postgres-fixture";
 import {
   seedVerifiedBackupTenant,
   type VerifiedBackupFixture,
@@ -138,6 +147,113 @@ Then(
     assert.equal(expected.phase, "EXPERIMENTING");
     assert.equal(expected.state, "RUNNING");
     assert.equal(expected.terminal, false);
+  },
+);
+
+Given(
+  "an active private-beta job survives adapter reconstruction",
+  { timeout: 30_000 },
+  async function (this: ReproForgeWorld) {
+    this.durableDatabase = new PGlite();
+    await applyPostgresMigrations(
+      pgliteMigrationClient(this.durableDatabase),
+    );
+    this.durablePostgres = pglitePostgresDatabase(this.durableDatabase);
+    const record = createDurableRecord(
+      "tenant_private_beta_restart",
+      "private_beta_restart",
+    );
+    await this.durableDatabase.query("INSERT INTO tenants (id) VALUES ($1)", [
+      record.tenantId,
+    ]);
+    const beforeRestart = new PostgresDurableReproductionRepository(
+      this.durablePostgres,
+    );
+    await beforeRestart.reserve(record);
+    this.durableRecord = record;
+    this.durableRepository = new PostgresDurableReproductionRepository(
+      this.durablePostgres,
+    );
+  },
+);
+
+When(
+  "the same durable queue message is delivered twice",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableRecord);
+    assert(this.durableRepository);
+    const consumer = new DurableQueueConsumer({
+      clock: { now: () => new Date(DURABLE_AT) },
+      leaseSeconds: 60,
+      repository: this.durableRepository,
+      worker: {
+        execute: async ({ record }) => {
+          this.durableQueueExecutions += 1;
+          const runningAt = new Date("2026-07-19T20:00:01.000Z");
+          const completedAt = new Date("2026-07-19T20:00:02.000Z");
+          return {
+            ...record,
+            snapshot: {
+              ...record.snapshot,
+              case: transitionCase(
+                transitionCase(
+                  record.snapshot.case,
+                  "INGESTING",
+                  "restart-safe execution",
+                  runningAt,
+                ),
+                "BLOCKED",
+                "restart-safe terminal outcome",
+                completedAt,
+              ),
+              job: transitionJob(record.snapshot.job, "FAILED", {
+                at: completedAt,
+                failure: {
+                  code: "SYNTHETIC_TERMINAL",
+                  message: "The deterministic restart campaign stopped safely",
+                  retryable: false,
+                },
+                progressPhase: "BLOCKED",
+              }),
+            },
+            updatedAt: completedAt.toISOString(),
+          };
+        },
+      },
+    });
+    for (const ownerId of ["worker_restart_1", "worker_restart_2"]) {
+      const result = await consumer.consume(
+        queueMessage(this.durableRecord),
+        ownerId,
+      );
+      this.durableQueueOutcomes.push(result.outcome);
+    }
+  },
+);
+
+Then(
+  "exactly one worker execution reaches one terminal job",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    assert(this.durableRecord);
+    assert.equal(this.durableQueueExecutions, 1);
+    assert.deepEqual(this.durableQueueOutcomes, ["completed", "ignored"]);
+    const rows = await this.durableDatabase.query<{
+      attempt: number;
+      cases: string;
+      jobs: string;
+      state: string;
+    }>(
+      `SELECT j.state, j.attempt,
+              (SELECT count(*)::text FROM cases WHERE tenant_id = $1) AS cases,
+              (SELECT count(*)::text FROM jobs WHERE tenant_id = $1) AS jobs
+         FROM jobs j
+        WHERE j.tenant_id = $1 AND j.id = $2`,
+      [this.durableRecord.tenantId, this.durableRecord.jobId],
+    );
+    assert.deepEqual(rows.rows, [
+      { attempt: 1, cases: "1", jobs: "1", state: "FAILED" },
+    ]);
   },
 );
 

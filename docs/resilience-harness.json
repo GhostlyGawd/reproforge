@@ -1,0 +1,62 @@
+{
+  "schemaVersion": "1.0",
+  "scenarios": [
+    {
+      "category": "load",
+      "deterministicSeed": 8406001,
+      "invariant": "A 128-request idempotent burst creates one case and one execution while every read returns the same durable identity.",
+      "testFiles": ["tests/private-beta-load-harness.test.ts"]
+    },
+    {
+      "category": "duplicate-delivery",
+      "deterministicSeed": 8406002,
+      "invariant": "Every duplicate or out-of-order delivery schedule produces one legal terminal attempt and cannot duplicate proof.",
+      "testFiles": ["tests/durable-queue-consumer.property.test.ts"]
+    },
+    {
+      "category": "restart",
+      "deterministicSeed": 8406003,
+      "invariant": "Adapter reconstruction preserves one case, job, outbox intent, private artifact, and bundle hash across retries.",
+      "testFiles": ["tests/durable-trusted-case-service.test.ts"]
+    },
+    {
+      "category": "dependency-outage",
+      "deterministicSeed": 8406004,
+      "invariant": "An unavailable dependency or capability remains fail closed and never falls back to memory, anonymous access, or host execution.",
+      "testFiles": [
+        "tests/runtime-health.test.ts",
+        "tests/repository-start-admission.test.ts"
+      ]
+    },
+    {
+      "category": "worker-loss",
+      "deterministicSeed": 8406005,
+      "invariant": "One expired lease is recovered once, publishes one recovery intent, and exhausts only at the bounded attempt limit.",
+      "testFiles": ["tests/job-lease-recovery.test.ts"]
+    },
+    {
+      "category": "queue-lag",
+      "deterministicSeed": 8406006,
+      "invariant": "Queued work and pending outbox age cross their warning thresholds deterministically without exposing scoped identifiers.",
+      "testFiles": ["tests/operations-dashboard.test.ts"]
+    },
+    {
+      "category": "storage-failure",
+      "deterministicSeed": 8406007,
+      "invariant": "A private artifact write or verification failure prevents terminal success and cannot manufacture a verified bundle.",
+      "testFiles": [
+        "tests/repository-durable-worker.test.ts",
+        "tests/artifact-store.test.ts"
+      ]
+    },
+    {
+      "category": "sandbox-failure",
+      "deterministicSeed": 8406008,
+      "invariant": "Sandbox create, command, snapshot, cancellation, or cleanup failure remains bounded, fail closed, and cleaned or quarantined.",
+      "testFiles": [
+        "tests/isolated-repository-runner.test.ts",
+        "tests/sandbox-lifecycle.test.ts"
+      ]
+    }
+  ]
+}
