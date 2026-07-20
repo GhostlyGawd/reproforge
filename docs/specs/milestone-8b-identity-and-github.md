@@ -104,8 +104,8 @@ secret, callback URL, or unrestricted network policy.
 
 ## Ordered task list
 
-- [ ] `RF-8201` Add failing OAuth metadata, challenge, and token-verification contract tests using generated signing keys and a local issuer fixture.
-- [ ] `RF-8202` Implement strict Auth0/resource configuration, protected-resource metadata, discovery validation, cached JWKS retrieval, and full JWT verification behind `AccessTokenVerifier`.
+- [x] `RF-8201` Add failing OAuth metadata, challenge, and token-verification contract tests using generated signing keys and a local issuer fixture.
+- [x] `RF-8202` Implement strict Auth0/resource configuration, protected-resource metadata, discovery validation, cached JWKS retrieval, and full JWT verification behind `AccessTokenVerifier`.
 - [ ] `RF-8203` Implement principal/tenant resolution and application authorization policies; remove caller identity from all protected transport inputs.
 - [ ] `RF-8204` Upgrade MCP tool schemas, per-tool `securitySchemes`, scope checks, linking/reauthorization challenges, and sanitized unauthenticated/forbidden errors while preserving the no-auth trusted demo.
 - [ ] `RF-8205` Add authenticated web session handling and repository-connection UI without placing access or installation tokens in browser storage.
