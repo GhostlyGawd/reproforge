@@ -17,6 +17,7 @@ import {
   Sparkles,
   TestTube2,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { SampleCaseResult } from "@/application/sample-case";
@@ -82,6 +83,11 @@ export function ReproForgeApp({
         <div className="header-inner">
           <BrandMark />
           <div className="header-meta">
+            <Link className="header-repository-link" href="/repositories">
+              <GitBranch size={14} aria-hidden="true" />
+              Repositories
+            </Link>
+            <span className="header-divider" aria-hidden="true" />
             <span>Evidence-first debugging</span>
             <span className="header-divider" aria-hidden="true" />
             <span className="mode-indicator">
