@@ -1,0 +1,120 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8a",
+  "capturedAt": "2026-07-20T01:56:49.640Z",
+  "implementationCommit": "b844b5725e67e04a9bb70cc78d3092105f35d490",
+  "deploymentFixCommit": "212aaa1a3041e31a0ba144ecc1286fe6b82013cb",
+  "scope": "durable trusted-fixture foundation",
+  "tasks": {
+    "RF-8101": "passed",
+    "RF-8102": "passed",
+    "RF-8103": "passed",
+    "RF-8104": "passed",
+    "RF-8105": "passed",
+    "RF-8106": "passed",
+    "RF-8107": "passed",
+    "RF-8108": "passed",
+    "RF-8109": "passed",
+    "RF-8110": "passed",
+    "RF-8111": "passed"
+  },
+  "providerVerification": {
+    "command": "npm run test:providers",
+    "testsPassed": 6,
+    "testsFailed": 0,
+    "testsSkipped": 0,
+    "transcript": "provider-transcript.json",
+    "transcriptSha256": "3255cf94407fdc711d8da4fc15d8f40d66022a25646e8abb83fa2c34d89ac25d",
+    "postcondition": {
+      "appliedMigrations": 6,
+      "temporaryProviderTestSchemas": 0,
+      "activeProviderTestTenants": 0,
+      "remainingProviderTestCases": 0,
+      "remainingProviderTestArtifacts": 0
+    }
+  },
+  "contractVerification": {
+    "propertyMinimumGeneratedSequences": 250,
+    "durableRestartRetryGeneratedSequences": 250,
+    "bddScenariosPassed": 26,
+    "bddStepsPassed": 171,
+    "bddStabilityRuns": {
+      "consecutiveRuns": 3,
+      "scenariosPassed": 78,
+      "stepsPassed": 513,
+      "fatalRuntimeAborts": 0
+    },
+    "fullGate": {
+      "command": "npm run verify",
+      "status": "passed",
+      "vitestFilesPassed": 52,
+      "vitestTestsPassed": 172,
+      "liveProviderTestsSkippedByOfflineGate": 6,
+      "bddScenariosPassed": 26,
+      "bddStepsPassed": 171,
+      "mcpSmoke": "passed",
+      "evalCasesPassed": 4,
+      "browserTestsPassed": 16,
+      "productionBuild": "passed"
+    },
+    "documentationGate": {
+      "command": "npm run verify:docs",
+      "status": "passed",
+      "localMarkdownLinksVerified": 103,
+      "evidenceJsonFilesParsed": 11
+    },
+    "dependencyAudit": {
+      "command": "npm audit --audit-level=high",
+      "status": "passed",
+      "vulnerabilities": 0
+    },
+    "ci": {
+      "workflow": "Verify trusted product contract",
+      "status": "passed",
+      "verifiedCommit": "212aaa1a3041e31a0ba144ecc1286fe6b82013cb",
+      "run": "https://github.com/GhostlyGawd/reproforge/actions/runs/29711534766"
+    }
+  },
+  "previewVerification": {
+    "sourceCommit": "212aaa1a3041e31a0ba144ecc1286fe6b82013cb",
+    "access": "Vercel SSO protected",
+    "deploymentStatus": "ready",
+    "red": "Hosted runtime configuration was resolved during Next.js page-data collection, so the first preview build failed closed before deployment.",
+    "green": "Runtime configuration is deferred until the first operation; the rebuilt preview completed and authenticated probes reached the application.",
+    "health": {
+      "liveness": {
+        "httpStatus": 200,
+        "status": "ready"
+      },
+      "readiness": {
+        "httpStatus": 200,
+        "status": "ready",
+        "checks": [
+          "DATABASE_READY",
+          "ARTIFACT_STORE_READY",
+          "QUEUE_CONFIGURATION_READY"
+        ]
+      },
+      "runner": {
+        "httpStatus": 503,
+        "status": "unavailable",
+        "code": "RUNNER_NOT_CONFIGURED",
+        "expectedUntil": "milestone-8c"
+      }
+    },
+    "sanitization": "The committed record omits deployment URLs, deployment IDs, project IDs, resource IDs, credentials, request IDs, and provider response headers."
+  },
+  "visualEvidence": {
+    "applicable": false,
+    "reason": "This backend milestone is observable through provider access behavior, database catalog state, migration checksums, recovery identity, restore hashes, command output, and cleanup postconditions. Hosted browser and ChatGPT visuals remain required by later milestones."
+  },
+  "deferred": [
+    "OAuth principal and tenant authorization",
+    "GitHub App repository authorization",
+    "isolated external repository execution",
+    "hosted application and Queue callback observation",
+    "ChatGPT developer-mode host smoke",
+    "plugin submission or publication"
+  ],
+  "sanitization": "Synthetic bundled fixture only. No credentials, connection strings, provider resource IDs, provider URLs, object keys, generated tenant IDs, personal data, customer data, or private repository content are committed."
+}

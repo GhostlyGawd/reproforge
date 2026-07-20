@@ -5,7 +5,10 @@ import type { MinimizationInput, MinimizationResult } from "@/domain/minimizatio
 import type { RunResult } from "@/domain/run";
 import type { VerificationSummary } from "@/domain/verification";
 import type { SampleCaseResult } from "@/application/sample-case";
-import type { CaseService } from "@/application/case-service";
+import type {
+  CaseOperations,
+  CaseService,
+} from "@/application/case-service";
 import type { StartResult } from "@/application/reproduction-contracts";
 import type { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
@@ -15,6 +18,7 @@ import type {
   DurableReproductionRecord,
   DurableReservationResult,
   LeaseRecoverySummary,
+  QueueMessage,
 } from "@/application/ports/production";
 import type { PostgresDatabase } from "@/infrastructure/postgres/database";
 import type {
@@ -67,6 +71,10 @@ export class ReproForgeWorld extends World {
   durableQueueExecutions = 0;
   durableQueueOutcomes: string[] = [];
   durableRecoverySummaries: LeaseRecoverySummary[] = [];
+  durableTrustedCaseService?: CaseOperations;
+  durableTrustedClockMs = Date.parse("2026-07-20T20:00:00.000Z");
+  durableTrustedMessages: QueueMessage[] = [];
+  durableTrustedStarts: StartResult[] = [];
   durableRetention?: PostgresTenantDataRetention;
   durableRetentionResult?: RetentionDeletionResult | null;
   runtimeHealthService?: HealthService;

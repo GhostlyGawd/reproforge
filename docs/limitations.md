@@ -14,7 +14,16 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
 - The full browser demo always uses the offline investigator.
 - The live GPT-5.6 API path plans through strict, non-executing tools; it does not connect those proposals to an external execution sandbox.
 - No live-key smoke evidence is committed because no key was present during milestone verification.
-- Trusted cases and jobs can be started, retried idempotently, read, polled, and exported within one server process. They are not durable across restart, shared across instances, or authenticated.
+- Local offline/test cases remain process-local and disappear on restart.
+  Preview/production composition is durable across adapter reconstruction and
+  uses Neon, private Blob, and Queue, but only for the bundled synthetic fixture.
+- The durable foundation has live development-provider proof for transactions,
+  concurrency, restart/retry identity, private object access/deletion,
+  identifier-only Queue publication, dependency readiness, and tenant
+  backup/restore. This is not a hosted availability or production-load claim.
+- Hosted durable operations still use an unauthenticated public synthetic
+  tenant. They are not user identity, authorization, or safe storage for
+  private/customer data.
 - The ChatGPT/MCP adapter implements the trusted journey and widget, but it has not been connected to a real ChatGPT developer-mode app because no reachable HTTPS endpoint or account-created `plugin_asdk_app…` ID was available.
 - The no-auth MCP endpoint uses one anonymous synthetic-demo caller scope. It is not user identity, tenant isolation, quota enforcement, or authorization.
 - The standalone `/widget-preview` route renders the exact MCP resource with real service data for browser evidence; it is not a screenshot of the widget inside ChatGPT.
@@ -34,7 +43,7 @@ ReproForge is a pre-alpha proof system around one complete, trusted JavaScript/T
 
 ## Product readiness
 
-- REST v2 and MCP are implemented draft contracts for the trusted slice, not stability guarantees. There is no hosted deployment, packaged developer-mode app, published plugin, published package, signed artifact, release tag, service-level agreement, or compatibility guarantee.
+- REST v2 and MCP are implemented draft contracts for the trusted slice, not stability guarantees. Managed development storage and automatic branch previews exist for provider validation, but there is no stable public application deployment, packaged developer-mode app, published plugin, published package, signed artifact, release tag, service-level agreement, or compatibility guarantee.
 - Security controls required for an internet-facing multi-user service are outside the MVP.
 - Browser automation covers Chromium at desktop and mobile viewports; it is not a cross-browser certification.
 - No license has been selected, so reuse rights have not been granted.

@@ -55,6 +55,20 @@ afterEach(async () => {
 });
 
 describe("Postgres durable-foundation migrations", () => {
+  it("uses one migration identity for LF and CRLF source files", () => {
+    const lf = definePostgresMigration(
+      "0001_line_endings",
+      "CREATE TABLE portable (\n  id text PRIMARY KEY\n);\n",
+    );
+    const crlf = definePostgresMigration(
+      "0001_line_endings",
+      "CREATE TABLE portable (\r\n  id text PRIMARY KEY\r\n);\r\n",
+    );
+
+    expect(crlf).toEqual(lf);
+    expect(crlf.sql).not.toContain("\r");
+  });
+
   it("applies from empty, records checksums, and safely skips a rerun", async () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);

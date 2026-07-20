@@ -73,7 +73,12 @@ GET /api/v2/jobs/{jobId}
 GET /api/v2/reproductions/{caseId}/bundle
 ```
 
-No OpenAI API key is used. The current repository is process-local and in-memory, so cases disappear on restart and are not suitable for a multi-instance deployment.
+No OpenAI API key is used. Local `offline` and `test` modes intentionally use
+process-local memory. A fully configured `preview` or `production` runtime
+selects the verified Neon Postgres, private Vercel Blob, and Vercel Queue
+adapters; partial hosted configuration fails closed instead of falling back to
+memory. See the [operations guide](docs/operations.md) before enabling a hosted
+mode.
 
 ## Run the exported reproduction directly
 
@@ -110,8 +115,8 @@ The committed four-case suite covers a verified positive, a negative no-match, a
 
 ## How it works
 
-1. ChatGPT/MCP, browser, and REST adapters translate requests into the same transport-neutral `CaseService` commands.
-2. The service creates caller-scoped, idempotent jobs and records ingestion, inspection, hypothesis, experiment, verification, minimization, and packaging phases.
+1. ChatGPT/MCP, browser, and REST adapters translate requests into the same transport-neutral case-operation commands.
+2. Offline modes use an in-memory repository. Hosted modes atomically reserve tenant-keyed Postgres case/job/idempotency/quota/audit/outbox state, publish an identifier-only Queue intent, execute the trusted worker under a lease, and commit a private content-addressed bundle before success.
 3. An offline or optional GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
 4. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
 5. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
@@ -158,6 +163,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Ordered remaining delivery specifications](docs/specs/README.md)
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
 - [Test and evidence strategy](docs/test-strategy.md)
+- [Hosted operations and recovery runbook](docs/operations.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
 - [Privacy behavior](docs/privacy.md)
@@ -167,11 +173,20 @@ This key is required only for the current optional standalone Responses route. I
 - [Completion audit](docs/completion-audit.md)
 - [Headless case/job service evidence](docs/evidence/milestone-6/README.md)
 - [ChatGPT MCP app evidence](docs/evidence/milestone-7/README.md)
+- [Durable provider evidence](docs/evidence/milestone-8a/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
 
-ReproForge is a pre-alpha Build Week prototype. The complete bundled JavaScript/TypeScript fixture journey works through the browser, REST v2, Streamable HTTP MCP, and the embedded proof widget with one in-memory case/job service. Durable persistence, external repository execution, private-repository access, tenant authentication, stable hosting, and plugin publication are intentionally unavailable. The synthetic four-case eval is a contract check, not a claim of real-world benchmark performance.
+ReproForge is a pre-alpha Build Week prototype. The complete bundled
+JavaScript/TypeScript fixture journey works through the browser, REST v2,
+Streamable HTTP MCP, and the embedded proof widget. Offline use remains
+in-memory and credential-free. The hosted durable foundation is implemented
+and provider-verified against Neon Postgres, private Vercel Blob, and Vercel
+Queue, but no stable hosted service is claimed. External repository execution,
+private-repository access, tenant authentication, production hosting, and
+plugin publication remain intentionally unavailable. The synthetic four-case
+eval is a contract check, not a claim of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

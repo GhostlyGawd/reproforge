@@ -5,7 +5,10 @@ import {
 } from "@modelcontextprotocol/ext-apps/server";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-import { CaseService, CaseServiceError } from "@/application/case-service";
+import {
+  CaseServiceError,
+  type CaseOperations,
+} from "@/application/case-service";
 import {
   bundleViewSchema,
   caseInputSchema,
@@ -35,7 +38,7 @@ const NO_AUTH = [{ type: "noauth" }] as const;
 
 type ServerOptions = {
   callerId: string;
-  service: CaseService;
+  service: CaseOperations;
 };
 
 function safeError(error: unknown) {

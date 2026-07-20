@@ -1,6 +1,6 @@
 import { WebStandardStreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js";
 
-import type { CaseService } from "@/application/case-service";
+import type { CaseOperations } from "@/application/case-service";
 import { createReproForgeMcpServer } from "@/mcp/server";
 
 const CORS_HEADERS = {
@@ -17,7 +17,7 @@ const CORS_HEADERS = {
 
 type McpHttpOptions = {
   callerId: string;
-  service: CaseService;
+  service: CaseOperations;
 };
 
 function withCors(response: Response): Response {

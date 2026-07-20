@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8a",
+  "capturedAt": "2026-07-20T01:01:56.3526465Z",
+  "sourceCommit": "b844b5725e67e04a9bb70cc78d3092105f35d490",
+  "command": "npm run test:providers",
+  "result": {
+    "filesPassed": 1,
+    "testsPassed": 6,
+    "testsFailed": 0,
+    "testsSkipped": 0
+  },
+  "providers": [
+    "Neon Postgres",
+    "private Vercel Blob",
+    "Vercel Queue"
+  ],
+  "tests": [
+    {
+      "name": "denies direct private-object access and verifies authorized round-trip deletion",
+      "result": "passed",
+      "observable": "direct access was denied; authorized bytes matched; deletion removed access"
+    },
+    {
+      "name": "accepts an identifier-only message through the live Vercel Queue service",
+      "result": "passed",
+      "observable": "provider returned a message identity for exactly six opaque fields"
+    },
+    {
+      "name": "runs the verified fixture end to end and preserves identity after reconstruction",
+      "result": "passed",
+      "observable": "one verified case, succeeded job, private bundle, Queue intent, and execution survived adapter reconstruction"
+    },
+    {
+      "name": "uses live Postgres serialization for concurrent starts and one expired-lease recovery",
+      "result": "passed",
+      "observable": "eight concurrent starts collapsed to one identity and one expired lease requeued exactly once"
+    },
+    {
+      "name": "reports live durable dependencies ready while the external runner stays unavailable",
+      "result": "passed",
+      "observable": "database, artifact store, and Queue boundary were ready; external runner remained explicitly unavailable"
+    },
+    {
+      "name": "exports, restores, and hash-verifies one tenant through live Neon and private Blob",
+      "result": "passed",
+      "observable": "source object removal, fresh-schema restore, manifest re-hash, private bundle read, and sanitized logs all passed"
+    }
+  ],
+  "postcondition": {
+    "appliedMigrations": 6,
+    "temporaryProviderTestSchemas": 0,
+    "activeProviderTestTenants": 0,
+    "remainingProviderTestCases": 0,
+    "remainingProviderTestArtifacts": 0
+  },
+  "redGreenRecord": [
+    {
+      "state": "red",
+      "evidence": "the original provider command exited zero with all six tests skipped when its internal flag was absent"
+    },
+    {
+      "state": "red",
+      "evidence": "the first restore drill failed because Neon correctly rejected search_path on the pooled endpoint"
+    },
+    {
+      "state": "green",
+      "evidence": "the command now enables its own live gate and the isolated restore drill uses the provisioned unpooled URL"
+    }
+  ],
+  "sanitization": "Synthetic bundled fixture only. No credentials, connection strings, provider resource IDs, provider URLs, object keys, test tenant IDs, personal data, customer data, or private repository content are recorded."
+}

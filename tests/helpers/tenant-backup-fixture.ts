@@ -6,6 +6,8 @@ import type { ArtifactDescriptor } from "@/application/ports/production";
 import { runTrustedSample } from "@/application/sample-case";
 import { createJob, transitionJob } from "@/domain/job";
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
+import type { PrivateBlobClient } from "@/infrastructure/artifacts/private-blob-client";
+import type { PostgresDatabase } from "@/infrastructure/postgres/database";
 
 import { MemoryPrivateBlobClient } from "./memory-private-blob-client";
 import { pglitePostgresDatabase } from "./pglite-postgres-database";
@@ -30,6 +32,18 @@ export type VerifiedBackupFixture = Readonly<{
 export async function seedVerifiedBackupTenant(
   database: PGlite,
   blobs: MemoryPrivateBlobClient,
+  tenantId = "tenant_backup",
+): Promise<VerifiedBackupFixture> {
+  return seedVerifiedBackupTenantWithAdapters(
+    pglitePostgresDatabase(database),
+    blobs,
+    tenantId,
+  );
+}
+
+export async function seedVerifiedBackupTenantWithAdapters(
+  database: PostgresDatabase,
+  blobs: PrivateBlobClient,
   tenantId = "tenant_backup",
 ): Promise<VerifiedBackupFixture> {
   const caseId = `case_${tenantId}`;
@@ -151,7 +165,7 @@ export async function seedVerifiedBackupTenant(
     tenantId,
   };
   const store = new ContentAddressedArtifactStore(
-    pglitePostgresDatabase(database),
+    database,
     blobs,
     { now: () => new Date(EVIDENCE_AT) },
   );

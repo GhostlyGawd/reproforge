@@ -52,6 +52,14 @@ Use Gherkin and Cucumber for user-observable behavior. Scenarios cover:
 
 Step definitions invoke application services, not browser selectors. Browser journeys separately prove the UI.
 
+Durable BDD steps boot PostgreSQL-in-WebAssembly through PGlite. Vitest runs
+PGlite files serially, and the Cucumber entrypoint applies V8's
+`--no-memory-protection-keys` only to that test process. This avoids a known
+V8 ThreadIsolation/JIT-page teardown race observed by other high-churn PGlite
+suites ([upstream harness record](https://github.com/prisma/prisma-next/pull/814));
+it does not alter application or production runtime flags. A fatal V8
+abort is a failed gate and is never treated as a test retry success.
+
 ### Browser and accessibility tests
 
 Use Playwright for the critical sample journey at desktop and mobile sizes. Assertions cover:

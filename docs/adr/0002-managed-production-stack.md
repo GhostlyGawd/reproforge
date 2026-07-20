@@ -17,6 +17,13 @@ The current application is a strict Next.js 16 TypeScript repository and the
 owner has authenticated Vercel access. No production project, provider
 credentials, domain, or paid resources are currently configured.
 
+Implementation note (2026-07-19): a Vercel project, private Blob store, free
+Neon resource, and Vercel Queue access are now connected for sanitized
+development-provider validation. The durable trusted fixture, readiness, and
+backup/restore gates pass against those services. Automatic branch previews do
+not constitute a stable public deployment; no production domain, OAuth tenant,
+GitHub App, sandbox runner, paid plan, or public service is implied.
+
 ## Decision
 
 Use a managed, Vercel-centered baseline while preserving provider-neutral
@@ -118,7 +125,9 @@ database, and artifacts as distinct trust domains.
 
 ## Operational consequences
 
-- Provisioning creates recurring provider costs owned by ReproForge.
+- The current acceptance resources use free development plans; any future
+  recurring provider cost is owned by ReproForge and requires an explicit
+  production gate.
 - Provider beta risk for Queues is recorded and covered by a Postgres outbox,
   recovery sweep, contract tests, metrics, and a replaceable interface.
 - Backups and restore drills cover Postgres and artifact manifests; ephemeral
