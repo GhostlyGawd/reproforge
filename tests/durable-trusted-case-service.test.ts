@@ -252,8 +252,8 @@ describe("durable trusted fixture orchestration", () => {
           expect(retried.reused).toBe(true);
           expect(retried.snapshot.case.id).toBe(first.snapshot.case.id);
           expect(retried.snapshot.job.id).toBe(first.snapshot.job.id);
-          expect(retried.snapshot.result?.bundle.bundleHash).toBe(
-            first.snapshot.result?.bundle.bundleHash,
+          expect(retried.snapshot.result?.bundle?.bundleHash).toBe(
+            first.snapshot.result?.bundle?.bundleHash,
           );
         }
       }),

@@ -6,6 +6,7 @@ import type { AuthorizedPrincipal } from "@/application/authorization";
 import type {
   EphemeralRepositoryArchiveCredential,
   RepositoryArchiveCredentialProvider,
+  RepositoryPrincipal,
   RepositorySourceProvider,
 } from "@/application/ports/repository-source";
 import type { GitHubAuthorizationStore } from "@/github/authorization-store";
@@ -110,7 +111,7 @@ export class GitHubRepositoryProvider
   }
 
   async listAuthorizedRepositories(
-    rawPrincipal: AuthorizedPrincipal,
+    rawPrincipal: RepositoryPrincipal,
     rawInput: { cursor?: string; limit?: number },
   ) {
     const principal = principalSchema.parse(rawPrincipal);
@@ -132,7 +133,7 @@ export class GitHubRepositoryProvider
   }
 
   async resolveRevision(
-    rawPrincipal: AuthorizedPrincipal,
+    rawPrincipal: RepositoryPrincipal,
     rawInput: { commitSha: string; repositoryId: string },
   ) {
     const principal = principalSchema.parse(rawPrincipal);
@@ -191,7 +192,7 @@ export class GitHubRepositoryProvider
   }
 
   async withArchiveCredential<Result>(
-    rawPrincipal: AuthorizedPrincipal,
+    rawPrincipal: RepositoryPrincipal,
     rawInput: {
       commitSha: string;
       fullName: string;

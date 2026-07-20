@@ -1,5 +1,7 @@
-import type { AuthorizedPrincipal } from "@/application/authorization";
-import type { RepositoryArchiveCredentialProvider } from "@/application/ports/repository-source";
+import type {
+  RepositoryArchiveCredentialProvider,
+  RepositoryPrincipal,
+} from "@/application/ports/repository-source";
 import {
   immutableRepositorySourceSchema,
   sandboxCommandSchema,
@@ -43,7 +45,7 @@ type Dependencies = {
 };
 
 type AcquireInput = {
-  principal: AuthorizedPrincipal;
+  principal: RepositoryPrincipal;
   session: IsolatedSandboxSession;
   source: ImmutableRepositorySource;
 };

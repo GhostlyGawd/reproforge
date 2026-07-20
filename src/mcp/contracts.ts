@@ -190,7 +190,16 @@ export const reproductionViewSchema = z
     kind: z.literal("reproduction"),
     proof: proofViewSchema,
     runs: z.array(runViewSchema),
-    sampleId: z.literal("cli-spaces"),
+    repository: z
+      .object({
+        commitSha: z.string().regex(/^[a-f0-9]{40}$/),
+        fullName: z.string().min(3).max(255),
+        private: z.boolean(),
+        repositoryId: z.string().min(1).max(128),
+      })
+      .strict()
+      .optional(),
+    sampleId: z.literal("cli-spaces").optional(),
     schemaVersion: z.literal("1.0"),
   })
   .strict();
@@ -257,8 +266,9 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
     jobState: snapshot.job.state,
     kind: "reproduction",
     proof: {
-      bundleHash: result?.bundle.bundleHash ?? null,
-      bundleReady: result?.summary.status === "VERIFIED",
+      bundleHash: result?.bundle?.bundleHash ?? null,
+      bundleReady:
+        result?.summary.status === "VERIFIED" && result.bundle !== null,
       candidateMatches: summary?.candidateMatches ?? 0,
       controlMatched: summary?.controlMatched ?? false,
       oracleId: summary?.oracleId ?? null,
@@ -273,7 +283,10 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
         id: run.id,
         role: run.id.includes("control") ? "control" : "candidate",
       })) ?? [],
-    sampleId: snapshot.sampleId,
+    ...(snapshot.repositorySource
+      ? { repository: snapshot.repositorySource }
+      : {}),
+    ...(snapshot.sampleId ? { sampleId: snapshot.sampleId } : {}),
     schemaVersion: "1.0",
   });
 }
@@ -284,7 +297,7 @@ export function toReproductionWidgetMeta(
 ): ReproductionWidgetMeta {
   return reproductionWidgetMetaSchema.parse({
     bundleFileNames: Object.keys(snapshot.result?.files ?? {}).sort(),
-    command: snapshot.result?.bundle.lock.command ?? null,
+    command: snapshot.result?.bundle?.lock.command ?? null,
     evidence: snapshot.result?.evidence ?? [],
     reason: snapshot.result?.summary.reason ?? snapshot.job.failure?.message ?? null,
     reused,

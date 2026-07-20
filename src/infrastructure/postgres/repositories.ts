@@ -237,8 +237,11 @@ function validateRecord(
 function serializeCaseDomain(record: DurableReproductionRecord): string {
   return JSON.stringify({
     case: record.snapshot.case,
+    ...(record.snapshot.repositorySource
+      ? { repositorySource: record.snapshot.repositorySource }
+      : {}),
     result: record.snapshot.result,
-    sampleId: record.snapshot.sampleId,
+    ...(record.snapshot.sampleId ? { sampleId: record.snapshot.sampleId } : {}),
     schemaVersion: record.snapshot.schemaVersion,
   });
 }

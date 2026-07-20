@@ -1,5 +1,7 @@
 import { createHash } from "node:crypto";
 
+import { z } from "zod";
+
 import {
   nodeRepositoryProfileSchema,
   sandboxCommandSchema,
@@ -40,13 +42,17 @@ export class DependencyPreparationError extends Error {
   }
 }
 
-export type DependencyMetadata = {
-  dependencyCount: number;
-  lockfileSha256: string;
-  lockfileVersion: 2 | 3;
-  packageJsonSha256: string;
-  policyVersion: "node-lock-v1";
-};
+export const dependencyMetadataSchema = z
+  .object({
+    dependencyCount: z.number().int().nonnegative().max(DEPENDENCY_LIMIT),
+    lockfileSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    lockfileVersion: z.union([z.literal(2), z.literal(3)]),
+    packageJsonSha256: z.string().regex(/^[a-f0-9]{64}$/),
+    policyVersion: z.literal("node-lock-v1"),
+  })
+  .strict();
+
+export type DependencyMetadata = z.infer<typeof dependencyMetadataSchema>;
 
 function sha256(bytes: Uint8Array): string {
   return createHash("sha256").update(bytes).digest("hex");
@@ -232,13 +238,13 @@ export function validateNodeDependencyMetadata(input: {
   if (dependencyCount > DEPENDENCY_LIMIT) {
     throw new DependencyPreparationError("UNSUPPORTED_SOURCE");
   }
-  return {
+  return dependencyMetadataSchema.parse({
     dependencyCount,
     lockfileSha256: sha256(input.lockBytes),
     lockfileVersion,
     packageJsonSha256: sha256(input.packageBytes),
     policyVersion: "node-lock-v1",
-  };
+  });
 }
 
 export type PreparedDependencies = DependencyMetadata & {

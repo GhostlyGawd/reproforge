@@ -166,7 +166,7 @@ if (process.env.NODE_ENV !== "production") {
 
 export async function getTrustedWebSample(): Promise<SampleCaseResult> {
   const snapshot = await getTrustedWebSnapshot();
-  if (!snapshot.result) {
+  if (!snapshot.result || "kind" in snapshot.result) {
     throw new Error("The trusted web sample did not complete inline");
   }
   return snapshot.result;

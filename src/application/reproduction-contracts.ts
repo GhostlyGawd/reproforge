@@ -7,6 +7,8 @@ import {
 import { reproBundleSchema } from "@/domain/bundle";
 import { reproCaseSchema } from "@/domain/case";
 import { reproductionJobSchema } from "@/domain/job";
+import { immutableRepositorySourceSchema } from "@/execution/contracts";
+import { repositoryProofResultSchema } from "@/execution/repository-proof";
 
 export const startTrustedReproductionSchema = z
   .object({
@@ -38,11 +40,37 @@ export const reproductionSnapshotSchema = z
   .object({
     case: reproCaseSchema,
     job: reproductionJobSchema,
-    result: sampleCaseResultSchema.nullable(),
-    sampleId: z.literal("cli-spaces"),
+    repositorySource: immutableRepositorySourceSchema.optional(),
+    result: z
+      .union([sampleCaseResultSchema, repositoryProofResultSchema])
+      .nullable(),
+    sampleId: z.literal("cli-spaces").optional(),
     schemaVersion: z.literal("2.0"),
   })
-  .strict();
+  .strict()
+  .superRefine((snapshot, context) => {
+    const trusted = snapshot.sampleId !== undefined;
+    const repository = snapshot.repositorySource !== undefined;
+    if (trusted === repository) {
+      context.addIssue({
+        code: "custom",
+        message: "snapshot requires exactly one trusted or repository source",
+        path: ["sampleId"],
+      });
+    }
+    const repositoryResult =
+      snapshot.result !== null && "kind" in snapshot.result;
+    if (
+      (repositoryResult && !repository) ||
+      (snapshot.result && !repositoryResult && !trusted)
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "result type must match the snapshot source",
+        path: ["result"],
+      });
+    }
+  });
 
 export const startResultSchema = z
   .object({

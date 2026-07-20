@@ -13,13 +13,18 @@ export type ResolvedRepositoryRevision = {
   repositoryId: string;
 };
 
+export type RepositoryPrincipal = Pick<
+  AuthorizedPrincipal,
+  "callerId" | "principalId" | "tenantId"
+>;
+
 export interface RepositorySourceProvider {
   listAuthorizedRepositories(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ): Promise<ListAuthorizedRepositoriesResult>;
   resolveRevision(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { commitSha: string; repositoryId: string },
   ): Promise<ResolvedRepositoryRevision>;
 }
@@ -31,7 +36,7 @@ export type EphemeralRepositoryArchiveCredential = {
 
 export interface RepositoryArchiveCredentialProvider {
   withArchiveCredential<Result>(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: {
       commitSha: string;
       fullName: string;

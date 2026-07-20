@@ -394,7 +394,12 @@ export class DurableTrustedCaseService implements CaseOperations {
   async exportReproBundle(rawQuery: GetReproduction): Promise<ExportResult> {
     const query = getReproductionSchema.parse(rawQuery);
     const snapshot = await this.getReproduction(query);
-    if (!snapshot.result || snapshot.result.summary.status !== "VERIFIED") {
+    if (
+      !snapshot.result ||
+      "kind" in snapshot.result ||
+      snapshot.result.summary.status !== "VERIFIED" ||
+      !snapshot.result.bundle
+    ) {
       throw new BundleNotReadyError();
     }
     const bytes = bundlePayloadBytes(snapshot.result);

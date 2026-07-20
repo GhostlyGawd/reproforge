@@ -167,24 +167,30 @@ export async function prepareExperimentWorkspaces(input: {
 const semverOutput = /^[0-9]+\.[0-9]+\.[0-9]+(?:-[A-Za-z0-9.-]+)?$/;
 const sha256Schema = z.string().regex(/^[a-f0-9]{64}$/);
 
-export type ExecutionEnvironmentProvenance = {
-  archiveSha256: string;
-  dependencyPolicyVersion: "node-lock-v1";
-  environmentHash: string;
-  executionPolicyVersion: "node-npm-v1";
-  lockfileSha256: string;
-  manifestSha256: string;
-  networkPolicy: "deny-all";
-  nodeVersion: string;
-  npmVersion: string;
-  packageJsonSha256: string;
-  provider: "vercel-sandbox";
-  runtime: "node22" | "node24";
-  schemaVersion: "1.0";
-  sourceCommitSha: string;
-  sourcePolicyVersion: "source-archive-v1";
-  vcpus: 2;
-};
+export const executionEnvironmentProvenanceSchema = z
+  .object({
+    archiveSha256: sha256Schema,
+    dependencyPolicyVersion: z.literal("node-lock-v1"),
+    environmentHash: sha256Schema,
+    executionPolicyVersion: z.literal("node-npm-v1"),
+    lockfileSha256: sha256Schema,
+    manifestSha256: sha256Schema,
+    networkPolicy: z.literal("deny-all"),
+    nodeVersion: z.string().regex(/^(?:22|24)\.[0-9]+\.[0-9]+$/),
+    npmVersion: z.string().regex(semverOutput),
+    packageJsonSha256: sha256Schema,
+    provider: z.literal("vercel-sandbox"),
+    runtime: z.enum(["node22", "node24"]),
+    schemaVersion: z.literal("1.0"),
+    sourceCommitSha: z.string().regex(/^[a-f0-9]{40}$/),
+    sourcePolicyVersion: z.literal("source-archive-v1"),
+    vcpus: z.literal(2),
+  })
+  .strict();
+
+export type ExecutionEnvironmentProvenance = z.infer<
+  typeof executionEnvironmentProvenanceSchema
+>;
 
 function readVersion(bytes: Uint8Array): string {
   try {
@@ -254,9 +260,9 @@ export async function collectExecutionEnvironment(input: {
   const environmentHash = createHash("sha256")
     .update(JSON.stringify(base))
     .digest("hex");
-  return {
+  return executionEnvironmentProvenanceSchema.parse({
     ...base,
     environmentHash,
     schemaVersion: "1.0",
-  };
+  });
 }

@@ -226,8 +226,8 @@ Then(
     assert.equal(retry.snapshot.case.id, first.snapshot.case.id);
     assert.equal(retry.snapshot.job.id, first.snapshot.job.id);
     assert.equal(
-      retry.snapshot.result?.bundle.bundleHash,
-      first.snapshot.result?.bundle.bundleHash,
+      retry.snapshot.result?.bundle?.bundleHash,
+      first.snapshot.result?.bundle?.bundleHash,
     );
   },
 );

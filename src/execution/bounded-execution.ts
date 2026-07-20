@@ -122,7 +122,7 @@ export function enforceArtifactBudget(
   return { artifactBytes, artifactCount: artifacts.length };
 }
 
-const capturedOutputSchema = z
+export const capturedOutputSchema = z
   .object({
     originalBytes: z.number().int().nonnegative().safe(),
     sha256: z.string().regex(/^[a-f0-9]{64}$/),
@@ -174,12 +174,56 @@ export type BoundedRun = {
   run: RunResult;
 };
 
+export const boundedRunSchema = z
+  .object({
+    capture: z
+      .object({
+        stderr: capturedOutputSchema,
+        stdout: capturedOutputSchema,
+      })
+      .strict(),
+    role: z.enum(["candidate", "control"]),
+    run: runResultSchema,
+  })
+  .strict();
+
 export type BoundedExperimentResult = {
   candidates: BoundedRun[];
   control: BoundedRun;
   limitsPolicyVersion: "sandbox-limits-v1";
   totalDurationMs: number;
 };
+
+export const boundedExperimentResultSchema = z
+  .object({
+    candidates: z.array(boundedRunSchema).min(1).max(EXECUTION_LIMITS.maxRuns),
+    control: boundedRunSchema,
+    limitsPolicyVersion: z.literal("sandbox-limits-v1"),
+    totalDurationMs: z
+      .number()
+      .int()
+      .nonnegative()
+      .max(EXECUTION_LIMITS.maxTotalAttemptMs),
+  })
+  .strict()
+  .superRefine((result, context) => {
+    if (result.control.role !== "control") {
+      context.addIssue({
+        code: "custom",
+        message: "control run must have the control role",
+        path: ["control", "role"],
+      });
+    }
+    result.candidates.forEach((candidate, index) => {
+      if (candidate.role !== "candidate") {
+        context.addIssue({
+          code: "custom",
+          message: "candidate run must have the candidate role",
+          path: ["candidates", index, "role"],
+        });
+      }
+    });
+  });
 
 const SUPERVISOR_DIRECTORY = `${SANDBOX_ROOT}/reproforge`;
 const SUPERVISOR_PATH = `${SUPERVISOR_DIRECTORY}/runner-supervisor.mjs`;
@@ -214,6 +258,113 @@ function sanitizeCapture(
 }
 
 export class BoundedExperimentExecutor {
+  async executeRun(input: {
+    command: SandboxCommand;
+    environment: ExecutionEnvironmentProvenance;
+    networkPolicy: "deny-all";
+    runId: string;
+    secrets: string[];
+    session: IsolatedSandboxSession;
+    signal?: AbortSignal;
+  }): Promise<BoundedRun> {
+    if (
+      input.networkPolicy !== "deny-all" ||
+      input.environment.networkPolicy !== "deny-all" ||
+      input.signal?.aborted
+    ) {
+      throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
+    }
+    const command = sandboxCommandSchema.parse(input.command);
+    if (command.phase !== "control" && command.phase !== "candidate") {
+      throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
+    }
+    const id = z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
+      .parse(input.runId);
+    await input.session.makeDirectory(SUPERVISOR_DIRECTORY);
+    const configPath = `${SUPERVISOR_DIRECTORY}/${id}.config.json`;
+    const resultPath = `${SUPERVISOR_DIRECTORY}/${id}.result.json`;
+    const workspaceRoot = command.cwd.split("/").slice(0, 5).join("/");
+    const config = {
+      args: command.args,
+      cwd: command.cwd,
+      executable: command.executable,
+      limits: {
+        commandTimeoutMs: EXECUTION_LIMITS.commandTimeoutMs,
+        maxMemoryBytes: EXECUTION_LIMITS.maxMemoryBytes,
+        maxOutputBytes: EXECUTION_LIMITS.maxOutputBytes,
+        maxProcesses: EXECUTION_LIMITS.maxProcesses,
+        maxWorkspaceBytes: EXECUTION_LIMITS.maxWorkspaceBytes,
+      },
+      phase: command.phase,
+      workspaceRoot,
+    };
+    await input.session.writeFiles([
+      {
+        content: new TextEncoder().encode(RUNNER_SUPERVISOR_SOURCE),
+        path: SUPERVISOR_PATH,
+      },
+      {
+        content: new TextEncoder().encode(JSON.stringify(config)),
+        path: configPath,
+      },
+    ]);
+    let launched;
+    try {
+      launched = await input.session.run(
+        sandboxCommandSchema.parse({
+          args: [SUPERVISOR_PATH, configPath, resultPath],
+          cwd: command.cwd,
+          executable: "node",
+          phase: command.phase,
+          timeoutMs: 125_000,
+        }),
+        { signal: input.signal },
+      );
+    } catch {
+      throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
+    }
+    if (launched.exitCode !== 0) {
+      throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
+    }
+    const rawResult = await input.session.readFile(resultPath);
+    if (
+      !rawResult ||
+      rawResult.byteLength > EXECUTION_LIMITS.maxOutputBytes + 64 * 1024
+    ) {
+      throw new ExecutionLimitError("OUTPUT_INVALID");
+    }
+    let result: SupervisorResult;
+    try {
+      result = supervisorResultSchema.parse(
+        JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(rawResult)),
+      );
+    } catch {
+      throw new ExecutionLimitError("OUTPUT_INVALID");
+    }
+    if (result.termination !== null) mapTermination(result.termination);
+    const stdout = sanitizeCapture(result.stdout, input.secrets);
+    const stderr = sanitizeCapture(result.stderr, input.secrets);
+    const role = command.phase === "control" ? "control" : "candidate";
+    const run = runResultSchema.parse({
+      command: displayCommand(command),
+      durationMs: result.durationMs,
+      environmentHash: input.environment.environmentHash,
+      exitCode: result.exitCode,
+      id,
+      stderr: stderr.text,
+      stdout: stdout.text,
+    });
+    return boundedRunSchema.parse({
+      capture: { stderr, stdout },
+      role,
+      run,
+    });
+  }
+
   async execute(input: {
     environment: ExecutionEnvironmentProvenance;
     networkPolicy: "deny-all";
@@ -238,110 +389,35 @@ export class BoundedExperimentExecutor {
     ) {
       throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
     }
-    await input.session.makeDirectory(SUPERVISOR_DIRECTORY);
     const runs: BoundedRun[] = [];
     let totalDurationMs = 0;
     for (const [index, command] of experimentCommands.entries()) {
-      if (input.signal?.aborted) {
-        throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
-      }
       const id = command.phase === "control" ? "control-1" : `candidate-${index}`;
-      const configPath = `${SUPERVISOR_DIRECTORY}/${id}.config.json`;
-      const resultPath = `${SUPERVISOR_DIRECTORY}/${id}.result.json`;
-      const workspaceRoot = command.cwd
-        .split("/")
-        .slice(0, 5)
-        .join("/");
-      const config = {
-        args: command.args,
-        cwd: command.cwd,
-        executable: command.executable,
-        limits: {
-          commandTimeoutMs: EXECUTION_LIMITS.commandTimeoutMs,
-          maxMemoryBytes: EXECUTION_LIMITS.maxMemoryBytes,
-          maxOutputBytes: EXECUTION_LIMITS.maxOutputBytes,
-          maxProcesses: EXECUTION_LIMITS.maxProcesses,
-          maxWorkspaceBytes: EXECUTION_LIMITS.maxWorkspaceBytes,
-        },
-        phase: command.phase,
-        workspaceRoot,
-      };
-      await input.session.writeFiles([
-        {
-          content: new TextEncoder().encode(RUNNER_SUPERVISOR_SOURCE),
-          path: SUPERVISOR_PATH,
-        },
-        {
-          content: new TextEncoder().encode(JSON.stringify(config)),
-          path: configPath,
-        },
-      ]);
-      let launched;
-      try {
-        launched = await input.session.run(
-          sandboxCommandSchema.parse({
-            args: [SUPERVISOR_PATH, configPath, resultPath],
-            cwd: command.cwd,
-            executable: "node",
-            phase: command.phase,
-            timeoutMs: 125_000,
-          }),
-          { signal: input.signal },
-        );
-      } catch {
-        throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
-      }
-      if (launched.exitCode !== 0) {
-        throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
-      }
-      const rawResult = await input.session.readFile(resultPath);
-      if (
-        !rawResult ||
-        rawResult.byteLength > EXECUTION_LIMITS.maxOutputBytes + 64 * 1024
-      ) {
-        throw new ExecutionLimitError("OUTPUT_INVALID");
-      }
-      let result: SupervisorResult;
-      try {
-        result = supervisorResultSchema.parse(
-          JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(rawResult)),
-        );
-      } catch {
-        throw new ExecutionLimitError("OUTPUT_INVALID");
-      }
-      if (result.termination !== null) mapTermination(result.termination);
-      totalDurationMs += result.durationMs;
+      const run = await this.executeRun({
+        command,
+        environment: input.environment,
+        networkPolicy: input.networkPolicy,
+        runId: id,
+        secrets: input.secrets,
+        session: input.session,
+        signal: input.signal,
+      });
+      totalDurationMs += run.run.durationMs;
       if (totalDurationMs > EXECUTION_LIMITS.maxTotalAttemptMs) {
         throw new ExecutionLimitError("ATTEMPT_TIMEOUT");
       }
-      const stdout = sanitizeCapture(result.stdout, input.secrets);
-      const stderr = sanitizeCapture(result.stderr, input.secrets);
-      const role = command.phase === "control" ? "control" : "candidate";
-      const run = runResultSchema.parse({
-        command: displayCommand(command),
-        durationMs: result.durationMs,
-        environmentHash: input.environment.environmentHash,
-        exitCode: result.exitCode,
-        id,
-        stderr: stderr.text,
-        stdout: stdout.text,
-      });
-      runs.push({
-        capture: { stderr, stdout },
-        role,
-        run,
-      });
+      runs.push(run);
     }
     const control = runs.find((run) => run.role === "control");
     const candidates = runs.filter((run) => run.role === "candidate");
     if (!control || candidates.length !== plan.requiredRuns) {
       throw new ExecutionLimitError("PROVIDER_INTERRUPTED");
     }
-    return {
+    return boundedExperimentResultSchema.parse({
       candidates,
       control,
       limitsPolicyVersion: EXECUTION_LIMITS.policyVersion,
       totalDurationMs,
-    };
+    });
   }
 }

@@ -2,8 +2,10 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import type { AuthorizedPrincipal } from "@/application/authorization";
-import type { RepositorySourceProvider } from "@/application/ports/repository-source";
+import type {
+  RepositoryPrincipal,
+  RepositorySourceProvider,
+} from "@/application/ports/repository-source";
 import {
   immutableRepositorySourceSchema,
   type ImmutableRepositorySource,
@@ -167,7 +169,7 @@ const sourceRequestSchema = z
 
 export async function resolveImmutableRepositorySource(
   provider: RepositorySourceProvider,
-  principal: AuthorizedPrincipal,
+  principal: RepositoryPrincipal,
   rawInput: { commitSha: string; repositoryId: string },
 ): Promise<ImmutableRepositorySource> {
   const input = sourceRequestSchema.parse(rawInput);
@@ -187,7 +189,7 @@ export async function resolveImmutableRepositorySource(
   });
 }
 
-const sourceProvenanceSchema = z
+export const sourceProvenanceSchema = z
   .object({
     acquiredAt: z.string().datetime({ offset: true }),
     archiveBytes: z.number().int().nonnegative().safe(),

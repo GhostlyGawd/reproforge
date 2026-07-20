@@ -133,6 +133,35 @@ describe("bounded experiment execution", () => {
     expect(JSON.stringify(caught)).not.toContain("candidate failure");
   });
 
+  it("executes one selected experiment in a fresh restored session", async () => {
+    const fixture = harness();
+    const plan = buildNodeExecutionPlan({ profile, requiredRuns: 3, source });
+    const command = plan.commands.find(
+      (candidate) => candidate.phase === "candidate",
+    );
+    expect(command).toBeDefined();
+
+    const result = await new BoundedExperimentExecutor().executeRun({
+      command: command!,
+      environment,
+      networkPolicy: "deny-all",
+      runId: "candidate-1",
+      secrets: ["synthetic-runtime-secret"],
+      session: fixture.session,
+    });
+
+    expect(result).toMatchObject({
+      role: "candidate",
+      run: {
+        environmentHash: environment.environmentHash,
+        exitCode: 1,
+        id: "candidate-1",
+        stderr: expect.stringContaining("[REDACTED]"),
+      },
+    });
+    expect(fixture.commands).toHaveLength(1);
+  });
+
   it("truncates deterministically while preserving original size and hash", () => {
     const bytes = new TextEncoder().encode("abcdef");
     expect(captureBoundedOutput(bytes, 4, [])).toEqual({
