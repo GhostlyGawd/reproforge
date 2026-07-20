@@ -12,7 +12,7 @@ const migrations = [
   sql: readFileSync(
     new URL(`../src/infrastructure/postgres/migrations/${id}.sql`, import.meta.url),
     "utf8",
-  ),
+  ).replace(/\r\n?/g, "\n"),
 }));
 
 const output = [

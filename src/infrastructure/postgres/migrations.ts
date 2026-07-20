@@ -56,7 +56,7 @@ export function definePostgresMigration(
   id: string,
   sql: string,
 ): PostgresMigration {
-  const normalizedSql = sql.trim();
+  const normalizedSql = sql.replace(/\r\n?/g, "\n").trim();
   if (!/^[0-9]{4}_[a-z0-9_]+$/.test(id) || normalizedSql.length === 0) {
     throw new MigrationIntegrityError({
       code: "INVALID_MIGRATION_MANIFEST",

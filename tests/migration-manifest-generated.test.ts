@@ -13,7 +13,10 @@ describe("generated Postgres migration manifest", () => {
           import.meta.url,
         ),
         "utf8",
-      ).trim();
+      )
+        .replace(/\r\n?/g, "\n")
+        .trim();
+      expect(migration.sql).not.toContain("\r");
       expect(migration.sql).toBe(source);
     }
   });
