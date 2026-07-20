@@ -1,6 +1,7 @@
 import { PGlite } from "@electric-sql/pglite";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import fc from "fast-check";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { DurableTrustedCaseService } from "@/application/durable-trusted-case-service";
@@ -30,7 +31,7 @@ const TENANT_ID = "tenant_trusted_provider_fixture";
 const REST_CALLER = "rest:anonymous-trusted-sample";
 
 class MonotonicClock {
-  private value = Date.parse("2026-07-19T20:00:00.000Z");
+  private value = Date.parse("2026-07-20T20:00:00.000Z");
 
   now(): Date {
     this.value += 1_000;
@@ -229,5 +230,38 @@ describe("durable trusted fixture orchestration", () => {
       await client.close();
       await server.close();
     }
+  });
+
+  it("preserves one durable identity for 250 generated restart/retry sequences", async () => {
+    const fixture = await harness();
+    const command = {
+      callerId: REST_CALLER,
+      idempotencyKey: "property-restart-retry",
+      sampleId: "cli-spaces" as const,
+    };
+    const first = await fixture
+      .createService()
+      .startTrustedReproduction(command);
+
+    await fc.assert(
+      fc.asyncProperty(fc.integer({ min: 1, max: 8 }), async (retryCount) => {
+        for (let index = 0; index < retryCount; index += 1) {
+          const retried = await fixture
+            .createService()
+            .startTrustedReproduction(command);
+          expect(retried.reused).toBe(true);
+          expect(retried.snapshot.case.id).toBe(first.snapshot.case.id);
+          expect(retried.snapshot.job.id).toBe(first.snapshot.job.id);
+          expect(retried.snapshot.result?.bundle.bundleHash).toBe(
+            first.snapshot.result?.bundle.bundleHash,
+          );
+        }
+      }),
+      { numRuns: 250 },
+    );
+
+    expect(fixture.executeTrustedSample).toHaveBeenCalledTimes(1);
+    expect(fixture.messages).toHaveLength(1);
+    expect(fixture.blobs.puts).toHaveLength(1);
   });
 });

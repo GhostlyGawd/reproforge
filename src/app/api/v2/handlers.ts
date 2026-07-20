@@ -2,7 +2,10 @@ import { randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
-import { CaseService, CaseServiceError } from "@/application/case-service";
+import {
+  CaseServiceError,
+  type CaseOperations,
+} from "@/application/case-service";
 
 const API_SCHEMA_VERSION = "2.0" as const;
 const TRUSTED_CALLER = "rest:anonymous-trusted-sample";
@@ -77,7 +80,7 @@ function mapError(error: unknown, requestId: string): Response {
 }
 
 export function createStartReproductionHandler(
-  service: CaseService,
+  service: CaseOperations,
   nextRequestId: NextRequestId = randomUUID,
 ) {
   return async function POST(request: Request): Promise<Response> {
@@ -107,7 +110,7 @@ export function createStartReproductionHandler(
 }
 
 export function createGetReproductionHandler(
-  service: CaseService,
+  service: CaseOperations,
   nextRequestId: NextRequestId = randomUUID,
 ) {
   return async function GET(
@@ -128,7 +131,7 @@ export function createGetReproductionHandler(
 }
 
 export function createGetJobHandler(
-  service: CaseService,
+  service: CaseOperations,
   nextRequestId: NextRequestId = randomUUID,
 ) {
   return async function GET(
@@ -149,7 +152,7 @@ export function createGetJobHandler(
 }
 
 export function createExportBundleHandler(
-  service: CaseService,
+  service: CaseOperations,
   nextRequestId: NextRequestId = randomUUID,
 ) {
   return async function GET(

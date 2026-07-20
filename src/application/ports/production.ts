@@ -170,6 +170,10 @@ export type DurableReproductionRecord = {
   createdAt: string;
   idempotencyKey: string;
   jobId: string;
+  requestedBudget?: {
+    maxToolCalls: number;
+    requiredRuns: number;
+  };
   snapshot: ReproductionSnapshot;
   tenantId: string;
   updatedAt: string;

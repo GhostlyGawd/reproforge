@@ -89,6 +89,17 @@ type CaseServiceDependencies = {
   repository: ReproductionRepository;
 };
 
+export interface CaseOperations {
+  exportReproBundle(rawQuery: GetReproduction): Promise<ExportResult>;
+  getJob(rawQuery: GetJob): Promise<JobSnapshot>;
+  getReproduction(
+    rawQuery: GetReproduction,
+  ): Promise<ReproductionSnapshot>;
+  startTrustedReproduction(
+    rawCommand: StartTrustedReproduction,
+  ): Promise<StartResult>;
+}
+
 function toSnapshot(record: StoredReproduction): ReproductionSnapshot {
   return reproductionSnapshotSchema.parse({
     case: record.case,
@@ -99,7 +110,7 @@ function toSnapshot(record: StoredReproduction): ReproductionSnapshot {
   });
 }
 
-export class CaseService {
+export class CaseService implements CaseOperations {
   private readonly executeTrustedSample: (
     options?: TrustedSampleOptions,
   ) => Promise<SampleCaseResult>;

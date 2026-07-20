@@ -10,6 +10,7 @@ import {
   type DurableStartInput,
 } from "@/application/durable-start";
 import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
+import { DurableTrustedCaseService } from "@/application/durable-trusted-case-service";
 import { requestDurableCancellation } from "@/application/durable-cancellation";
 import type { DurableReproductionRecord } from "@/application/ports/production";
 import { createCase, transitionCase } from "@/domain/case";
@@ -18,6 +19,7 @@ import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/conten
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
   PostgresDurableReproductionRepository,
+  PostgresOutbox,
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
@@ -98,6 +100,45 @@ function bddStartInput(record: DurableReproductionRecord): DurableStartInput {
   };
 }
 
+function createBddDurableTrustedService(world: ReproForgeWorld) {
+  assert(world.durablePostgres);
+  assert(world.durableRepository);
+  assert(world.durableUnitOfWork);
+  world.durableBlobClient ??= new MemoryPrivateBlobClient();
+  world.durableArtifactStore = new ContentAddressedArtifactStore(
+    world.durablePostgres,
+    world.durableBlobClient,
+    { now: () => new Date((world.durableTrustedClockMs += 1_000)) },
+  );
+  return new DurableTrustedCaseService({
+    artifactStore: world.durableArtifactStore,
+    clock: { now: () => new Date((world.durableTrustedClockMs += 1_000)) },
+    identifiers: {
+      nextCaseId: () => "case_bdd_trusted_service",
+      nextJobId: () => "job_bdd_trusted_service",
+      nextWorkerOwnerId: () => "worker_bdd_trusted_service",
+    },
+    leaseSeconds: 90,
+    outbox: new PostgresOutbox(world.durablePostgres),
+    outboxPolicy: {
+      claimSeconds: 30,
+      maxAttempts: 5,
+      maxBatchSize: 25,
+      ownerId: "publisher_bdd_trusted_service",
+    },
+    queue: {
+      send: async (message) => {
+        world.durableTrustedMessages.push(structuredClone(message));
+        return { messageId: `provider_${message.eventId}` };
+      },
+    },
+    repository: world.durableRepository,
+    retentionDays: 30,
+    tenantId: "tenant_bdd_durable",
+    unitOfWork: world.durableUnitOfWork,
+  });
+}
+
 After(async function (this: ReproForgeWorld) {
   if (this.durableDatabase) await this.durableDatabase.close();
   if (this.backupSourceDatabase) await this.backupSourceDatabase.close();
@@ -127,6 +168,109 @@ Given(
     this.durableRecoverySummaries = [];
     await this.durableDatabase.query("INSERT INTO tenants (id) VALUES ($1)", [
       this.durableRecord.tenantId,
+    ]);
+  },
+);
+
+When(
+  "the caller runs the trusted fixture through the durable service",
+  async function (this: ReproForgeWorld) {
+    this.durableTrustedCaseService = createBddDurableTrustedService(this);
+    this.durableTrustedStarts.push(
+      await this.durableTrustedCaseService.startTrustedReproduction({
+        callerId: "caller_bdd_trusted_service",
+        idempotencyKey: "key_bdd_trusted_service",
+        sampleId: "cli-spaces",
+      }),
+    );
+  },
+);
+
+When(
+  "the durable trusted service is recreated",
+  function (this: ReproForgeWorld) {
+    this.durableRepository = new PostgresDurableReproductionRepository(
+      this.durablePostgres!,
+    );
+    this.durableUnitOfWork = new PostgresUnitOfWork(this.durablePostgres!);
+    this.durableTrustedCaseService = createBddDurableTrustedService(this);
+  },
+);
+
+When(
+  "the caller retries the trusted fixture through the durable service",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableTrustedCaseService);
+    this.durableTrustedStarts.push(
+      await this.durableTrustedCaseService.startTrustedReproduction({
+        callerId: "caller_bdd_trusted_service",
+        idempotencyKey: "key_bdd_trusted_service",
+        sampleId: "cli-spaces",
+      }),
+    );
+  },
+);
+
+Then(
+  "the verified case job and bundle identities are unchanged",
+  function (this: ReproForgeWorld) {
+    assert.equal(this.durableTrustedStarts.length, 2);
+    const [first, retry] = this.durableTrustedStarts;
+    assert(first);
+    assert(retry);
+    assert.equal(first.reused, false);
+    assert.equal(retry.reused, true);
+    assert.equal(first.snapshot.case.state, "VERIFIED");
+    assert.equal(first.snapshot.job.state, "SUCCEEDED");
+    assert.equal(first.snapshot.result?.summary.status, "VERIFIED");
+    assert.equal(retry.snapshot.case.id, first.snapshot.case.id);
+    assert.equal(retry.snapshot.job.id, first.snapshot.job.id);
+    assert.equal(
+      retry.snapshot.result?.bundle.bundleHash,
+      first.snapshot.result?.bundle.bundleHash,
+    );
+  },
+);
+
+Then(
+  "exactly one identifier-only provider message was published",
+  function (this: ReproForgeWorld) {
+    assert.equal(this.durableTrustedMessages.length, 1);
+    const [message] = this.durableTrustedMessages;
+    assert(message);
+    assert.deepEqual(Object.keys(message).sort(), [
+      "caseId",
+      "eventId",
+      "jobId",
+      "kind",
+      "schemaVersion",
+      "tenantId",
+    ]);
+  },
+);
+
+Then(
+  "exactly one private verified bundle is durable",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    const result = await this.durableDatabase.query<{
+      access_class: string;
+      count: string;
+      kind: string;
+      status: string;
+    }>(
+      `SELECT count(*)::text AS count, min(kind) AS kind,
+              min(access_class) AS access_class, min(status) AS status
+         FROM artifacts
+        WHERE tenant_id = 'tenant_bdd_durable'`,
+    );
+    assert.deepEqual(result.rows, [
+      {
+        access_class: "PRIVATE",
+        count: "1",
+        kind: "bundle",
+        status: "AVAILABLE",
+      },
     ]);
   },
 );

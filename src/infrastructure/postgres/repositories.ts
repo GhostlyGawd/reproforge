@@ -56,6 +56,7 @@ type DurableRow = {
   job_state: string;
   job_updated_at: Date | string;
   job_version: string | number;
+  source_descriptor: unknown;
   tenant_id: string;
   updated_at: Date | string;
 };
@@ -67,6 +68,7 @@ SELECT
   i.idempotency_key,
   trim(i.command_hash) AS command_hash,
   c.id AS case_id,
+  c.source_descriptor,
   c.domain_state AS case_domain_state,
   c.state AS case_state,
   c.version AS case_version,
@@ -203,6 +205,13 @@ function validateRecord(
       record.caseId !== record.snapshot.case.id ||
       record.jobId !== record.snapshot.job.id ||
       record.caseId !== record.snapshot.job.caseId ||
+      (record.requestedBudget !== undefined &&
+        (!Number.isInteger(record.requestedBudget.maxToolCalls) ||
+          record.requestedBudget.maxToolCalls < 1 ||
+          record.requestedBudget.maxToolCalls > 20 ||
+          !Number.isInteger(record.requestedBudget.requiredRuns) ||
+          record.requestedBudget.requiredRuns < 1 ||
+          record.requestedBudget.requiredRuns > 5)) ||
       !Number.isSafeInteger(record.version) ||
       record.version < 1 ||
       (options.initial && record.version !== 1) ||
@@ -237,6 +246,12 @@ function serializeCaseDomain(record: DurableReproductionRecord): string {
 function rowToRecord(row: DurableRow): DurableReproductionRecord {
   try {
     const domain = objectValue(row.case_domain_state);
+    const sourceDescriptor = objectValue(row.source_descriptor);
+    const requestedBudget = sourceDescriptor.budget;
+    const parsedBudget =
+      requestedBudget === undefined
+        ? undefined
+        : objectValue(requestedBudget);
     const version = integer(row.case_version);
     if (version !== integer(row.job_version)) throw new CorruptDurableRecordError();
     const failure =
@@ -272,6 +287,14 @@ function rowToRecord(row: DurableRow): DurableReproductionRecord {
       createdAt: timestamp(row.created_at),
       idempotencyKey: row.idempotency_key,
       jobId: row.job_id,
+      ...(parsedBudget
+        ? {
+            requestedBudget: {
+              maxToolCalls: Number(parsedBudget.maxToolCalls),
+              requiredRuns: Number(parsedBudget.requiredRuns),
+            },
+          }
+        : {}),
       snapshot,
       tenantId: row.tenant_id,
       updatedAt: timestamp(row.updated_at),
@@ -1146,7 +1169,12 @@ export class PostgresDurableReproductionRepository
       [
         record.tenantId,
         record.caseId,
-        JSON.stringify({ sampleId: record.snapshot.sampleId }),
+        JSON.stringify({
+          ...(record.requestedBudget
+            ? { budget: record.requestedBudget }
+            : {}),
+          sampleId: record.snapshot.sampleId,
+        }),
         record.snapshot.case.state,
         serializeCaseDomain(record),
         record.snapshot.schemaVersion,

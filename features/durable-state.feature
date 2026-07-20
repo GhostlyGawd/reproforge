@@ -16,6 +16,15 @@ Feature: Durable reproduction state
     Then exactly one durable case and job exist
     And the retry returns the original durable case and job
 
+  Scenario: A trusted reproduction survives a complete durable service restart
+    Given an empty durable Postgres store for a tenant
+    When the caller runs the trusted fixture through the durable service
+    And the durable trusted service is recreated
+    And the caller retries the trusted fixture through the durable service
+    Then the verified case job and bundle identities are unchanged
+    And exactly one identifier-only provider message was published
+    And exactly one private verified bundle is durable
+
   Scenario: Conflicting use of an idempotency key is rejected
     Given an empty durable Postgres store for a tenant
     When the caller reserves a durable reproduction
