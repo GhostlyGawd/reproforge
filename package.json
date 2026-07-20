@@ -23,6 +23,7 @@
     "fixture:repro": "node fixtures/cli-spaces/repro.mjs",
     "mcp:smoke": "tsx scripts/run-mcp-smoke.ts",
     "eval": "tsx scripts/run-evals.ts",
+    "generate:migrations": "node scripts/generate-migration-manifest.mjs",
     "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run build",
     "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser"
   },

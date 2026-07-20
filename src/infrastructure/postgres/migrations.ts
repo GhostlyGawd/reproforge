@@ -1,11 +1,11 @@
 import { createHash } from "node:crypto";
-import { readFileSync } from "node:fs";
 
 import type {
   PostgresDatabase,
   PostgresExecutor,
   PostgresQueryResult as DatabaseQueryResult,
 } from "./database";
+import { POSTGRES_MIGRATION_SOURCES } from "./migration-manifest.generated";
 
 export type PostgresQueryResult<Row extends Record<string, unknown>> =
   DatabaseQueryResult<Row>;
@@ -52,33 +52,6 @@ CREATE TABLE IF NOT EXISTS reproforge_schema_migrations (
     CHECK (checksum ~ '^[a-f0-9]{64}$')
 );`;
 
-const migrationSources = [
-  {
-    id: "0001_durable_foundation",
-    url: new URL("./migrations/0001_durable_foundation.sql", import.meta.url),
-  },
-  {
-    id: "0002_durable_invariants",
-    url: new URL("./migrations/0002_durable_invariants.sql", import.meta.url),
-  },
-  {
-    id: "0003_artifact_lifecycle",
-    url: new URL("./migrations/0003_artifact_lifecycle.sql", import.meta.url),
-  },
-  {
-    id: "0004_queue_delivery",
-    url: new URL("./migrations/0004_queue_delivery.sql", import.meta.url),
-  },
-  {
-    id: "0005_governance_lifecycle",
-    url: new URL("./migrations/0005_governance_lifecycle.sql", import.meta.url),
-  },
-  {
-    id: "0006_backup_restore",
-    url: new URL("./migrations/0006_backup_restore.sql", import.meta.url),
-  },
-] as const;
-
 export function definePostgresMigration(
   id: string,
   sql: string,
@@ -99,8 +72,8 @@ export function definePostgresMigration(
 }
 
 export function loadPostgresMigrations(): PostgresMigration[] {
-  return migrationSources.map(({ id, url }) =>
-    definePostgresMigration(id, readFileSync(url, "utf8")),
+  return POSTGRES_MIGRATION_SOURCES.map(({ id, sql }) =>
+    definePostgresMigration(id, sql),
   );
 }
 
