@@ -20,6 +20,13 @@ import { createCase } from "@/domain/case";
 import { createJob } from "@/domain/job";
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
+import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
+import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
+import {
+  InMemoryOperationalMetrics,
+  JsonOperationalLogger,
+} from "@/infrastructure/operations/observability";
+import { createRuntimeHealthService } from "@/infrastructure/operations/runtime-health";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
   createNeonPostgresDatabase,
@@ -33,6 +40,11 @@ import {
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 
+import {
+  BACKUP_BODY_MARKER,
+  seedVerifiedBackupTenantWithAdapters,
+} from "../helpers/tenant-backup-fixture";
+
 vi.setConfig({ hookTimeout: 120_000, testTimeout: 120_000 });
 
 const LIVE = process.env.REPROFORGE_LIVE_PROVIDER_TESTS === "1";
@@ -45,6 +57,18 @@ function requiredEnvironment(name: string): string {
 
 function suffix(): string {
   return `${Date.now()}_${randomUUID().replaceAll("-", "").slice(0, 12)}`;
+}
+
+function databaseUrlWithSearchPath(
+  connectionString: string,
+  schema: string,
+): string {
+  if (!/^[a-z][a-z0-9_]{0,62}$/.test(schema)) {
+    throw new Error("Invalid provider-test schema");
+  }
+  const url = new URL(connectionString);
+  url.searchParams.set("options", `-csearch_path=${schema}`);
+  return url.toString();
 }
 
 function tenantScope(tenantId: string, callerId: string): TenantScope {
@@ -395,6 +419,157 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
       ).resolves.toEqual({ cancelled: 0, exhausted: 0, requeued: 0 });
     } finally {
       await cleanTenant(tenantId, callerId);
+    }
+  });
+
+  it("reports live durable dependencies ready while the external runner stays unavailable", async () => {
+    const logs: string[] = [];
+    const health = createRuntimeHealthService({
+      clock: { now: () => new Date() },
+      environment: {
+        BLOB_READ_WRITE_TOKEN: requiredEnvironment("BLOB_READ_WRITE_TOKEN"),
+        DATABASE_URL: requiredEnvironment("DATABASE_URL"),
+        REPROFORGE_BASE_URL: "https://provider-proof.reproforge.test",
+        REPROFORGE_QUEUE_TOPIC: `reproforge-health-${suffix()}`,
+        REPROFORGE_RUNTIME_MODE: "production",
+      },
+      logger: new JsonOperationalLogger({
+        secrets: [
+          requiredEnvironment("BLOB_READ_WRITE_TOKEN"),
+          requiredEnvironment("DATABASE_URL"),
+        ],
+        sink: {
+          error: (line) => logs.push(line),
+          info: (line) => logs.push(line),
+        },
+      }),
+      metrics: new InMemoryOperationalMetrics(),
+    });
+
+    await expect(health.readiness()).resolves.toMatchObject({
+      checks: [
+        { code: "DATABASE_READY", component: "database", status: "ready" },
+        {
+          code: "ARTIFACT_STORE_READY",
+          component: "artifact-store",
+          status: "ready",
+        },
+        {
+          code: "QUEUE_CONFIGURATION_READY",
+          component: "queue",
+          status: "ready",
+        },
+      ],
+      status: "ready",
+    });
+    await expect(health.runner()).resolves.toMatchObject({
+      checks: [
+        {
+          code: "RUNNER_NOT_CONFIGURED",
+          component: "runner",
+          status: "unavailable",
+        },
+      ],
+      status: "unavailable",
+    });
+    expect(logs.join("\n")).not.toContain("postgresql://");
+    expect(logs.join("\n")).not.toContain("BLOB_READ_WRITE_TOKEN");
+  });
+
+  it("exports, restores, and hash-verifies one tenant through live Neon and private Blob", async () => {
+    const id = createHash("sha256").update(suffix()).digest("hex").slice(0, 16);
+    const sourceSchema = `rf_source_${id}`;
+    const destinationSchema = `rf_restore_${id}`;
+    const tenantId = `tenant_backup_${id}`;
+    const connectionString = requiredEnvironment("DATABASE_URL_UNPOOLED");
+    const source = createNeonPostgresDatabase(
+      databaseUrlWithSearchPath(connectionString, sourceSchema),
+    );
+    const destination = createNeonPostgresDatabase(
+      databaseUrlWithSearchPath(connectionString, destinationSchema),
+    );
+    const logs: string[] = [];
+    const logger = new JsonTenantBackupLogger({
+      sink: {
+        error: (line) => logs.push(line),
+        info: (line) => logs.push(line),
+      },
+    });
+    let objectKey: string | undefined;
+
+    await database.execute(`CREATE SCHEMA ${sourceSchema}`);
+    await database.execute(`CREATE SCHEMA ${destinationSchema}`);
+    try {
+      await applyPostgresMigrations(source);
+      await applyPostgresMigrations(destination);
+      const fixture = await seedVerifiedBackupTenantWithAdapters(
+        source,
+        blobClient,
+        tenantId,
+      );
+      objectKey = fixture.artifact.objectKey;
+      const sourceService = new PostgresTenantBackupService(
+        source,
+        blobClient,
+        { now: () => new Date("2026-07-19T21:00:00.000Z") },
+        logger,
+      );
+      const destinationService = new PostgresTenantBackupService(
+        destination,
+        blobClient,
+        { now: () => new Date("2026-07-19T22:00:00.000Z") },
+        logger,
+      );
+
+      const archive = await sourceService.exportTenant(tenantId);
+      const sourceObject = await blobClient.head(objectKey);
+      expect(sourceObject).not.toBeNull();
+      await expect(
+        blobClient.delete(objectKey, sourceObject?.etag),
+      ).resolves.toBe(true);
+      await expect(blobClient.get(objectKey)).resolves.toBeNull();
+
+      const restored = await destinationService.restoreTenant({
+        archive,
+        requestedBy: `operator_${id}`,
+      });
+      expect(restored).toMatchObject({
+        artifactCount: 1,
+        caseCount: 1,
+        evidenceCount: 1,
+        restored: true,
+        tenantId,
+      });
+      expect(restored.manifestSha256).toMatch(/^[a-f0-9]{64}$/);
+      await expect(
+        destinationService.verifyRestore(archive),
+      ).resolves.toMatchObject({ manifestSha256: restored.manifestSha256 });
+
+      const restoredArtifact = await new ContentAddressedArtifactStore(
+        destination,
+        blobClient,
+        { now: () => new Date("2026-07-19T22:00:01.000Z") },
+      ).read(tenantScope(tenantId, fixture.callerId), fixture.artifact.artifactId);
+      expect(restoredArtifact?.bytes).toEqual(fixture.body);
+      expect(logs.join("\n")).not.toContain(BACKUP_BODY_MARKER);
+      expect(logs.map((line) => JSON.parse(line))).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ event: "tenant-backup.exported" }),
+          expect.objectContaining({ event: "tenant-backup.restored" }),
+          expect.objectContaining({ event: "tenant-backup.verified" }),
+        ]),
+      );
+    } finally {
+      if (objectKey) {
+        const remaining = await blobClient.head(objectKey).catch(() => null);
+        if (remaining) {
+          await blobClient.delete(objectKey, remaining.etag).catch(() => false);
+        }
+      }
+      await source.close().catch(() => undefined);
+      await destination.close().catch(() => undefined);
+      await database.execute(`DROP SCHEMA IF EXISTS ${sourceSchema} CASCADE`);
+      await database.execute(`DROP SCHEMA IF EXISTS ${destinationSchema} CASCADE`);
     }
   });
 });
