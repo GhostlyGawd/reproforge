@@ -5,7 +5,11 @@ import { GitHubRepositoryProvider } from "@/github/repository-provider";
 
 const principal: AuthorizedPrincipal = {
   callerId: "principal-alpha",
+  expiresAt: 1_774_224_000,
+  issuer: "https://issuer.example/",
   principalId: "principal-alpha",
+  scopes: ["reproforge:repositories:read"],
+  subject: "auth0|principal-alpha",
   tenantId: "tenant-alpha",
 };
 

@@ -23,7 +23,15 @@ export type VerifiedGitHubInstallation = {
     issues: "read";
     metadata: "read";
   };
+  repositories?: VerifiedGitHubRepository[];
   repositorySelection: "all" | "selected";
+};
+
+export type VerifiedGitHubRepository = {
+  defaultBranch: string;
+  fullName: string;
+  private: boolean;
+  repositoryId: number;
 };
 
 export interface GitHubInstallationVerifier {

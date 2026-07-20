@@ -17,6 +17,9 @@ const EXPECTED_TABLES = [
   "audit_events",
   "cases",
   "deletion_requests",
+  "github_installation_states",
+  "github_installations",
+  "github_repositories",
   "idempotency_keys",
   "jobs",
   "outbox_events",
@@ -33,6 +36,9 @@ const EXPECTED_INDEXES = [
   "audit_tenant_occurred_idx",
   "cases_tenant_state_idx",
   "deletion_schedule_idx",
+  "github_installation_states_expiry_idx",
+  "github_installations_tenant_status_idx",
+  "github_repositories_tenant_active_idx",
   "jobs_expired_lease_idx",
   "jobs_tenant_state_next_attempt_idx",
   "outbox_pending_idx",
@@ -127,12 +133,13 @@ describe("Postgres durable-foundation migrations", () => {
          AND table_name IN (
            'principals', 'cases', 'jobs', 'idempotency_keys', 'run_evidence',
            'artifacts', 'outbox_events', 'audit_events', 'quota_ledger',
-           'deletion_requests'
+           'deletion_requests', 'github_installation_states',
+           'github_installations', 'github_repositories'
          )
          AND column_name = 'tenant_id'
        ORDER BY table_name
     `);
-    expect(tenantColumns.rows).toHaveLength(10);
+    expect(tenantColumns.rows).toHaveLength(13);
 
     const retentionColumns = await database.query<{ table_name: string }>(`
       SELECT table_name
@@ -142,7 +149,7 @@ describe("Postgres durable-foundation migrations", () => {
          AND table_name IN (
            'principals', 'cases', 'jobs', 'idempotency_keys', 'run_evidence',
            'artifacts', 'outbox_events', 'audit_events', 'quota_ledger',
-           'deletion_requests'
+           'deletion_requests', 'github_installation_states'
          )
        GROUP BY table_name
        ORDER BY table_name
@@ -152,6 +159,7 @@ describe("Postgres durable-foundation migrations", () => {
       "audit_events",
       "cases",
       "deletion_requests",
+      "github_installation_states",
       "idempotency_keys",
       "jobs",
       "outbox_events",
@@ -206,7 +214,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(6);
+    expect(migrations).toHaveLength(7);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`
