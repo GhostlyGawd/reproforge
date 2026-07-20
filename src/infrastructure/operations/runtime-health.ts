@@ -9,6 +9,9 @@ import {
   parseRuntimeConfig,
   type RuntimeEnvironment,
 } from "@/config/runtime";
+import { parseGitHubConfig } from "@/config/github";
+import { parseOAuthResourceConfig } from "@/config/oauth";
+import { parseWebAuthenticationConfig } from "@/config/web-auth";
 import type { IsolatedSandboxProvider } from "@/execution/contracts";
 import { VercelSandboxProvider } from "@/execution/vercel-sandbox";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
@@ -168,6 +171,37 @@ export function createRuntimeHealthService(
   }
 
   const hostedConfig = config;
+  try {
+    const webAuthentication = parseWebAuthenticationConfig(options.environment);
+    const oauth = parseOAuthResourceConfig(options.environment);
+    const github = parseGitHubConfig(options.environment);
+    if (
+      webAuthentication.appBaseUrl !== hostedConfig.baseUrl ||
+      oauth.baseUrl !== hostedConfig.baseUrl ||
+      github.baseUrl !== hostedConfig.baseUrl
+    ) {
+      throw new Error("Hosted product origins do not match");
+    }
+  } catch {
+    return new HealthService({
+      clock: options.clock,
+      logger: options.logger,
+      metrics: options.metrics,
+      readinessProbes: [
+        fixedProbe(
+          "configuration",
+          "INVALID_RUNTIME_CONFIGURATION",
+          "unavailable",
+        ),
+      ],
+      runnerProbe: fixedProbe(
+        "runner",
+        "RUNNER_NOT_CONFIGURED",
+        "unavailable",
+      ),
+      timeoutMs: 2_000,
+    });
+  }
 
   const databaseProbe: HealthProbe =
     options.hostedProbes?.database ?? {

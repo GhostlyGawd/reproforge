@@ -427,9 +427,25 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
     const health = createRuntimeHealthService({
       clock: { now: () => new Date() },
       environment: {
+        APP_BASE_URL: "https://provider-proof.reproforge.test",
+        AUTH0_CLIENT_ID: "synthetic-client-id",
+        AUTH0_CLIENT_SECRET: "synthetic-client-secret",
+        AUTH0_DOMAIN: "tenant.us.auth0.com",
+        AUTH0_SECRET: "a".repeat(64),
         BLOB_READ_WRITE_TOKEN: requiredEnvironment("BLOB_READ_WRITE_TOKEN"),
         DATABASE_URL: requiredEnvironment("DATABASE_URL"),
+        GITHUB_APP_CLIENT_ID: "Iv1.synthetic-client",
+        GITHUB_APP_CLIENT_SECRET: "synthetic-client-secret-123456",
+        GITHUB_APP_ID: "12345",
+        GITHUB_APP_PRIVATE_KEY:
+          "-----BEGIN PRIVATE KEY-----\n" +
+          "a".repeat(256) +
+          "\n-----END PRIVATE KEY-----",
+        GITHUB_APP_SLUG: "reproforge-development",
+        GITHUB_WEBHOOK_SECRET: "synthetic-webhook-secret-with-entropy",
         REPROFORGE_BASE_URL: "https://provider-proof.reproforge.test",
+        REPROFORGE_OAUTH_TENANT_CLAIM:
+          "https://provider-proof.reproforge.test/tenant_id",
         REPROFORGE_QUEUE_TOPIC: `reproforge-health-${suffix()}`,
         REPROFORGE_RUNTIME_MODE: "production",
       },
