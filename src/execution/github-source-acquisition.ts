@@ -22,10 +22,13 @@ import {
 const ACQUISITION_WORKSPACE = `${SANDBOX_WORKSPACE_ROOT}/acquisition`;
 const SOURCE_WORKSPACE = `${SANDBOX_WORKSPACE_ROOT}/source`;
 const ARCHIVE_NAME = "source.tar.gz";
-const GITHUB_HOSTS = ["api.github.com", "codeload.github.com"] as const;
+const GITHUB_API_VERSION = "2026-03-10";
+const GITHUB_ARCHIVE_HOST = "codeload.github.com";
+const ARCHIVE_DOWNLOAD_TIMEOUT_MS = 120_000;
 
 export type SourceAcquisitionCode =
   | "ARCHIVE_DOWNLOAD_FAILED"
+  | "ARCHIVE_LIMIT_EXCEEDED"
   | "ARCHIVE_INSPECTION_FAILED"
   | "CREDENTIAL_UNAVAILABLE"
   | "EXTRACTION_FAILED"
@@ -42,6 +45,7 @@ export class SourceAcquisitionError extends Error {
 type Dependencies = {
   clock?: { now(): Date };
   credentialProvider: RepositoryArchiveCredentialProvider;
+  fetcher?: typeof fetch;
 };
 
 type AcquireInput = {
@@ -118,8 +122,126 @@ function parseTarListing(listing: string) {
 
 function archiveUrl(source: ImmutableRepositorySource) {
   const [owner, repository] = source.fullName.split("/") as [string, string];
-  const path = `/repos/${owner}/${repository}/tarball/${source.commitSha}`;
-  return { path, url: `https://api.github.com${path}` };
+  return `https://api.github.com/repos/${owner}/${repository}/tarball/${source.commitSha}`;
+}
+
+function archiveHeaders(authorizationHeader?: string): Record<string, string> {
+  return {
+    Accept: "application/vnd.github+json",
+    ...(authorizationHeader ? { Authorization: authorizationHeader } : {}),
+    "User-Agent": "ReproForge/0.2",
+    "X-GitHub-Api-Version": GITHUB_API_VERSION,
+  };
+}
+
+function archiveRedirect(response: Response): URL {
+  const location = response.headers.get("location");
+  if (!location) {
+    throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+  }
+  let target: URL;
+  try {
+    target = new URL(location);
+  } catch {
+    throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+  }
+  if (
+    target.protocol !== "https:" ||
+    target.hostname !== GITHUB_ARCHIVE_HOST ||
+    target.port ||
+    target.username ||
+    target.password ||
+    target.hash
+  ) {
+    throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+  }
+  return target;
+}
+
+async function readBoundedArchive(response: Response): Promise<Uint8Array> {
+  const rawLength = response.headers.get("content-length");
+  if (rawLength !== null) {
+    const normalized = rawLength.trim();
+    if (!/^(?:0|[1-9][0-9]*)$/.test(normalized)) {
+      throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+    }
+    if (Number(normalized) > SOURCE_LIMITS.maxArchiveBytes) {
+      throw new SourceAcquisitionError("ARCHIVE_LIMIT_EXCEEDED");
+    }
+  }
+  if (!response.body) {
+    throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+  }
+
+  const reader = response.body.getReader();
+  const chunks: Uint8Array[] = [];
+  let byteCount = 0;
+  try {
+    while (true) {
+      const next = await reader.read();
+      if (next.done) break;
+      byteCount += next.value.byteLength;
+      if (byteCount > SOURCE_LIMITS.maxArchiveBytes) {
+        await reader.cancel().catch(() => undefined);
+        throw new SourceAcquisitionError("ARCHIVE_LIMIT_EXCEEDED");
+      }
+      chunks.push(next.value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+
+  const archive = new Uint8Array(byteCount);
+  let offset = 0;
+  for (const chunk of chunks) {
+    archive.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return archive;
+}
+
+export async function downloadGitHubArchive(input: {
+  authorizationHeader?: string;
+  fetcher?: typeof fetch;
+  source: ImmutableRepositorySource;
+}): Promise<Uint8Array> {
+  const source = immutableRepositorySourceSchema.parse(input.source);
+  const githubArchiveUrl = archiveUrl(source);
+  const fetcher = input.fetcher ?? globalThis.fetch;
+  const controller = new AbortController();
+  const timeout = setTimeout(
+    () => controller.abort(),
+    ARCHIVE_DOWNLOAD_TIMEOUT_MS,
+  );
+
+  try {
+    const redirect = await fetcher(githubArchiveUrl, {
+      headers: archiveHeaders(input.authorizationHeader),
+      method: "GET",
+      redirect: "manual",
+      signal: controller.signal,
+    });
+    if (redirect.status !== 302) {
+      throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+    }
+    const target = archiveRedirect(redirect);
+    await redirect.body?.cancel().catch(() => undefined);
+    const archive = await fetcher(target, {
+      headers: archiveHeaders(),
+      method: "GET",
+      redirect: "error",
+      signal: controller.signal,
+    });
+    if (!archive.ok) {
+      throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+    }
+    return await readBoundedArchive(archive);
+  } catch (error) {
+    if (error instanceof SourceAcquisitionError) throw error;
+    throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+  } finally {
+    clearTimeout(timeout);
+  }
 }
 
 export class GitHubArchiveAcquirer {
@@ -132,77 +254,55 @@ export class GitHubArchiveAcquirer {
   async acquire(rawInput: AcquireInput): Promise<AcquiredRepositorySource> {
     const source = immutableRepositorySourceSchema.parse(rawInput.source);
     const { principal, session } = rawInput;
+    try {
+      await session.setNetworkPolicy({ kind: "deny-all" });
+    } catch {
+      throw new SourceAcquisitionError("NETWORK_LOCKDOWN_FAILED");
+    }
     await session.makeDirectory(SANDBOX_WORKSPACE_ROOT);
     await session.makeDirectory(ACQUISITION_WORKSPACE);
     await session.makeDirectory(SOURCE_WORKSPACE);
-    const githubArchive = archiveUrl(source);
-
+    let archiveBytes: Uint8Array;
     try {
-      await this.dependencies.credentialProvider.withArchiveCredential(
-        principal,
-        {
-          commitSha: source.commitSha,
-          fullName: source.fullName,
-          repositoryId: source.repositoryId,
-        },
-        async (credential) => {
-          const expiresAt = Date.parse(credential.expiresAt);
-          if (
-            !Number.isFinite(expiresAt) ||
-            expiresAt <= this.clock.now().getTime() + 30_000
-          ) {
-            throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");
-          }
-          let networkOpened = false;
-          try {
-            networkOpened = true;
-            await session.setNetworkPolicy({
-              allowedHosts: [...GITHUB_HOSTS],
-              injection: {
-                authorizationHeader: credential.authorizationHeader,
-                host: "api.github.com",
-                method: "GET",
-                path: githubArchive.path,
-              },
-              kind: "brokered-allow-hosts",
-              phase: "github-acquisition",
-            });
-            const downloaded = await run(session, {
-              args: [
-                "--fail",
-                "--silent",
-                "--show-error",
-                "--location",
-                "--proto",
-                "=https",
-                "--max-filesize",
-                String(SOURCE_LIMITS.maxArchiveBytes),
-                "--output",
-                ARCHIVE_NAME,
-                githubArchive.url,
-              ],
-              cwd: ACQUISITION_WORKSPACE,
-              executable: "curl",
-              phase: "source-acquisition",
-              timeoutMs: 120_000,
-            });
-            if (downloaded.exitCode !== 0) {
-              throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+      archiveBytes =
+        await this.dependencies.credentialProvider.withArchiveCredential(
+          principal,
+          {
+            commitSha: source.commitSha,
+            fullName: source.fullName,
+            repositoryId: source.repositoryId,
+          },
+          (credential) => {
+            const expiresAt = Date.parse(credential.expiresAt);
+            if (
+              !Number.isFinite(expiresAt) ||
+              expiresAt <= this.clock.now().getTime() + 30_000
+            ) {
+              throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");
             }
-          } finally {
-            if (networkOpened) {
-              try {
-                await session.setNetworkPolicy({ kind: "deny-all" });
-              } catch {
-                throw new SourceAcquisitionError("NETWORK_LOCKDOWN_FAILED");
-              }
-            }
-          }
-        },
-      );
+            return downloadGitHubArchive({
+              authorizationHeader: credential.authorizationHeader,
+              fetcher: this.dependencies.fetcher,
+              source,
+            });
+          },
+        );
     } catch (error) {
       if (error instanceof SourceAcquisitionError) throw error;
       throw new SourceAcquisitionError("CREDENTIAL_UNAVAILABLE");
+    }
+
+    try {
+      await session.writeFiles([
+        {
+          content: archiveBytes,
+          path: `${ACQUISITION_WORKSPACE}/${ARCHIVE_NAME}`,
+        },
+      ]);
+    } catch {
+      throw new SourceAcquisitionError("ARCHIVE_DOWNLOAD_FAILED");
+    } finally {
+      archiveBytes.fill(0);
     }
 
     const manifest = await this.inspectArchive(session);

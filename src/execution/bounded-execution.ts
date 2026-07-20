@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
@@ -225,9 +225,6 @@ export const boundedExperimentResultSchema = z
     });
   });
 
-const SUPERVISOR_DIRECTORY = `${SANDBOX_ROOT}/reproforge`;
-const SUPERVISOR_PATH = `${SUPERVISOR_DIRECTORY}/runner-supervisor.mjs`;
-
 function mapTermination(termination: SupervisorResult["termination"]): never {
   switch (termination) {
     case "timeout":
@@ -284,9 +281,11 @@ export class BoundedExperimentExecutor {
       .max(128)
       .regex(/^[A-Za-z0-9][A-Za-z0-9._-]*$/)
       .parse(input.runId);
-    await input.session.makeDirectory(SUPERVISOR_DIRECTORY);
-    const configPath = `${SUPERVISOR_DIRECTORY}/${id}.config.json`;
-    const resultPath = `${SUPERVISOR_DIRECTORY}/${id}.result.json`;
+    const supervisorDirectory = `${SANDBOX_ROOT}/reproforge-${randomUUID()}`;
+    const supervisorPath = `${supervisorDirectory}/runner-supervisor.mjs`;
+    await input.session.makeDirectory(supervisorDirectory);
+    const configPath = `${supervisorDirectory}/${id}.config.json`;
+    const resultPath = `${supervisorDirectory}/${id}.result.json`;
     const workspaceRoot = command.cwd.split("/").slice(0, 5).join("/");
     const config = {
       args: command.args,
@@ -305,7 +304,7 @@ export class BoundedExperimentExecutor {
     await input.session.writeFiles([
       {
         content: new TextEncoder().encode(RUNNER_SUPERVISOR_SOURCE),
-        path: SUPERVISOR_PATH,
+        path: supervisorPath,
       },
       {
         content: new TextEncoder().encode(JSON.stringify(config)),
@@ -316,7 +315,7 @@ export class BoundedExperimentExecutor {
     try {
       launched = await input.session.run(
         sandboxCommandSchema.parse({
-          args: [SUPERVISOR_PATH, configPath, resultPath],
+          args: [supervisorPath, configPath, resultPath],
           cwd: command.cwd,
           executable: "node",
           phase: command.phase,

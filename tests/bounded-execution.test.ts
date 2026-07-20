@@ -83,6 +83,7 @@ describe("bounded experiment execution", () => {
     expect(result.candidates[0]?.run.stderr).toContain("[REDACTED]");
     expect(JSON.stringify(result)).not.toContain("synthetic-runtime-secret");
     expect(result.limitsPolicyVersion).toBe("sandbox-limits-v1");
+    expect(fixture.directories.size).toBe(4);
 
     const supervisor = fixture.files.find((file) =>
       file.path.endsWith("runner-supervisor.mjs"),
@@ -190,6 +191,7 @@ describe("bounded experiment execution", () => {
 });
 
 function harness(options: { termination?: string } = {}) {
+  const directories = new Set<string>();
   const files: SandboxFile[] = [];
   const storage = new Map<string, Uint8Array>();
   const commands: SandboxCommand[] = [];
@@ -201,7 +203,10 @@ function harness(options: { termination?: string } = {}) {
     stdout: new Uint8Array(),
   };
   const session: IsolatedSandboxSession = {
-    makeDirectory: async () => undefined,
+    makeDirectory: async (path) => {
+      if (directories.has(path)) throw new Error("directory already exists");
+      directories.add(path);
+    },
     readFile: async (path) => storage.get(path) ?? null,
     run: async (command) => {
       commands.push(command);
@@ -248,7 +253,7 @@ function harness(options: { termination?: string } = {}) {
       }
     },
   };
-  return { commands, files, session };
+  return { commands, directories, files, session };
 }
 
 function capture(value: string) {

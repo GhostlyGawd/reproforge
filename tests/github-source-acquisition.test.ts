@@ -17,10 +17,12 @@ import {
   GitHubArchiveAcquirer,
   SourceAcquisitionError,
 } from "@/execution/github-source-acquisition";
+import { SOURCE_LIMITS } from "@/execution/source-provenance";
 
 const SHA = "0123456789abcdef0123456789abcdef01234567";
 const ARCHIVE_SHA = "a".repeat(64);
 const SECRET = "ghs_synthetic-acquisition-secret";
+const ARCHIVE_BYTES = new TextEncoder().encode("synthetic compressed archive");
 const principal: AuthorizedPrincipal = {
   callerId: "principal_1",
   expiresAt: Date.parse("2026-07-21T00:00:00.000Z"),
@@ -53,11 +55,24 @@ function commandResult(
   };
 }
 
-function harness(options: { curlFailure?: boolean } = {}) {
+type FetchCall = { init?: RequestInit; url: string };
+
+function header(call: FetchCall, name: string): string | null {
+  return new Headers(call.init?.headers).get(name);
+}
+
+function harness(
+  options: {
+    archiveContentLength?: string;
+    downloadFailure?: boolean;
+    redirectLocation?: string;
+  } = {},
+) {
   const policies: SandboxNetworkPolicy[] = [];
   const commands: SandboxCommand[] = [];
   const directories: string[] = [];
   const files: SandboxFile[] = [];
+  const fetchCalls: FetchCall[] = [];
   const tarListing = [
     "drwxr-xr-x 0/0 0 2026-07-20 00:00:00.000000000 +0000 GhostlyGawd-reproforge-0123456/",
     "-rw-r--r-- 0/0 12 2026-07-20 00:00:00.000000000 +0000 GhostlyGawd-reproforge-0123456/package.json",
@@ -70,11 +85,6 @@ function harness(options: { curlFailure?: boolean } = {}) {
     readFile: vi.fn(),
     run: async (command) => {
       commands.push(command);
-      if (command.executable === "curl") {
-        return options.curlFailure
-          ? commandResult("", `provider failed ${SECRET}`, 22)
-          : commandResult();
-      }
       if (command.executable === "node") return commandResult("1024\n");
       if (command.executable === "sha256sum") {
         return commandResult(`${ARCHIVE_SHA}  source.tar.gz\n`);
@@ -102,7 +112,12 @@ function harness(options: { curlFailure?: boolean } = {}) {
       networkIngressBytes: null,
     }),
     writeFiles: async (input) => {
-      files.push(...input);
+      files.push(
+        ...input.map((file) => ({
+          content: file.content.slice(),
+          path: file.path,
+        })),
+      );
     },
   };
   const leaseCalls: unknown[] = [];
@@ -127,14 +142,39 @@ function harness(options: { curlFailure?: boolean } = {}) {
       }
     },
   };
+  const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+    fetchCalls.push({ init, url: String(input) });
+    if (fetchCalls.length === 1) {
+      if (options.downloadFailure) {
+        return new Response("provider failed", { status: 503 });
+      }
+      return new Response(null, {
+        headers: {
+          Location:
+            options.redirectLocation ??
+            `https://codeload.github.com/GhostlyGawd/reproforge/legacy.tar.gz/${SHA}`,
+        },
+        status: 302,
+      });
+    }
+    return new Response(ARCHIVE_BYTES.slice(), {
+      headers: {
+        "Content-Length":
+          options.archiveContentLength ?? String(ARCHIVE_BYTES.byteLength),
+      },
+      status: 200,
+    });
+  });
   const acquirer = new GitHubArchiveAcquirer({
     clock: { now: () => new Date("2026-07-20T00:00:00.000Z") },
     credentialProvider,
+    fetcher,
   });
   return {
     acquirer,
     commands,
     directories,
+    fetchCalls,
     files,
     leaseCalls,
     policies,
@@ -143,7 +183,7 @@ function harness(options: { curlFailure?: boolean } = {}) {
 }
 
 describe("GitHub archive acquisition", () => {
-  it("brokers a JIT token outside the VM and returns to deny-all before extraction", async () => {
+  it("downloads a bounded archive on the trusted host and injects only bytes into deny-all", async () => {
     const fixture = harness();
     const acquired = await fixture.acquirer.acquire({
       principal,
@@ -158,25 +198,30 @@ describe("GitHub archive acquisition", () => {
         repositoryId: source.repositoryId,
       },
     ]);
-    expect(fixture.policies).toEqual([
+    expect(fixture.policies).toEqual([{ kind: "deny-all" }]);
+    expect(fixture.fetchCalls).toHaveLength(2);
+    expect(fixture.fetchCalls[0]).toMatchObject({
+      init: { method: "GET", redirect: "manual" },
+      url: `https://api.github.com/repos/GhostlyGawd/reproforge/tarball/${SHA}`,
+    });
+    expect(header(fixture.fetchCalls[0]!, "authorization")).toBe(
+      `Bearer ${SECRET}`,
+    );
+    expect(fixture.fetchCalls[1]).toMatchObject({
+      init: { method: "GET", redirect: "error" },
+      url: `https://codeload.github.com/GhostlyGawd/reproforge/legacy.tar.gz/${SHA}`,
+    });
+    expect(header(fixture.fetchCalls[1]!, "authorization")).toBeNull();
+    expect(fixture.files).toEqual([
       {
-        allowedHosts: ["api.github.com", "codeload.github.com"],
-        injection: {
-          authorizationHeader: `Bearer ${SECRET}`,
-          host: "api.github.com",
-          method: "GET",
-          path: `/repos/GhostlyGawd/reproforge/tarball/${SHA}`,
-        },
-        kind: "brokered-allow-hosts",
-        phase: "github-acquisition",
+        content: ARCHIVE_BYTES,
+        path: "/vercel/sandbox/workspaces/acquisition/source.tar.gz",
       },
-      { kind: "deny-all" },
     ]);
     const extractIndex = fixture.commands.findIndex((command) =>
       command.args.includes("--extract"),
     );
     expect(extractIndex).toBeGreaterThan(0);
-    expect(fixture.policies.at(-1)).toEqual({ kind: "deny-all" });
     expect(acquired).toMatchObject({
       provenance: {
         archiveBytes: 1024,
@@ -190,17 +235,13 @@ describe("GitHub archive acquisition", () => {
     expect(JSON.stringify(acquired)).not.toContain(SECRET);
     expect(JSON.stringify(fixture.commands)).not.toContain(SECRET);
     expect(JSON.stringify(fixture.files)).not.toContain(SECRET);
-    expect(fixture.commands[0]).toMatchObject({
-      args: expect.arrayContaining([
-        `https://api.github.com/repos/GhostlyGawd/reproforge/tarball/${SHA}`,
-      ]),
-      executable: "curl",
-      phase: "source-acquisition",
-    });
+    expect(
+      fixture.commands.some((command) => command.executable === "curl"),
+    ).toBe(false);
   });
 
-  it("closes egress and returns only a stable sanitized error when acquisition fails", async () => {
-    const fixture = harness({ curlFailure: true });
+  it("returns only a stable sanitized error when GitHub acquisition fails", async () => {
+    const fixture = harness({ downloadFailure: true });
 
     let caught: unknown;
     try {
@@ -215,15 +256,48 @@ describe("GitHub archive acquisition", () => {
     expect(caught).toBeInstanceOf(SourceAcquisitionError);
     expect(caught).toMatchObject({ code: "ARCHIVE_DOWNLOAD_FAILED" });
     expect(JSON.stringify(caught)).not.toContain(SECRET);
-    expect(fixture.policies.at(-1)).toEqual({ kind: "deny-all" });
-    expect(fixture.commands).toHaveLength(1);
+    expect(fixture.policies).toEqual([{ kind: "deny-all" }]);
+    expect(fixture.commands).toHaveLength(0);
+    expect(fixture.files).toHaveLength(0);
+  });
+
+  it("rejects redirects outside GitHub's archive host without forwarding credentials", async () => {
+    const fixture = harness({
+      redirectLocation: "https://attacker.example/archive.tar.gz",
+    });
+
+    await expect(
+      fixture.acquirer.acquire({
+        principal,
+        session: fixture.session,
+        source,
+      }),
+    ).rejects.toMatchObject({ code: "ARCHIVE_DOWNLOAD_FAILED" });
+    expect(fixture.fetchCalls).toHaveLength(1);
+    expect(fixture.fetchCalls[0]?.url).toContain("api.github.com");
+    expect(fixture.files).toHaveLength(0);
+  });
+
+  it("rejects an oversized archive before injecting it into the sandbox", async () => {
+    const fixture = harness({
+      archiveContentLength: String(SOURCE_LIMITS.maxArchiveBytes + 1),
+    });
+
+    await expect(
+      fixture.acquirer.acquire({
+        principal,
+        session: fixture.session,
+        source,
+      }),
+    ).rejects.toMatchObject({ code: "ARCHIVE_LIMIT_EXCEEDED" });
+    expect(fixture.files).toHaveLength(0);
+    expect(fixture.commands).toHaveLength(0);
   });
 
   it("rejects an unsafe manifest before the extraction command", async () => {
     const fixture = harness();
     fixture.session.run = async (command) => {
       fixture.commands.push(command);
-      if (command.executable === "curl") return commandResult();
       if (command.executable === "node") return commandResult("1024\n");
       if (command.executable === "sha256sum") {
         return commandResult(`${ARCHIVE_SHA}  source.tar.gz\n`);
