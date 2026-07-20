@@ -39,7 +39,9 @@ const EXPECTED_INDEXES = [
   "deletion_schedule_idx",
   "github_installation_states_expiry_idx",
   "github_installations_tenant_status_idx",
+  "github_installations_provider_updated_idx",
   "github_repositories_tenant_active_idx",
+  "github_repositories_provider_updated_idx",
   "github_webhook_deliveries_expiry_idx",
   "github_webhook_deliveries_installation_idx",
   "jobs_expired_lease_idx",
@@ -220,7 +222,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(8);
+    expect(migrations).toHaveLength(9);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`

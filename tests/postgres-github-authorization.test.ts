@@ -165,6 +165,7 @@ describe("Postgres GitHub authorization store", () => {
           id: installation.installationId,
           permissions: installation.permissions,
           suspended_at: "2026-07-20T00:03:00.000Z",
+          updated_at: "2026-07-20T00:03:00.000Z",
         },
       },
     };
@@ -185,6 +186,7 @@ describe("Postgres GitHub authorization store", () => {
             id: installation.installationId,
             permissions: installation.permissions,
             suspended_at: null,
+            updated_at: "2026-07-20T00:04:00.000Z",
           },
         },
       }),
@@ -229,6 +231,7 @@ describe("Postgres GitHub authorization store", () => {
               contents: "write",
             },
             suspended_at: null,
+            updated_at: "2026-07-20T00:03:00.000Z",
           },
         },
       }),
@@ -246,7 +249,10 @@ describe("Postgres GitHub authorization store", () => {
         event: "installation_repositories",
         payload: {
           action: "removed",
-          installation: { id: installation.installationId },
+          installation: {
+            id: installation.installationId,
+            updated_at: "2026-07-20T00:03:00.000Z",
+          },
           repositories_added: [],
           repositories_removed: [{ id: 8001 }],
         },
@@ -258,5 +264,39 @@ describe("Postgres GitHub authorization store", () => {
     await expect(
       store.findRepository(actor.tenantId, "repo_2"),
     ).resolves.toMatchObject({ status: "ACTIVE" });
+  });
+
+  it("ignores stale status events and keeps installation removal terminal", async () => {
+    await store.bind(actor, installation);
+    const event = (
+      deliveryId: string,
+      action: string,
+      updatedAt: string,
+    ) =>
+      store.processWebhook({
+        deliveryId,
+        event: "installation",
+        payload: {
+          action,
+          installation: {
+            id: installation.installationId,
+            permissions: installation.permissions,
+            suspended_at: action === "suspended" ? updatedAt : null,
+            updated_at: updatedAt,
+          },
+        },
+      });
+
+    await event("delivery-current-active", "unsuspended", "2026-07-20T00:05:00.000Z");
+    await event("delivery-stale-suspend", "suspended", "2026-07-20T00:04:00.000Z");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "ACTIVE" });
+
+    await event("delivery-delete-terminal", "deleted", "2026-07-20T00:03:00.000Z");
+    await event("delivery-after-delete", "unsuspended", "2026-07-20T00:06:00.000Z");
+    await expect(
+      store.findRepository(actor.tenantId, "repo_1"),
+    ).resolves.toMatchObject({ status: "REMOVED" });
   });
 });

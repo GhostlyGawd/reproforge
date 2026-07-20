@@ -14,6 +14,11 @@ import type {
 } from "@/github/installation-state";
 import type { GitHubWebhookEnvelope } from "@/github/webhook";
 import {
+  reduceGitHubAuthorizationState,
+  type GitHubAuthorizationState,
+  type GitHubAuthorizationStatus,
+} from "@/github/authorization-state";
+import {
   auditEventSchema,
   type AuditEvent,
 } from "@/application/ports/production";
@@ -65,6 +70,7 @@ const installationSchema = z
       .regex(/^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$/),
     installationId: z.number().int().positive().safe(),
     permissions: permissionsSchema,
+    providerUpdatedAt: timestamp.optional(),
     repositories: z.array(repositorySchema).max(10_000).default([]),
     repositorySelection: z.enum(["all", "selected"]),
   })
@@ -81,11 +87,15 @@ const webhookInstallationSchema = z.object({
     id: z.number().int().positive().safe(),
     permissions: z.record(z.string(), z.string()),
     suspended_at: z.string().datetime({ offset: true }).nullable(),
+    updated_at: z.string().datetime({ offset: true }),
   }),
 });
 const webhookRepositorySchema = z.object({
   action: z.enum(["added", "removed"]),
-  installation: z.object({ id: z.number().int().positive().safe() }),
+  installation: z.object({
+    id: z.number().int().positive().safe(),
+    updated_at: z.string().datetime({ offset: true }),
+  }),
   repositories_added: z.array(
     z.object({
       default_branch: z.string().min(1).max(255).optional(),
@@ -248,14 +258,16 @@ export class PostgresGitHubAuthorizationStore
       await executor.query(
         `INSERT INTO github_installations (
            tenant_id, installation_id, linked_by_principal_id, account_id,
-           account_login, repository_selection, permissions, status
-         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE')
+           account_login, repository_selection, permissions, status,
+           provider_updated_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7::jsonb, 'ACTIVE', $8)
          ON CONFLICT (tenant_id, installation_id) DO UPDATE SET
            linked_by_principal_id = EXCLUDED.linked_by_principal_id,
            account_id = EXCLUDED.account_id,
            account_login = EXCLUDED.account_login,
            repository_selection = EXCLUDED.repository_selection,
            permissions = EXCLUDED.permissions,
+           provider_updated_at = EXCLUDED.provider_updated_at,
            status = 'ACTIVE', suspended_at = NULL, removed_at = NULL,
            updated_at = CURRENT_TIMESTAMP`,
         [
@@ -266,6 +278,7 @@ export class PostgresGitHubAuthorizationStore
           installation.accountLogin,
           installation.repositorySelection,
           JSON.stringify(installation.permissions),
+          installation.providerUpdatedAt ?? null,
         ],
       );
       await executor.query(
@@ -490,21 +503,44 @@ export class PostgresGitHubAuthorizationStore
     const exactPermissions = permissionsSchema.safeParse(
       payload.installation.permissions,
     ).success;
-    let status: "ACTIVE" | "REMOVED" | "SUSPENDED";
-    let action: string;
+    let desiredStatus: GitHubAuthorizationStatus;
     if (payload.action === "deleted") {
-      status = "REMOVED";
-      action = "github.installation-removed";
+      desiredStatus = "REMOVED";
     } else if (payload.action === "suspended" || !exactPermissions) {
-      status = "SUSPENDED";
-      action = "github.installation-suspended";
+      desiredStatus = "SUSPENDED";
     } else if (
       payload.action === "unsuspended" ||
       payload.action === "new_permissions_accepted"
     ) {
-      status = "ACTIVE";
-      action = "github.installation-activated";
+      desiredStatus = "ACTIVE";
     } else {
+      return null;
+    }
+    const existing = await executor.query<{
+      provider_updated_at: string | Date | null;
+      status: GitHubAuthorizationStatus;
+    }>(
+      `SELECT status, provider_updated_at
+         FROM github_installations
+        WHERE tenant_id = $1 AND installation_id = $2
+        FOR UPDATE`,
+      [tenantId, payload.installation.id],
+    );
+    const row = existing.rows[0];
+    if (!row) return null;
+    const current: GitHubAuthorizationState = {
+      providerUpdatedAt:
+        row.provider_updated_at === null ? null : toIso(row.provider_updated_at),
+      status: row.status,
+    };
+    const next = reduceGitHubAuthorizationState(current, {
+      at: payload.installation.updated_at,
+      status: desiredStatus,
+    });
+    if (
+      next.status === current.status &&
+      next.providerUpdatedAt === current.providerUpdatedAt
+    ) {
       return null;
     }
     await executor.query(
@@ -516,11 +552,12 @@ export class PostgresGitHubAuthorizationStore
               removed_at = CASE
                 WHEN $3 = 'REMOVED' THEN $4::timestamptz ELSE NULL
               END,
-              updated_at = $4::timestamptz
+              updated_at = $4::timestamptz,
+              provider_updated_at = $5::timestamptz
         WHERE tenant_id = $1 AND installation_id = $2`,
-      [tenantId, payload.installation.id, status, at],
+      [tenantId, payload.installation.id, next.status, at, next.providerUpdatedAt],
     );
-    if (status === "REMOVED") {
+    if (next.status === "REMOVED") {
       await executor.query(
         `UPDATE github_repositories
             SET status = 'REMOVED', removed_at = $3, updated_at = $3
@@ -529,6 +566,12 @@ export class PostgresGitHubAuthorizationStore
         [tenantId, payload.installation.id, at],
       );
     }
+    const action =
+      next.status === "REMOVED"
+        ? "github.installation-removed"
+        : next.status === "SUSPENDED"
+          ? "github.installation-suspended"
+          : "github.installation-activated";
     return {
       action,
       actorId: "github-webhook",
@@ -552,13 +595,14 @@ export class PostgresGitHubAuthorizationStore
     at: string,
   ): Promise<AuditEvent> {
     for (const repository of payload.repositories_removed) {
-      await executor.query(
-        `UPDATE github_repositories
-            SET status = 'REMOVED', removed_at = $4, updated_at = $4
-          WHERE tenant_id = $1 AND installation_id = $2
-            AND provider_repository_id = $3`,
-        [tenantId, payload.installation.id, repository.id, at],
-      );
+      await this.applyRepositoryTransition(executor, {
+        at,
+        installationId: payload.installation.id,
+        providerRepositoryId: repository.id,
+        providerUpdatedAt: payload.installation.updated_at,
+        status: "REMOVED",
+        tenantId,
+      });
     }
     for (const repository of payload.repositories_added) {
       if (
@@ -566,12 +610,23 @@ export class PostgresGitHubAuthorizationStore
         repository.full_name &&
         repository.private !== undefined
       ) {
-        await this.upsertRepository(executor, tenantId, payload.installation.id, {
-          defaultBranch: repository.default_branch,
-          fullName: repository.full_name,
-          private: repository.private,
-          repositoryId: repository.id,
-        });
+        await this.applyRepositoryTransition(
+          executor,
+          {
+            at,
+            installationId: payload.installation.id,
+            providerRepositoryId: repository.id,
+            providerUpdatedAt: payload.installation.updated_at,
+            status: "ACTIVE",
+            tenantId,
+          },
+          {
+            defaultBranch: repository.default_branch,
+            fullName: repository.full_name,
+            private: repository.private,
+            repositoryId: repository.id,
+          },
+        );
       }
     }
     return {
@@ -589,6 +644,95 @@ export class PostgresGitHubAuthorizationStore
       targetType: "installation",
       tenantId,
     };
+  }
+
+  private async applyRepositoryTransition(
+    executor: PostgresExecutor,
+    input: {
+      at: string;
+      installationId: number;
+      providerRepositoryId: number;
+      providerUpdatedAt: string;
+      status: "ACTIVE" | "REMOVED";
+      tenantId: string;
+    },
+    repository?: z.infer<typeof repositorySchema>,
+  ): Promise<void> {
+    const existing = await executor.query<{
+      provider_updated_at: string | Date | null;
+      repository_id: string;
+      status: "ACTIVE" | "REMOVED";
+    }>(
+      `SELECT repository_id, status, provider_updated_at
+         FROM github_repositories
+        WHERE tenant_id = $1 AND installation_id = $2
+          AND provider_repository_id = $3
+        FOR UPDATE`,
+      [input.tenantId, input.installationId, input.providerRepositoryId],
+    );
+    const row = existing.rows[0];
+    if (!row) {
+      if (input.status === "ACTIVE" && repository) {
+        const repositoryId = opaqueId.parse(this.repositoryId());
+        await executor.query(
+          `INSERT INTO github_repositories (
+             tenant_id, repository_id, installation_id, provider_repository_id,
+             full_name, default_branch, is_private, status, provider_updated_at
+           ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE', $8)`,
+          [
+            input.tenantId,
+            repositoryId,
+            input.installationId,
+            input.providerRepositoryId,
+            repository.fullName,
+            repository.defaultBranch,
+            repository.private,
+            input.providerUpdatedAt,
+          ],
+        );
+      }
+      return;
+    }
+    const current: GitHubAuthorizationState = {
+      providerUpdatedAt:
+        row.provider_updated_at === null ? null : toIso(row.provider_updated_at),
+      status: row.status,
+    };
+    const next = reduceGitHubAuthorizationState(current, {
+      at: input.providerUpdatedAt,
+      status: input.status,
+    });
+    if (
+      next.status === current.status &&
+      next.providerUpdatedAt === current.providerUpdatedAt
+    ) {
+      return;
+    }
+    await executor.query(
+      `UPDATE github_repositories
+          SET status = $4,
+              removed_at = CASE
+                WHEN $4 = 'REMOVED' THEN $5::timestamptz ELSE NULL
+              END,
+              full_name = COALESCE($6, full_name),
+              default_branch = COALESCE($7, default_branch),
+              is_private = COALESCE($8, is_private),
+              provider_updated_at = $9::timestamptz,
+              updated_at = $5::timestamptz
+        WHERE tenant_id = $1 AND installation_id = $2
+          AND provider_repository_id = $3`,
+      [
+        input.tenantId,
+        input.installationId,
+        input.providerRepositoryId,
+        next.status,
+        input.at,
+        repository?.fullName ?? null,
+        repository?.defaultBranch ?? null,
+        repository?.private ?? null,
+        next.providerUpdatedAt,
+      ],
+    );
   }
 
   private async completeDelivery(

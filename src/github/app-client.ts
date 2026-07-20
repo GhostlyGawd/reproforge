@@ -56,6 +56,7 @@ const installationSchema = z.object({
   permissions: permissionsSchema,
   repository_selection: z.enum(["all", "selected"]),
   suspended_at: z.string().datetime({ offset: true }).nullable(),
+  updated_at: z.string().datetime({ offset: true }).optional(),
 });
 const installationTokenSchema = z.object({
   expires_at: z.string().datetime({ offset: true }),
@@ -157,6 +158,9 @@ export class GitHubAppClient
           accountLogin: installation.account.login,
           installationId: installation.id,
           permissions: installation.permissions,
+          ...(installation.updated_at
+            ? { providerUpdatedAt: installation.updated_at }
+            : {}),
           repositories,
           repositorySelection: installation.repository_selection,
         };

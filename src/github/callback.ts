@@ -23,6 +23,7 @@ export type VerifiedGitHubInstallation = {
     issues: "read";
     metadata: "read";
   };
+  providerUpdatedAt?: string;
   repositories?: VerifiedGitHubRepository[];
   repositorySelection: "all" | "selected";
 };

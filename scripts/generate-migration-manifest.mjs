@@ -9,6 +9,7 @@ const migrations = [
   "0006_backup_restore",
   "0007_identity_github_authorization",
   "0008_github_revocation_audit",
+  "0009_github_event_ordering",
 ].map((id) => ({
   id,
   sql: readFileSync(
