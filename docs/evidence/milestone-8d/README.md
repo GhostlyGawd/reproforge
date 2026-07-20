@@ -11,19 +11,38 @@ Evidence is added incrementally and tied to an exact Git commit in
 ## Current verified slice
 
 Exact implementation commit
-`8f4464c4dfefd00e6ccff79f1e8796688828e669` adds a real isolated-runner
+`370db06247ad8fa80714de2ca7015cb86f453919` adds a real isolated-runner
 capability probe, fail-closed validation of the complete hosted product
-configuration, and one durable progress projection shared by REST, MCP,
-ChatGPT widget, and tenant-scoped web case views.
+configuration, one durable progress projection shared by REST, MCP, ChatGPT
+widget, and tenant-scoped web views, resilient worker/operator controls, and
+the account data lifecycle.
 
-The progress property gate passed 500 generated schedules. Focused contract
-tests passed 13/13, Cucumber passed 40 scenarios and 289 steps, TypeScript and
-ESLint passed, and the production Next.js build completed. Browser inspection
-found meaningful content, no framework error overlay, no page errors, and no
-horizontal overflow at a 390 × 844 mobile viewport. Development-console output
-contained only Next.js/HMR notices.
+The RF-8403 slice blocks new starts during runner degradation while preserving
+reads, recovers expired leases, observes cancellation before the next command,
+and exposes production-only outbox, lease, and exact-resource quarantine
+operations. Its focused resilience gate passed 29 tests, including 500 hostile
+operator argument cases.
+
+The RF-8404 slice adds integrity-checked portable account archives,
+tenant-scoped export quota, authenticated export and deletion routes, explicit
+destructive confirmation, provider-first deletion, retryable retention, and
+operator backup/restore commands. Its focused gate passed 17 tests. The broader
+governance suite passed 25 tests, including 250 generated retention/deletion
+sequences; the backup suite passed 14 tests, including 500 generated portable
+archive round trips and mutations.
+
+At this commit, Cucumber passed 45 scenarios and 326 steps, the account page
+passed 3 browser tests, TypeScript and ESLint passed, and the production Next.js
+build completed. Production-build browser inspection found no framework error
+overlay, page errors, console output, or horizontal overflow at a 390 × 844
+mobile viewport. The final local account page deliberately shows real controls
+disabled while identity configuration is absent.
 
 ## Local visual evidence
+
+![Desktop ReproForge account data page showing export, explicit deletion confirmation, and retention disclosures in the fail-closed identity setup state.](local-account-data-controls-desktop.png)
+
+![Mobile ReproForge account data page showing responsive export, deletion, and retention controls without horizontal overflow.](local-account-data-controls-mobile.png)
 
 ![Desktop ReproForge ChatGPT widget preview showing verified proof, evidence, runs, and bundle state.](local-widget-desktop.png)
 
@@ -34,6 +53,7 @@ contained only Next.js/HMR notices.
 ![Mobile ReproForge case page showing the tenant-scoped identity boundary without horizontal overflow.](local-case-auth-boundary-mobile.png)
 
 These captures intentionally prove only the local widget presentation,
-responsive layout, and fail-closed account boundary. They are not live Auth0,
-GitHub App, hosted ChatGPT, or public/private canary evidence. Those gates remain
-open and keep the milestone status `in-progress`.
+responsive layout, fail-closed account boundary, and disclosed account-data
+controls. They are not proof of a live export or deletion, Auth0, GitHub App,
+hosted ChatGPT, or public/private canary journey. Those gates remain open and
+keep the milestone status `in-progress`.

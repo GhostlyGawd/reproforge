@@ -1,15 +1,15 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8d",
-  "capturedAt": "2026-07-20T21:20:57.088Z",
-  "implementationCommit": "8f4464c4dfefd00e6ccff79f1e8796688828e669",
-  "scope": "private-beta runtime health and durable progress parity implementation evidence",
+  "capturedAt": "2026-07-20T22:29:29.270Z",
+  "implementationCommit": "370db06247ad8fa80714de2ca7015cb86f453919",
+  "scope": "private-beta runtime health, durable progress, resilience, and account data lifecycle implementation evidence",
   "status": "in-progress",
   "tasks": {
     "RF-8401": "implementation-passed-live-configuration-pending",
     "RF-8402": "implementation-passed-hosted-journey-pending",
-    "RF-8403": "pending",
-    "RF-8404": "pending",
+    "RF-8403": "implementation-passed-hosted-operations-pending",
+    "RF-8404": "implementation-passed-hosted-lifecycle-pending",
     "RF-8405": "pending",
     "RF-8406": "pending",
     "RF-8407": "pending",
@@ -38,9 +38,32 @@
     "generatedSchedules": 500,
     "propertyTestsPassed": 2,
     "focusedTestsPassed": 13,
-    "bddScenariosPassed": 40,
-    "bddStepsPassed": 289,
+    "bddScenariosPassed": 45,
+    "bddStepsPassed": 326,
     "productionBuild": "passed"
+  },
+  "resilience": {
+    "runnerDegradationAdmission": "passed",
+    "workerLossLeaseRecovery": "passed",
+    "monotonicCancellation": "passed",
+    "boundedRetry": "passed",
+    "exactResourceQuarantineCleanup": "passed",
+    "operatorArgumentFuzzCases": 500,
+    "focusedTestsPassed": 29,
+    "hostedExercise": "pending"
+  },
+  "accountDataLifecycle": {
+    "portableArchiveSchemaVersion": "1.0",
+    "generatedPortableArchiveBodies": 500,
+    "generatedRetentionSequences": 250,
+    "focusedTestsPassed": 17,
+    "governanceTestsPassed": 25,
+    "backupTestsPassed": 14,
+    "browserTestsPassed": 3,
+    "accountExport": "passed-local",
+    "explicitDeletionConfirmation": "passed-local",
+    "providerFirstDeletion": "passed-local",
+    "hostedExercise": "pending"
   },
   "browserVerification": {
     "tool": "agent-browser",
@@ -49,7 +72,7 @@
     "pageErrors": 0,
     "horizontalOverflowAt390px": false,
     "interactiveWidgetSnapshot": "passed",
-    "console": "Next.js development and HMR notices only"
+    "console": "no output on the final production-built account data page"
   },
   "visualEvidence": [
     {
@@ -79,6 +102,20 @@
       "bytes": 63710,
       "sha256": "41c7a12a9ed2c1e1ca483033388738e335f4d20669eb2d4690ed09bfd3089b3d",
       "alt": "Mobile ReproForge ChatGPT widget preview showing verified proof without horizontal overflow."
+    },
+    {
+      "file": "local-account-data-controls-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 275135,
+      "sha256": "cc3e9a46c4f98491e165155fdfbdf00e26465519ed8a0cd154aaa52745443ab1",
+      "alt": "Desktop ReproForge account data page showing export, explicit deletion confirmation, and retention disclosures in the fail-closed identity setup state."
+    },
+    {
+      "file": "local-account-data-controls-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 215672,
+      "sha256": "7a8da3a46f7ce964b834b1b4c51dce2e81601b51187a1f9d183ef254f542a642",
+      "alt": "Mobile ReproForge account data page showing responsive export, deletion, and retention controls without horizontal overflow."
     }
   ],
   "redGreenFindings": [
@@ -93,6 +130,14 @@
     {
       "red": "REST, MCP, widget, and web surfaces had independent or implicit progress representations.",
       "green": "All four surfaces now consume one strict durable progress projection, covered by 500 generated schedules and an executable BDD journey."
+    },
+    {
+      "red": "Runner degradation, expired work, and cleanup failure lacked one fail-closed admission and operator recovery path.",
+      "green": "New starts are denied while reads remain available; worker loss and cancellation follow legal durable transitions; exact quarantined sandbox or snapshot cleanup is provider-deleted before a sanitized resolution audit is appended."
+    },
+    {
+      "red": "Tenant archives were internal structures and users had no authenticated export or deletion controls.",
+      "green": "A strict portable archive verifies its manifest and object digests, authenticated account routes enforce quota/idempotency/origin/confirmation boundaries, and provider-first deletion suspends and cancels work before purging tenant data."
     }
   ],
   "deferred": [
@@ -100,7 +145,9 @@
     "live GitHub App installation and repository selection",
     "hosted signed-in case-page capture",
     "public and private deployed canaries",
-    "RF-8403 through RF-8411"
+    "hosted RF-8403 recovery and quarantine exercise",
+    "hosted RF-8404 retention, deletion, and backup/restore exercise",
+    "RF-8405 through RF-8411"
   ],
-  "sanitization": "Evidence contains only the trusted synthetic fixture and a synthetic inaccessible case identifier; no credentials, sessions, private repository names, customer data, or provider resource identifiers are committed."
+  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, and the signed-out/unconfigured account-data state; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
 }

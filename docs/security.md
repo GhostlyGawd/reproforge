@@ -40,13 +40,23 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 - The OpenAI client is initialized only for an explicit live request with a configured key.
 - Live Responses requests use `store: false`.
 - API errors return generic messages and do not echo credentials or raw exceptions.
-- Preview/production configuration fails closed unless Neon and private Blob authentication are complete; offline/test builds do not initialize provider clients.
+- Preview/production configuration fails closed unless the canonical origin,
+  web/OAuth identity, GitHub App, Neon, private Blob, Queue, and isolated-runner
+  configuration are complete; offline/test builds do not initialize provider
+  clients.
 - Every durable case, job, artifact, evidence, quota, outbox, audit, and deletion record is tenant-keyed, and database constraints reject cross-tenant references.
 - Serializable idempotency reservation, optimistic versions, compare-and-swap leases, bounded attempts, and terminal-state constraints make duplicate or stale Queue delivery harmless.
 - Queue payloads contain only opaque tenant/case/job/event identifiers and a schema/kind; source, commands, tokens, evidence, and object bodies are rejected.
 - Artifact bytes are hashed before a private immutable upload, reverified on read, and required before a job can commit success. Direct unauthenticated provider access was denied in the live provider gate.
 - Forward-only migrations record canonical SHA-256 checksums, use an advisory lock, roll back failed DDL, and reject applied-file drift.
-- Retention/deletion code removes customer-class rows and private objects while preserving only the documented sanitized audit tombstone. Backup/restore verifies manifest and object hashes before accepting restored state.
+- Account export requires a server-owned tenant session, an idempotency key, a
+  daily quota, and a quiescent tenant; responses are integrity-tagged and never
+  cached. Account deletion additionally requires same-origin submission and an
+  exact destructive confirmation phrase.
+- Retention/deletion suspends new starts, requests cancellation, removes private
+  objects before customer-class rows, and preserves only the documented
+  sanitized audit tombstone. Backup/restore verifies the portable manifest and
+  every object hash before accepting restored state.
 - Operational logs use allowlisted fields and secret/credential-shape redaction; provider bodies and connection strings are not logged.
 - Bundle materialization redacts registered secrets before serialization.
 - Canonical hashes cover contract-relevant bundle content and provenance fields.
@@ -102,9 +112,10 @@ with explicit CPU/memory/time configuration, bounded filesystem/output policy,
 deny-all repository execution, no ambient host secrets, and no host checkout or
 container-socket mount. Source acquisition and dependency preparation are
 trusted-supervisor phases; repository-controlled code cannot run while GitHub
-or registry access is available. The default hosted runner health probe remains
-unavailable until 8D wires and verifies the composed service, so a web deploy
-alone does not advertise repository readiness.
+or registry access is available. The hosted runner health route now performs a
+real bounded deny-all sandbox create/execute/cleanup probe and admits new starts
+only while it reports ready. This local implementation does not replace the
+pending authenticated deployed-journey and degradation drills.
 
 ## Dependency and model risk
 

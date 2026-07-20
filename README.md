@@ -85,6 +85,22 @@ adapters; partial hosted configuration fails closed instead of falling back to
 memory. See the [operations guide](docs/operations.md) before enabling a hosted
 mode.
 
+## Account data lifecycle
+
+In a fully configured hosted runtime, signed-in users can open `/account` to
+download one integrity-checked tenant archive or explicitly request permanent
+deletion. The export contains the canonical manifest plus its private
+content-addressed objects, is quota-bounded, and requires work to be quiescent.
+Deletion immediately suspends new starts, requests cancellation of active work,
+deletes provider objects before database state, and retains only the documented
+sanitized tombstone. These controls use the web session and never ask the user
+for an OpenAI or GitHub API token.
+
+The local page deliberately renders the real controls disabled when identity is
+not configured. Live export/deletion and backup/restore drills remain required
+before private-beta completion; see the [operations guide](docs/operations.md)
+and [Milestone 8D evidence](docs/evidence/milestone-8d/README.md).
+
 ## Run the exported reproduction directly
 
 This command exercises the same intentionally defective spaced-path fixture represented in the sample bundle:
@@ -190,6 +206,7 @@ This key is required only for the current optional standalone Responses route. I
 - [ChatGPT MCP app evidence](docs/evidence/milestone-7/README.md)
 - [Durable provider evidence](docs/evidence/milestone-8a/README.md)
 - [Isolated runner and public-canary evidence](docs/evidence/milestone-8c/README.md)
+- [Private-beta implementation evidence](docs/evidence/milestone-8d/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
@@ -202,10 +219,12 @@ and provider-verified against Neon Postgres, private Vercel Blob, Vercel Queue,
 and Vercel Sandbox. A tiny immutable public repository canary has completed the
 full isolated path—bounded acquisition, dependency preparation, one control,
 three fresh candidates, deterministic proof, portable bundle, and cleanup.
-Live account authorization, general/private repository use, the composed
-stable hosted journey, production hosting, and plugin publication remain
-intentionally unavailable. The synthetic four-case eval and public canary are
-contract checks, not claims of real-world benchmark performance.
+Resilience and account export/deletion controls are implemented and locally
+verified, but their deployed recovery and lifecycle drills remain open. Live
+account authorization, general/private repository use, the composed stable
+hosted journey, production hosting, and plugin publication remain intentionally
+unavailable. The synthetic four-case eval and public canary are contract checks,
+not claims of real-world benchmark performance.
 
 No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
 

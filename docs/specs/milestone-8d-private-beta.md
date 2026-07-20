@@ -1,6 +1,7 @@
 # Milestone 8D specification: private-beta completion
 
-- **Status:** blocked on 8C completion, otherwise ready
+- **Status:** in progress; local RF-8401–RF-8404 implementation passed, hosted
+  exercises and RF-8405–RF-8411 remain open
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable foundation, identity/GitHub authorization, and isolated execution
 - **Unblocks:** stable hosted ChatGPT/plugin testing
@@ -114,6 +115,14 @@ the deployed canary evidence.
 - [ ] `RF-8409` Run tenant-isolation, authorization, retention, backup/restore, abuse, and secret-leak audits against deployed staging.
 - [ ] `RF-8410` Capture accessible desktop/mobile web and widget evidence, protocol transcripts, operational metrics, canary manifests, and checksums.
 - [ ] `RF-8411` Update every product/security/privacy/operations/release document and complete the Milestone 8 requirement audit.
+
+The checkboxes remain open until their deployed acceptance evidence passes.
+Commit `370db06247ad8fa80714de2ca7015cb86f453919` is the current local
+implementation boundary: RF-8401/RF-8402 still require the live authenticated
+hosted journey, RF-8403 still requires the deployed recovery/quarantine drill,
+and RF-8404 still requires the deployed retention/deletion/restore drill. The
+sanitized local record is in
+[`docs/evidence/milestone-8d`](../evidence/milestone-8d/README.md).
 
 ## TDD, property, and BDD requirements
 

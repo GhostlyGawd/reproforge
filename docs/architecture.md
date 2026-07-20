@@ -90,6 +90,7 @@ flowchart LR
 | Private content-addressed artifacts | `src/infrastructure/artifacts/` |
 | Queue publisher, consumer, and recovery | `src/application/outbox-publisher.ts`, `src/application/durable-queue-consumer.ts`, and `src/infrastructure/queue/` |
 | Retention, deletion, backup, and restore | `src/infrastructure/retention/` and `src/infrastructure/backup/` |
+| Account export/deletion boundary | `src/application/account-data-service.ts`, `src/account/`, and `src/app/api/account/` |
 | Health and sanitized operations telemetry | `src/application/health.ts` and `src/infrastructure/operations/` |
 | MCP schemas and view mapping | `src/mcp/contracts.ts` |
 | MCP tool/resource registration | `src/mcp/server.ts` |

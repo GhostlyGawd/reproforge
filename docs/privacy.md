@@ -25,8 +25,13 @@ quota, deletion, and principal records use a separate 365-day default. The
 internal deletion workflow removes eligible customer-class records and private
 objects and retains one sanitized audit tombstone. Backup/restore archives keep
 object bodies separate from the canonical manifest and verify every digest.
-These controls are implemented, but no public account deletion endpoint or
-retention-administration UI exists yet.
+The authenticated `/account` page and account API expose a quota-bounded
+portable export and an explicit-confirmation deletion request. Export requires
+a quiescent tenant and returns private object bytes inside the integrity-checked
+download; it is never cached. Deletion suspends new activity, requests
+cancellation of active work, deletes private objects before database rows, and
+remains retryable after a provider failure. There is no public
+retention-administration or operator UI.
 
 Current live provider evidence uses only generated synthetic identifiers and
 the bundled fixture. Active provider-test tenants, cases, artifacts, objects,
@@ -61,8 +66,10 @@ customer code until those gates pass.
 Live mode is separate and explicit. When a caller selects `live` and configures `OPENAI_API_KEY`, the submitted repository metadata, issue text, and supplied evidence are sent to the OpenAI Responses API. ReproForge sets `store: false`, but use of that service remains subject to the applicable OpenAI terms and data controls.
 
 Do not submit secrets, credentials, customer data, regulated data, or private
-source content. The current product does not include a data-classification UI,
-consent workflow, public deletion endpoint, or organization policy enforcement.
+source content. The current product does not include a data-classification UI
+or organization policy enforcement. Account export/deletion controls do not
+change the separate live-investigator disclosure or make sensitive submissions
+appropriate.
 
 ## Logs and bundles
 

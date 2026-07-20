@@ -1,9 +1,9 @@
 # Hosted operations and recovery runbook
 
-This runbook covers the implemented durable foundation and development-provider
-proof for isolated repository execution. It is not a production-launch guide:
-live account authorization, a composed hosted consumer/runner, domain
-configuration, alerts, and a public ChatGPT app remain gated milestones.
+This runbook covers the implemented durable foundation, isolated repository
+execution, recovery controls, and account data lifecycle. It is not a
+production-launch guide: live account authorization, deployed journey drills,
+domain configuration, alerts, and a public ChatGPT app remain gated milestones.
 
 ## Runtime modes
 
@@ -82,8 +82,8 @@ silently skipping. It proves:
   job, attempt, execution, Queue identity, and bundle identity;
 - live Postgres serialization collapses concurrent starts and recovers one
   expired lease once;
-- database, artifact, and Queue readiness are healthy while the default hosted
-  runner probe remains explicitly unavailable until composed 8D wiring;
+- database, artifact, and Queue readiness are healthy and the bounded hosted
+  runner probe creates, executes in, and cleans an isolated deny-all sandbox;
 - a complete tenant archive is exported, its source object removed, restored
   into a fresh Neon schema, re-hashed, and independently read from private
   Blob.
@@ -108,7 +108,7 @@ test cases/artifacts, and zero temporary restore schemas.
 |---|---|---|
 | `/health/live` | process can answer | `200` / `PROCESS_ALIVE` |
 | `/health/ready` | configuration, database, artifact store, and Queue boundary | `200` only when every check is ready |
-| `/health/runner` | composed isolated repository execution | `503` / `RUNNER_NOT_CONFIGURED` until Milestone 8D wires and verifies the hosted runner probe |
+| `/health/runner` | composed isolated repository execution | `200` / `RUNNER_READY` only after a real bounded deny-all sandbox probe succeeds; otherwise `503` with a stable unavailable code |
 
 Do not route customer traffic when readiness is unavailable. Do not replace a
 failed hosted dependency with local memory. Health output contains stable codes
@@ -134,11 +134,46 @@ diagnostics after redaction.
   manifest and every object before mutation, records a restore session, then
   re-exports and digest-compares the result.
 
-The current recovery sweep, deletion executor, and backup/restore services are
-application/operator primitives, not public administration endpoints. A
-scheduled control plane, alerts, dashboards, and operator authentication remain
-private-beta tasks; until then they must not be represented as automated
-production operations.
+Signed-in users can open `/account`, download a portable tenant archive through
+`GET /api/account/export`, or schedule deletion through
+`POST /api/account/delete`. Both routes require the server-owned web session and
+an idempotency key. Deletion additionally requires a same-origin request and the
+exact visible confirmation phrase. A deletion request immediately suspends the
+tenant and requests cancellation of queued/running work; the database purge
+waits until no run remains active and a private-object delete failure leaves the
+request retryable.
+
+## Production-only operator commands
+
+`npm run ops -- ...` refuses offline/test mode, applies migrations, returns
+structured JSON, and maps unexpected failures to one sanitized error. Run it
+only from an authenticated operator environment with the intended hosted
+configuration loaded.
+
+```bash
+npm run ops -- leases:recover --limit 100
+npm run ops -- outbox:publish
+npm run ops -- retention:schedule --limit 100
+npm run ops -- retention:execute
+npm run ops -- backup:export --tenant-id tenant_example --output tenant-example.json
+npm run ops -- backup:verify --input tenant-example.json
+npm run ops -- backup:restore --input tenant-example.json --actor-id operator_example
+npm run ops -- quarantine:list --limit 25
+npm run ops -- quarantine:resolve --tenant-id tenant_example --attempt-id job_example.attempt-1 --resource-type sandbox --provider-resource-id sandbox_example --actor-id operator_example
+```
+
+Archive export creates a new file and refuses to overwrite an existing path.
+Verification is read-only. Restore is mutating and fails closed on a conflicting
+tenant identity. Quarantine resolution matches the exact tenant, attempt,
+resource type, and provider identifier, deletes that provider resource first,
+then records a sanitized resolution audit; a deletion failure remains open.
+Retention execution claims at most one due deletion request per invocation.
+
+The recovery sweep, deletion executor, quarantine cleanup, and backup/restore
+commands remain operator primitives rather than public administration
+endpoints. A scheduled control plane, alerts, dashboards, and a separately
+authenticated operator surface remain private-beta tasks; until then these
+commands must not be represented as automated production operations.
 
 ## Incident rules
 

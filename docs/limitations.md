@@ -42,6 +42,10 @@ public repository canary. Its boundaries are intentional and user-visible.
   concurrency, restart/retry identity, private object access/deletion,
   identifier-only Queue publication, dependency readiness, and tenant
   backup/restore. This is not a hosted availability or production-load claim.
+- Account export/deletion routes, portable archives, retryable provider-first
+  deletion, and responsive controls are implemented and locally verified. They
+  have not completed a signed-in deployed lifecycle drill, so they are not a
+  customer-data readiness claim.
 - The no-auth trusted sample still uses an anonymous public synthetic tenant.
   OAuth/principal and GitHub authorization contracts are implemented for the
   protected path, but they are not safe for private/customer data until the
