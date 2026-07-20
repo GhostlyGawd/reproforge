@@ -28,6 +28,10 @@ export type RetentionClassResults = Readonly<{
   auditEvents: number;
   cases: number;
   deletionRequests: number;
+  githubInstallationStates: number;
+  githubInstallations: number;
+  githubRepositories: number;
+  githubWebhookDeliveries: number;
   idempotencyKeys: number;
   jobs: number;
   outboxEvents: number;
@@ -409,6 +413,18 @@ export class PostgresTenantDataRetention {
       await executor.query("DELETE FROM artifacts WHERE tenant_id = $1", [claim.tenantId]);
       await executor.query("DELETE FROM jobs WHERE tenant_id = $1", [claim.tenantId]);
       await executor.query("DELETE FROM cases WHERE tenant_id = $1", [claim.tenantId]);
+      await executor.query(
+        "DELETE FROM github_webhook_deliveries WHERE tenant_id = $1",
+        [claim.tenantId],
+      );
+      await executor.query(
+        "DELETE FROM github_installation_states WHERE tenant_id = $1",
+        [claim.tenantId],
+      );
+      await executor.query(
+        "DELETE FROM github_installations WHERE tenant_id = $1",
+        [claim.tenantId],
+      );
       await executor.query("DELETE FROM principals WHERE tenant_id = $1", [claim.tenantId]);
       await executor.query("DELETE FROM audit_events WHERE tenant_id = $1", [claim.tenantId]);
 
@@ -477,6 +493,10 @@ export class PostgresTenantDataRetention {
          (SELECT count(*) FROM audit_events WHERE tenant_id = $1) AS audit_events,
          (SELECT count(*) FROM cases WHERE tenant_id = $1) AS cases,
          (SELECT count(*) FROM deletion_requests WHERE tenant_id = $1) AS deletion_requests,
+         (SELECT count(*) FROM github_installation_states WHERE tenant_id = $1) AS github_installation_states,
+         (SELECT count(*) FROM github_installations WHERE tenant_id = $1) AS github_installations,
+         (SELECT count(*) FROM github_repositories WHERE tenant_id = $1) AS github_repositories,
+         (SELECT count(*) FROM github_webhook_deliveries WHERE tenant_id = $1) AS github_webhook_deliveries,
          (SELECT count(*) FROM idempotency_keys WHERE tenant_id = $1) AS idempotency_keys,
          (SELECT count(*) FROM jobs WHERE tenant_id = $1) AS jobs,
          (SELECT count(*) FROM outbox_events WHERE tenant_id = $1) AS outbox_events,
@@ -491,6 +511,10 @@ export class PostgresTenantDataRetention {
       auditEvents: integer(row.audit_events ?? 0),
       cases: integer(row.cases ?? 0),
       deletionRequests: integer(row.deletion_requests ?? 0),
+      githubInstallationStates: integer(row.github_installation_states ?? 0),
+      githubInstallations: integer(row.github_installations ?? 0),
+      githubRepositories: integer(row.github_repositories ?? 0),
+      githubWebhookDeliveries: integer(row.github_webhook_deliveries ?? 0),
       idempotencyKeys: integer(row.idempotency_keys ?? 0),
       jobs: integer(row.jobs ?? 0),
       outboxEvents: integer(row.outbox_events ?? 0),

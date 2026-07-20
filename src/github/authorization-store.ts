@@ -4,6 +4,7 @@ import type {
   GitHubInstallationStateStore,
 } from "@/github/installation-state";
 import type { VerifiedGitHubInstallation } from "@/github/callback";
+import type { GitHubWebhookEnvelope } from "@/github/webhook";
 
 export type GitHubRepositoryAuthorizationStatus =
   | "ACTIVE"
@@ -42,4 +43,7 @@ export interface GitHubAuthorizationStore
     limit: number;
     tenantId: string;
   }): Promise<GitHubRepositoryPage>;
+  processWebhook(
+    envelope: GitHubWebhookEnvelope,
+  ): Promise<"accepted" | "duplicate">;
 }

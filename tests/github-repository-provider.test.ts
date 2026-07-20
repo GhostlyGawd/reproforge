@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 
 import type { AuthorizedPrincipal } from "@/application/authorization";
+import type { AuditEvent } from "@/application/ports/production";
 import { GitHubRepositoryProvider } from "@/github/repository-provider";
 
 const principal: AuthorizedPrincipal = {
@@ -96,7 +97,9 @@ describe("provider-neutral repository authorization", () => {
   });
 
   it("audits repository access and denial without repository names or credentials", async () => {
-    const append = vi.fn(async () => undefined);
+    const append = vi.fn(async (event: AuditEvent) => {
+      void event;
+    });
     const store = {
       findRepository: vi
         .fn()

@@ -1,8 +1,11 @@
+import { randomUUID } from "node:crypto";
+
 import { z } from "zod";
 
 import type { AuthorizedPrincipal } from "@/application/authorization";
 import type { RepositorySourceProvider } from "@/application/ports/repository-source";
 import type { GitHubAuthorizationStore } from "@/github/authorization-store";
+import type { AuditSink } from "@/application/ports/production";
 
 type Catalog = Pick<
   GitHubAuthorizationStore,
@@ -60,10 +63,25 @@ const revisionSchema = z
   .strict();
 
 export class GitHubRepositoryProvider implements RepositorySourceProvider {
+  private readonly audit?: AuditSink;
+  private readonly clock: { now(): Date };
+  private readonly eventId: () => string;
+
   constructor(
     private readonly catalog: Catalog,
     private readonly live: GitHubLiveRepositoryClient,
-  ) {}
+    options: {
+      audit?: AuditSink;
+      clock?: { now(): Date };
+      eventId?: () => string;
+    } = {},
+  ) {
+    this.audit = options.audit;
+    this.clock = options.clock ?? { now: () => new Date() };
+    this.eventId =
+      options.eventId ??
+      (() => `audit_repository_${randomUUID().replaceAll("-", "")}`);
+  }
 
   async listAuthorizedRepositories(
     rawPrincipal: AuthorizedPrincipal,
@@ -99,17 +117,43 @@ export class GitHubRepositoryProvider implements RepositorySourceProvider {
       parsed.data.repositoryId,
     );
     if (!repository || repository.status !== "ACTIVE") {
+      await this.auditAccess(
+        principal,
+        parsed.data.repositoryId,
+        "github.repository-access-denied",
+        "denied",
+        "unavailable",
+      );
       throw new RepositoryAuthorizationError("REPOSITORY_NOT_FOUND");
     }
-    const revision = await this.live.assertRepositoryRevision({
-      commitSha: parsed.data.commitSha,
-      fullName: repository.fullName,
-      installationId: repository.installationId,
-      providerRepositoryId: repository.providerRepositoryId,
-    });
+    let revision: { commitSha: string };
+    try {
+      revision = await this.live.assertRepositoryRevision({
+        commitSha: parsed.data.commitSha,
+        fullName: repository.fullName,
+        installationId: repository.installationId,
+        providerRepositoryId: repository.providerRepositoryId,
+      });
+    } catch (error) {
+      await this.auditAccess(
+        principal,
+        repository.repositoryId,
+        "github.repository-access-denied",
+        "denied",
+        "live-check-failed",
+      );
+      throw error;
+    }
     if (revision.commitSha !== parsed.data.commitSha) {
       throw new RepositoryAuthorizationError("INVALID_REVISION");
     }
+    await this.auditAccess(
+      principal,
+      repository.repositoryId,
+      "github.repository-accessed",
+      "success",
+      "immutable-revision",
+    );
     return {
       commitSha: revision.commitSha,
       defaultBranch: repository.defaultBranch,
@@ -118,5 +162,27 @@ export class GitHubRepositoryProvider implements RepositorySourceProvider {
       provider: "github" as const,
       repositoryId: repository.repositoryId,
     };
+  }
+
+  private async auditAccess(
+    principal: Pick<AuthorizedPrincipal, "principalId" | "tenantId">,
+    repositoryId: string,
+    action:
+      | "github.repository-access-denied"
+      | "github.repository-accessed",
+    outcome: "denied" | "success",
+    reason: string,
+  ): Promise<void> {
+    await this.audit?.append({
+      action,
+      actorId: principal.principalId,
+      eventId: this.eventId(),
+      metadata: { provider: "github", reason },
+      occurredAt: this.clock.now().toISOString(),
+      outcome,
+      targetId: repositoryId,
+      targetType: "repository",
+      tenantId: principal.tenantId,
+    });
   }
 }

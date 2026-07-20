@@ -1,4 +1,4 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 
 import { z } from "zod";
 
@@ -12,6 +12,11 @@ import type {
   GitHubInstallationActor,
   GitHubInstallationStateRecord,
 } from "@/github/installation-state";
+import type { GitHubWebhookEnvelope } from "@/github/webhook";
+import {
+  auditEventSchema,
+  type AuditEvent,
+} from "@/application/ports/production";
 import {
   runSerializableTransaction,
   type PostgresDatabase,
@@ -70,6 +75,29 @@ const installationSchema = z
       context.addIssue({ code: "custom", message: "Duplicate repository" });
     }
   });
+const webhookInstallationSchema = z.object({
+  action: z.string().min(1).max(64).regex(/^[a-z_]+$/),
+  installation: z.object({
+    id: z.number().int().positive().safe(),
+    permissions: z.record(z.string(), z.string()),
+    suspended_at: z.string().datetime({ offset: true }).nullable(),
+  }),
+});
+const webhookRepositorySchema = z.object({
+  action: z.enum(["added", "removed"]),
+  installation: z.object({ id: z.number().int().positive().safe() }),
+  repositories_added: z.array(
+    z.object({
+      default_branch: z.string().min(1).max(255).optional(),
+      full_name: z.string().min(3).max(255).regex(/^[^/\s]+\/[^/\s]+$/).optional(),
+      id: z.number().int().positive().safe(),
+      private: z.boolean().optional(),
+    }),
+  ).max(10_000),
+  repositories_removed: z.array(
+    z.object({ id: z.number().int().positive().safe() }),
+  ).max(10_000),
+});
 
 type RepositoryRow = {
   default_branch: string;
@@ -134,13 +162,23 @@ export class PostgresGitHubAuthorizationStore
   implements GitHubAuthorizationStore
 {
   private readonly repositoryId: () => string;
+  private readonly auditEventId: () => string;
+  private readonly clock: { now(): Date };
 
   constructor(
     private readonly database: PostgresDatabase,
-    options: { repositoryId?: () => string } = {},
+    options: {
+      auditEventId?: () => string;
+      clock?: { now(): Date };
+      repositoryId?: () => string;
+    } = {},
   ) {
     this.repositoryId =
       options.repositoryId ?? (() => `repo_${randomUUID().replaceAll("-", "")}`);
+    this.auditEventId =
+      options.auditEventId ??
+      (() => `audit_github_${randomUUID().replaceAll("-", "")}`);
+    this.clock = options.clock ?? { now: () => new Date() };
   }
 
   async create(rawRecord: GitHubInstallationStateRecord): Promise<void> {
@@ -205,6 +243,7 @@ export class PostgresGitHubAuthorizationStore
       ...rawInstallation,
       repositories: rawInstallation.repositories ?? [],
     });
+    const occurredAt = this.clock.now().toISOString();
     await runSerializableTransaction(this.database, async (executor) => {
       await executor.query(
         `INSERT INTO github_installations (
@@ -240,6 +279,118 @@ export class PostgresGitHubAuthorizationStore
       for (const repository of installation.repositories) {
         await this.upsertRepository(executor, actor.tenantId, installation.installationId, repository);
       }
+      await this.appendAudit(executor, {
+        action: "github.installation-linked",
+        actorId: actor.principalId,
+        eventId: this.auditEventId(),
+        metadata: { selection: installation.repositorySelection },
+        occurredAt,
+        outcome: "success",
+        targetId: String(installation.installationId),
+        targetType: "installation",
+        tenantId: actor.tenantId,
+      });
+    });
+  }
+
+  async processWebhook(
+    rawEnvelope: GitHubWebhookEnvelope,
+  ): Promise<"accepted" | "duplicate"> {
+    const envelope = z
+      .object({
+        deliveryId: z.string().min(1).max(128).regex(/^[A-Za-z0-9-]+$/),
+        event: z.enum(["installation", "installation_repositories"]),
+        payload: z.unknown(),
+      })
+      .strict()
+      .parse(rawEnvelope);
+    const receivedAt = this.clock.now().toISOString();
+    const expiresAt = new Date(
+      Date.parse(receivedAt) + 30 * 24 * 60 * 60_000,
+    ).toISOString();
+    const payloadHash = createHash("sha256")
+      .update(JSON.stringify(envelope.payload))
+      .digest("hex");
+    return runSerializableTransaction(this.database, async (executor) => {
+      const installationPayload =
+        envelope.event === "installation"
+          ? webhookInstallationSchema.safeParse(envelope.payload)
+          : null;
+      const repositoryPayload =
+        envelope.event === "installation_repositories"
+          ? webhookRepositorySchema.safeParse(envelope.payload)
+          : null;
+      const validPayload =
+        installationPayload?.success === true ||
+        repositoryPayload?.success === true;
+      const installationId = installationPayload?.success
+        ? installationPayload.data.installation.id
+        : repositoryPayload?.success
+          ? repositoryPayload.data.installation.id
+          : null;
+      const action = installationPayload?.success
+        ? installationPayload.data.action
+        : repositoryPayload?.success
+          ? repositoryPayload.data.action
+          : null;
+      const inserted = await executor.query<{ delivery_id: string }>(
+        `INSERT INTO github_webhook_deliveries (
+           delivery_id, event, payload_hash, installation_id, action,
+           received_at, expires_at
+         ) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         ON CONFLICT (delivery_id) DO NOTHING
+         RETURNING delivery_id`,
+        [
+          envelope.deliveryId,
+          envelope.event,
+          payloadHash,
+          installationId,
+          action,
+          receivedAt,
+          expiresAt,
+        ],
+      );
+      if (!inserted.rows[0]) return "duplicate";
+      if (!validPayload || installationId === null) {
+        await this.completeDelivery(executor, envelope.deliveryId, receivedAt, null, "IGNORED");
+        return "accepted";
+      }
+      const owner = await executor.query<{ tenant_id: string }>(
+        `SELECT tenant_id FROM github_installations
+          WHERE installation_id = $1
+          LIMIT 1`,
+        [installationId],
+      );
+      const tenantId = owner.rows[0]?.tenant_id;
+      if (!tenantId) {
+        await this.completeDelivery(executor, envelope.deliveryId, receivedAt, null, "IGNORED");
+        return "accepted";
+      }
+
+      const audit = installationPayload?.success
+        ? await this.applyInstallationWebhook(
+            executor,
+            tenantId,
+            installationPayload.data,
+            receivedAt,
+          )
+        : repositoryPayload?.success
+          ? await this.applyRepositoryWebhook(
+              executor,
+              tenantId,
+              repositoryPayload.data,
+              receivedAt,
+            )
+          : null;
+      await this.completeDelivery(
+        executor,
+        envelope.deliveryId,
+        receivedAt,
+        tenantId,
+        audit ? "ACCEPTED" : "IGNORED",
+      );
+      if (audit) await this.appendAudit(executor, audit);
+      return "accepted";
     });
   }
 
@@ -326,6 +477,155 @@ export class PostgresGitHubAuthorizationStore
         repository.fullName,
         repository.defaultBranch,
         repository.private,
+      ],
+    );
+  }
+
+  private async applyInstallationWebhook(
+    executor: PostgresExecutor,
+    tenantId: string,
+    payload: z.infer<typeof webhookInstallationSchema>,
+    at: string,
+  ): Promise<AuditEvent | null> {
+    const exactPermissions = permissionsSchema.safeParse(
+      payload.installation.permissions,
+    ).success;
+    let status: "ACTIVE" | "REMOVED" | "SUSPENDED";
+    let action: string;
+    if (payload.action === "deleted") {
+      status = "REMOVED";
+      action = "github.installation-removed";
+    } else if (payload.action === "suspended" || !exactPermissions) {
+      status = "SUSPENDED";
+      action = "github.installation-suspended";
+    } else if (
+      payload.action === "unsuspended" ||
+      payload.action === "new_permissions_accepted"
+    ) {
+      status = "ACTIVE";
+      action = "github.installation-activated";
+    } else {
+      return null;
+    }
+    await executor.query(
+      `UPDATE github_installations
+          SET status = $3,
+              suspended_at = CASE
+                WHEN $3 = 'SUSPENDED' THEN $4::timestamptz ELSE NULL
+              END,
+              removed_at = CASE
+                WHEN $3 = 'REMOVED' THEN $4::timestamptz ELSE NULL
+              END,
+              updated_at = $4::timestamptz
+        WHERE tenant_id = $1 AND installation_id = $2`,
+      [tenantId, payload.installation.id, status, at],
+    );
+    if (status === "REMOVED") {
+      await executor.query(
+        `UPDATE github_repositories
+            SET status = 'REMOVED', removed_at = $3, updated_at = $3
+          WHERE tenant_id = $1 AND installation_id = $2
+            AND status <> 'REMOVED'`,
+        [tenantId, payload.installation.id, at],
+      );
+    }
+    return {
+      action,
+      actorId: "github-webhook",
+      eventId: this.auditEventId(),
+      metadata: {
+        permissionsExact: exactPermissions,
+        provider: "github",
+      },
+      occurredAt: at,
+      outcome: "success",
+      targetId: String(payload.installation.id),
+      targetType: "installation",
+      tenantId,
+    };
+  }
+
+  private async applyRepositoryWebhook(
+    executor: PostgresExecutor,
+    tenantId: string,
+    payload: z.infer<typeof webhookRepositorySchema>,
+    at: string,
+  ): Promise<AuditEvent> {
+    for (const repository of payload.repositories_removed) {
+      await executor.query(
+        `UPDATE github_repositories
+            SET status = 'REMOVED', removed_at = $4, updated_at = $4
+          WHERE tenant_id = $1 AND installation_id = $2
+            AND provider_repository_id = $3`,
+        [tenantId, payload.installation.id, repository.id, at],
+      );
+    }
+    for (const repository of payload.repositories_added) {
+      if (
+        repository.default_branch &&
+        repository.full_name &&
+        repository.private !== undefined
+      ) {
+        await this.upsertRepository(executor, tenantId, payload.installation.id, {
+          defaultBranch: repository.default_branch,
+          fullName: repository.full_name,
+          private: repository.private,
+          repositoryId: repository.id,
+        });
+      }
+    }
+    return {
+      action: "github.repositories-updated",
+      actorId: "github-webhook",
+      eventId: this.auditEventId(),
+      metadata: {
+        added: payload.repositories_added.length,
+        provider: "github",
+        removed: payload.repositories_removed.length,
+      },
+      occurredAt: at,
+      outcome: "success",
+      targetId: String(payload.installation.id),
+      targetType: "installation",
+      tenantId,
+    };
+  }
+
+  private async completeDelivery(
+    executor: PostgresExecutor,
+    deliveryId: string,
+    at: string,
+    tenantId: string | null,
+    outcome: "ACCEPTED" | "IGNORED",
+  ): Promise<void> {
+    await executor.query(
+      `UPDATE github_webhook_deliveries
+          SET tenant_id = $2, outcome = $3, processed_at = $4
+        WHERE delivery_id = $1 AND outcome = 'PROCESSING'`,
+      [deliveryId, tenantId, outcome, at],
+    );
+  }
+
+  private async appendAudit(
+    executor: PostgresExecutor,
+    rawEvent: AuditEvent,
+  ): Promise<void> {
+    const event = auditEventSchema.parse(rawEvent);
+    await executor.query(
+      `INSERT INTO audit_events (
+         tenant_id, id, actor_id, action, target_type, target_id,
+         outcome, metadata, occurred_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, $8::jsonb, $9)`,
+      [
+        event.tenantId,
+        event.eventId,
+        event.actorId,
+        event.action,
+        event.targetType,
+        event.targetId,
+        event.outcome,
+        JSON.stringify(event.metadata),
+        event.occurredAt,
       ],
     );
   }

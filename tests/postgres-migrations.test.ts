@@ -20,6 +20,7 @@ const EXPECTED_TABLES = [
   "github_installation_states",
   "github_installations",
   "github_repositories",
+  "github_webhook_deliveries",
   "idempotency_keys",
   "jobs",
   "outbox_events",
@@ -39,6 +40,8 @@ const EXPECTED_INDEXES = [
   "github_installation_states_expiry_idx",
   "github_installations_tenant_status_idx",
   "github_repositories_tenant_active_idx",
+  "github_webhook_deliveries_expiry_idx",
+  "github_webhook_deliveries_installation_idx",
   "jobs_expired_lease_idx",
   "jobs_tenant_state_next_attempt_idx",
   "outbox_pending_idx",
@@ -134,12 +137,13 @@ describe("Postgres durable-foundation migrations", () => {
            'principals', 'cases', 'jobs', 'idempotency_keys', 'run_evidence',
            'artifacts', 'outbox_events', 'audit_events', 'quota_ledger',
            'deletion_requests', 'github_installation_states',
-           'github_installations', 'github_repositories'
+           'github_installations', 'github_repositories',
+           'github_webhook_deliveries'
          )
          AND column_name = 'tenant_id'
        ORDER BY table_name
     `);
-    expect(tenantColumns.rows).toHaveLength(13);
+    expect(tenantColumns.rows).toHaveLength(14);
 
     const retentionColumns = await database.query<{ table_name: string }>(`
       SELECT table_name
@@ -149,7 +153,8 @@ describe("Postgres durable-foundation migrations", () => {
          AND table_name IN (
            'principals', 'cases', 'jobs', 'idempotency_keys', 'run_evidence',
            'artifacts', 'outbox_events', 'audit_events', 'quota_ledger',
-           'deletion_requests', 'github_installation_states'
+           'deletion_requests', 'github_installation_states',
+           'github_webhook_deliveries'
          )
        GROUP BY table_name
        ORDER BY table_name
@@ -160,6 +165,7 @@ describe("Postgres durable-foundation migrations", () => {
       "cases",
       "deletion_requests",
       "github_installation_states",
+      "github_webhook_deliveries",
       "idempotency_keys",
       "jobs",
       "outbox_events",
@@ -214,7 +220,7 @@ describe("Postgres durable-foundation migrations", () => {
     const database = createDatabase();
     const client = pgliteMigrationClient(database);
     const migrations = loadPostgresMigrations();
-    expect(migrations).toHaveLength(7);
+    expect(migrations).toHaveLength(8);
 
     await applyPostgresMigrations(client, migrations.slice(0, 1));
     await database.exec(`
