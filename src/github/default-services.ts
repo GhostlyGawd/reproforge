@@ -3,6 +3,7 @@ import "server-only";
 import { randomUUID } from "node:crypto";
 
 import type { WebIdentity } from "@/auth/web-session";
+import { AccountDataService } from "@/application/account-data-service";
 import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
 import { DurableRepositoryCaseService } from "@/application/durable-repository-case-service";
 import { TrustedFixtureDurableWorker } from "@/application/durable-trusted-case-service";
@@ -16,6 +17,8 @@ import { GitHubAppClient } from "@/github/app-client";
 import { GitHubRepositoryProvider } from "@/github/repository-provider";
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
+import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
+import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
 import { AuditSandboxQuarantineSink } from "@/infrastructure/execution/audit-sandbox-quarantine-sink";
 import { PostgresGitHubAuthorizationStore } from "@/infrastructure/github/postgres-github-authorization-store";
 import { PostgresWebPrincipalSession } from "@/infrastructure/identity/postgres-web-principal-session";
@@ -31,6 +34,8 @@ import {
   PostgresUnitOfWork,
 } from "@/infrastructure/postgres/repositories";
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
+import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
+import { PostgresAccountExportQuota } from "@/infrastructure/operations/postgres-account-export-quota";
 import { createSandboxRunnerHealthProbe } from "@/infrastructure/operations/runtime-health";
 import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
 
@@ -46,6 +51,7 @@ export class GitHubRuntimeUnavailableError extends Error {
 }
 
 export type DefaultGitHubServices = {
+  accountData: AccountDataService;
   client: GitHubAppClient;
   config: GitHubConfig;
   database: NeonPostgresDatabase;
@@ -79,11 +85,24 @@ async function createServices(): Promise<DefaultGitHubServices> {
   });
   const clock = { now: () => new Date() };
   const audit = new PostgresAuditSink(database);
+  const blobClient = new VercelPrivateBlobClient(runtime.credentials.blob);
   const artifactStore = new ContentAddressedArtifactStore(
     database,
-    new VercelPrivateBlobClient(runtime.credentials.blob),
+    blobClient,
     clock,
   );
+  const accountData = new AccountDataService({
+    audit,
+    backup: new PostgresTenantBackupService(
+      database,
+      blobClient,
+      clock,
+      new JsonTenantBackupLogger(),
+    ),
+    clock,
+    exportQuota: new PostgresAccountExportQuota(database),
+    retention: new PostgresTenantDataRetention(database, blobClient),
+  });
   const repository = new PostgresDurableReproductionRepository(database);
   const sandboxProvider = new VercelSandboxProvider();
   const runnerProbe = createSandboxRunnerHealthProbe({
@@ -148,6 +167,7 @@ async function createServices(): Promise<DefaultGitHubServices> {
     },
   });
   return {
+    accountData,
     client,
     config,
     database,

@@ -1,11 +1,19 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
+import { readFile, writeFile } from "node:fs/promises";
 
 import {
   formatOperatorFailure,
   runOperatorCommand,
 } from "@/application/operator-command";
 import { OutboxPublisher } from "@/application/outbox-publisher";
+import {
+  parsePortableTenantBackup,
+  serializePortableTenantBackup,
+} from "@/application/tenant-backup";
 import { getRuntimeConfig } from "@/config/runtime";
+import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
+import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
+import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
 import { PostgresSandboxQuarantineOperator } from "@/infrastructure/operations/postgres-sandbox-quarantine-operator";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import {
@@ -18,6 +26,7 @@ import {
   PostgresOutbox,
 } from "@/infrastructure/postgres/repositories";
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
+import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 
 async function main(): Promise<void> {
   let database: NeonPostgresDatabase | undefined;
@@ -30,6 +39,14 @@ async function main(): Promise<void> {
     await applyPostgresMigrations(database);
 
     const clock = { now: () => new Date() };
+    const blobs = new VercelPrivateBlobClient(runtime.credentials.blob);
+    const backup = new PostgresTenantBackupService(
+      database,
+      blobs,
+      clock,
+      new JsonTenantBackupLogger(),
+    );
+    const retention = new PostgresTenantDataRetention(database, blobs);
     const repository = new PostgresDurableReproductionRepository(database);
     const outboxPublisher = new OutboxPublisher({
       claimSeconds: runtime.outboxClaimSeconds,
@@ -50,6 +67,41 @@ async function main(): Promise<void> {
       database,
     });
     const result = await runOperatorCommand(process.argv.slice(2), {
+      backupExport: async ({ outputPath, tenantId }) => {
+        const archive = await backup.exportTenant(tenantId);
+        const bytes = serializePortableTenantBackup(archive);
+        await writeFile(outputPath, bytes, { flag: "wx" });
+        return {
+          artifactCount: archive.manifest.artifacts.length,
+          byteCount: bytes.byteLength,
+          caseCount: archive.manifest.reproductions.length,
+          evidenceCount: archive.manifest.evidence.length,
+          manifestSha256: archive.manifestSha256,
+          portableSha256: createHash("sha256").update(bytes).digest("hex"),
+        };
+      },
+      backupRestore: async ({ actorId, inputPath }) =>
+        backup.restoreTenant({
+          archive: parsePortableTenantBackup(
+            Uint8Array.from(await readFile(inputPath)),
+          ),
+          requestedBy: actorId,
+        }),
+      backupVerify: async ({ inputPath }) => {
+        const archive = parsePortableTenantBackup(
+          Uint8Array.from(await readFile(inputPath)),
+        );
+        return {
+          artifactCount: archive.manifest.artifacts.length,
+          caseCount: archive.manifest.reproductions.length,
+          evidenceCount: archive.manifest.evidence.length,
+          manifestSha256: archive.manifestSha256,
+          tenantId: archive.manifest.tenant.tenantId,
+          verified: true,
+        };
+      },
+      executeRetention: () =>
+        retention.executeNext({ at: clock.now().toISOString() }),
       listQuarantine: (input) => quarantine.listOpen(input),
       publishOutbox: () => outboxPublisher.publishBatch(),
       recoverExpiredLeases: ({ limit }) =>
@@ -58,6 +110,11 @@ async function main(): Promise<void> {
           limit,
         }),
       resolveQuarantine: (input) => quarantine.resolve(input),
+      scheduleRetention: async ({ limit }) => ({
+        scheduled: (
+          await retention.scheduleDue({ at: clock.now().toISOString(), limit })
+        ).length,
+      }),
     });
     process.stdout.write(`${JSON.stringify({ ok: true, ...result })}\n`);
   } catch (error) {

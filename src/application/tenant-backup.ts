@@ -1,4 +1,5 @@
 import { createHash } from "node:crypto";
+import { Buffer } from "node:buffer";
 
 import { z } from "zod";
 
@@ -318,6 +319,25 @@ export type TenantBackupArchive = Readonly<{
   objects: Readonly<Record<string, Uint8Array>>;
 }>;
 
+const MAX_PORTABLE_BACKUP_BYTES = 128 * 1024 * 1024;
+const portableTenantBackupSchema = z
+  .object({
+    archiveSchemaVersion: z.literal("1.0"),
+    manifest: tenantBackupManifestSchema,
+    manifestSha256: sha256Schema,
+    objects: z.record(
+      z.string().min(1).max(1024),
+      z
+        .object({
+          base64: z.string().max(MAX_PORTABLE_BACKUP_BYTES * 2),
+          byteCount: z.number().int().nonnegative(),
+          sha256: sha256Schema,
+        })
+        .strict(),
+    ),
+  })
+  .strict();
+
 export type TenantBackupLogEvent = Readonly<{
   artifactCount: number;
   at: string;
@@ -364,6 +384,89 @@ function corrupt(): TenantBackupError {
     "The tenant backup failed canonical integrity validation",
     false,
   );
+}
+
+function decodeCanonicalBase64(value: string): Uint8Array {
+  if (
+    !/^(?:[A-Za-z0-9+/]{4})*(?:[A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(
+      value,
+    )
+  ) {
+    throw corrupt();
+  }
+  const decoded = Buffer.from(value, "base64");
+  if (decoded.toString("base64") !== value) throw corrupt();
+  return Uint8Array.from(decoded);
+}
+
+export function serializePortableTenantBackup(
+  rawArchive: TenantBackupArchive,
+): Uint8Array {
+  const archive = verifyTenantBackupArchive(rawArchive);
+  const objects: Record<
+    string,
+    { base64: string; byteCount: number; sha256: string }
+  > = {};
+  for (const artifact of archive.manifest.artifacts) {
+    const body = archive.objects[artifact.objectKey];
+    if (!body) throw corrupt();
+    objects[artifact.objectKey] = {
+      base64: Buffer.from(body).toString("base64"),
+      byteCount: artifact.byteCount,
+      sha256: artifact.sha256,
+    };
+  }
+  const bytes = new TextEncoder().encode(
+    canonicalJson({
+      archiveSchemaVersion: "1.0",
+      manifest: archive.manifest,
+      manifestSha256: archive.manifestSha256,
+      objects,
+    }),
+  );
+  if (bytes.byteLength > MAX_PORTABLE_BACKUP_BYTES) throw corrupt();
+  return bytes;
+}
+
+export function parsePortableTenantBackup(
+  bytes: Uint8Array,
+): TenantBackupArchive {
+  if (!(bytes instanceof Uint8Array) || bytes.byteLength > MAX_PORTABLE_BACKUP_BYTES) {
+    throw corrupt();
+  }
+  try {
+    const portable = portableTenantBackupSchema.parse(
+      JSON.parse(new TextDecoder("utf-8", { fatal: true }).decode(bytes)),
+    );
+    const expectedObjectKeys = portable.manifest.artifacts
+      .map(({ objectKey }) => objectKey)
+      .sort();
+    if (
+      JSON.stringify(Object.keys(portable.objects).sort()) !==
+      JSON.stringify(expectedObjectKeys)
+    ) {
+      throw corrupt();
+    }
+    const objects: Record<string, Uint8Array> = {};
+    for (const artifact of portable.manifest.artifacts) {
+      const encoded = portable.objects[artifact.objectKey];
+      if (
+        !encoded ||
+        encoded.byteCount !== artifact.byteCount ||
+        encoded.sha256 !== artifact.sha256
+      ) {
+        throw corrupt();
+      }
+      objects[artifact.objectKey] = decodeCanonicalBase64(encoded.base64);
+    }
+    return verifyTenantBackupArchive({
+      manifest: portable.manifest,
+      manifestSha256: portable.manifestSha256,
+      objects,
+    });
+  } catch {
+    throw corrupt();
+  }
 }
 
 export function tenantBackupManifestSha256(

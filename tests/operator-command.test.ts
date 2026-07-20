@@ -9,6 +9,10 @@ import {
 
 function tools(): OperatorCommandTools {
   return {
+    backupExport: vi.fn().mockResolvedValue({ manifestSha256: "a".repeat(64) }),
+    backupRestore: vi.fn().mockResolvedValue({ restored: true }),
+    backupVerify: vi.fn().mockResolvedValue({ verified: true }),
+    executeRetention: vi.fn().mockResolvedValue({ requestId: "delete_1" }),
     listQuarantine: vi.fn().mockResolvedValue([
       {
         attemptId: "attempt_1",
@@ -31,6 +35,7 @@ function tools(): OperatorCommandTools {
       requeued: 1,
     }),
     resolveQuarantine: vi.fn().mockResolvedValue({ changed: true }),
+    scheduleRetention: vi.fn().mockResolvedValue({ scheduled: 2 }),
   };
 }
 
@@ -113,6 +118,66 @@ describe("operator command", () => {
     });
   });
 
+  it("runs bounded retention and portable backup jobs through explicit commands", async () => {
+    const operations = tools();
+
+    await expect(
+      runOperatorCommand(["retention:schedule", "--limit", "25"], operations),
+    ).resolves.toEqual({
+      command: "retention:schedule",
+      result: { scheduled: 2 },
+    });
+    await expect(
+      runOperatorCommand(["retention:execute"], operations),
+    ).resolves.toEqual({
+      command: "retention:execute",
+      result: { requestId: "delete_1" },
+    });
+    await expect(
+      runOperatorCommand(
+        [
+          "backup:export",
+          "--tenant-id",
+          "tenant_1",
+          "--output",
+          "C:\\exports\\tenant-1.json",
+        ],
+        operations,
+      ),
+    ).resolves.toMatchObject({ command: "backup:export" });
+    await expect(
+      runOperatorCommand(
+        ["backup:verify", "--input", "C:\\exports\\tenant-1.json"],
+        operations,
+      ),
+    ).resolves.toMatchObject({ command: "backup:verify" });
+    await expect(
+      runOperatorCommand(
+        [
+          "backup:restore",
+          "--input",
+          "C:\\exports\\tenant-1.json",
+          "--actor-id",
+          "operator_restore",
+        ],
+        operations,
+      ),
+    ).resolves.toMatchObject({ command: "backup:restore" });
+    expect(operations.scheduleRetention).toHaveBeenCalledWith({ limit: 25 });
+    expect(operations.executeRetention).toHaveBeenCalledOnce();
+    expect(operations.backupExport).toHaveBeenCalledWith({
+      outputPath: "C:\\exports\\tenant-1.json",
+      tenantId: "tenant_1",
+    });
+    expect(operations.backupVerify).toHaveBeenCalledWith({
+      inputPath: "C:\\exports\\tenant-1.json",
+    });
+    expect(operations.backupRestore).toHaveBeenCalledWith({
+      actorId: "operator_restore",
+      inputPath: "C:\\exports\\tenant-1.json",
+    });
+  });
+
   it.each([
     { argv: [] },
     { argv: ["unknown"] },
@@ -120,6 +185,8 @@ describe("operator command", () => {
     { argv: ["leases:recover", "--limit", "2", "--limit", "3"] },
     { argv: ["outbox:publish", "--token", "never-print-this"] },
     { argv: ["quarantine:resolve", "--tenant-id", "tenant_1"] },
+    { argv: ["backup:export", "--tenant-id", "tenant_1"] },
+    { argv: ["backup:restore", "--input", "archive.json"] },
   ])("fails closed with stable, sanitized errors for %#", async ({ argv }) => {
     await expect(runOperatorCommand(argv, tools())).rejects.toBeInstanceOf(
       OperatorCommandError,

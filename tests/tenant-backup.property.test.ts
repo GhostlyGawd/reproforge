@@ -4,7 +4,9 @@ import fc from "fast-check";
 import { describe, expect, it } from "vitest";
 
 import {
+  parsePortableTenantBackup,
   sealTenantBackupArchive,
+  serializePortableTenantBackup,
   tenantBackupManifestSchema,
   verifyTenantBackupArchive,
 } from "@/application/tenant-backup";
@@ -16,7 +18,7 @@ const COMPLETED_AT = "2026-07-19T20:00:01.000Z";
 const RETENTION_UNTIL = "2099-07-19T20:00:00.000Z";
 
 describe("tenant backup integrity properties", () => {
-  it("round-trips and detects mutation for 250 generated private object bodies", () => {
+  it("round-trips portable archives and detects mutation for 500 generated private object bodies", () => {
     fc.assert(
       fc.property(
         fc.uint8Array({ minLength: 1, maxLength: 512 }),
@@ -105,6 +107,9 @@ describe("tenant backup integrity properties", () => {
           expect(verifyTenantBackupArchive(archive).manifestSha256).toBe(
             archive.manifestSha256,
           );
+          expect(
+            parsePortableTenantBackup(serializePortableTenantBackup(archive)),
+          ).toEqual(archive);
           const mutated = Uint8Array.from(body);
           mutated[0] = (mutated[0] ?? 0) ^ 0xff;
           expect(() =>
@@ -117,7 +122,7 @@ describe("tenant backup integrity properties", () => {
           );
         },
       ),
-      { numRuns: 250 },
+      { numRuns: 500 },
     );
   });
 });

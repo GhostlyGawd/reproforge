@@ -13,6 +13,11 @@ const providerResourceId = z
   .min(1)
   .max(512)
   .refine((value) => !/[\u0000-\u001f\u007f]/u.test(value));
+const filePath = z
+  .string()
+  .min(1)
+  .max(1024)
+  .refine((value) => !/[\u0000-\u001f\u007f]/u.test(value));
 const positiveInteger = (maximum: number) =>
   z
     .string()
@@ -39,6 +44,19 @@ const resolveFlags = z
     "--tenant-id": identifier,
   })
   .strict();
+const backupExportFlags = z
+  .object({
+    "--output": filePath,
+    "--tenant-id": identifier,
+  })
+  .strict();
+const backupVerifyFlags = z.object({ "--input": filePath }).strict();
+const backupRestoreFlags = z
+  .object({
+    "--actor-id": identifier,
+    "--input": filePath,
+  })
+  .strict();
 
 export type QuarantineResourceView = Readonly<{
   attemptId: string;
@@ -57,6 +75,16 @@ export type ResolveQuarantineInput = Readonly<{
 }>;
 
 export type OperatorCommandTools = Readonly<{
+  backupExport(input: {
+    outputPath: string;
+    tenantId: string;
+  }): Promise<unknown>;
+  backupRestore(input: {
+    actorId: string;
+    inputPath: string;
+  }): Promise<unknown>;
+  backupVerify(input: { inputPath: string }): Promise<unknown>;
+  executeRetention(): Promise<unknown>;
   listQuarantine(input: { limit: number }): Promise<QuarantineResourceView[]>;
   publishOutbox(): Promise<OutboxPublishSummary>;
   recoverExpiredLeases(input: {
@@ -65,6 +93,7 @@ export type OperatorCommandTools = Readonly<{
   resolveQuarantine(
     input: ResolveQuarantineInput,
   ): Promise<{ changed: boolean }>;
+  scheduleRetention(input: { limit: number }): Promise<unknown>;
 }>;
 
 export class OperatorCommandError extends Error {
@@ -119,6 +148,44 @@ export async function runOperatorCommand(
   if (command === "outbox:publish") {
     if (rawFlags.length > 0) throw new OperatorCommandError();
     return { command, result: await tools.publishOutbox() };
+  }
+  if (command === "retention:schedule") {
+    const input = parseOrThrow(recoverFlags, flags(rawFlags));
+    return {
+      command,
+      result: await tools.scheduleRetention({ limit: input["--limit"] }),
+    };
+  }
+  if (command === "retention:execute") {
+    if (rawFlags.length > 0) throw new OperatorCommandError();
+    return { command, result: await tools.executeRetention() };
+  }
+  if (command === "backup:export") {
+    const input = parseOrThrow(backupExportFlags, flags(rawFlags));
+    return {
+      command,
+      result: await tools.backupExport({
+        outputPath: input["--output"],
+        tenantId: input["--tenant-id"],
+      }),
+    };
+  }
+  if (command === "backup:verify") {
+    const input = parseOrThrow(backupVerifyFlags, flags(rawFlags));
+    return {
+      command,
+      result: await tools.backupVerify({ inputPath: input["--input"] }),
+    };
+  }
+  if (command === "backup:restore") {
+    const input = parseOrThrow(backupRestoreFlags, flags(rawFlags));
+    return {
+      command,
+      result: await tools.backupRestore({
+        actorId: input["--actor-id"],
+        inputPath: input["--input"],
+      }),
+    };
   }
   if (command === "quarantine:list") {
     const input = parseOrThrow(listFlags, flags(rawFlags));

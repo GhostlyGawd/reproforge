@@ -22,7 +22,10 @@ export default async function RepositoriesPage() {
           <span className="brand-mark" aria-hidden="true">RF</span>
           ReproForge
         </Link>
-        <Link className="account-back" href="/">Trusted sample</Link>
+        <div className="account-nav-links">
+          <Link className="account-back" href="/account">Data controls</Link>
+          <Link className="account-back" href="/">Trusted sample</Link>
+        </div>
       </nav>
 
       <section className="account-panel" aria-labelledby="repository-heading">

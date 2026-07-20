@@ -3,30 +3,54 @@ import assert from "node:assert/strict";
 import { PGlite } from "@electric-sql/pglite";
 import { Given, Then, When } from "@cucumber/cucumber";
 
+import {
+  ACCOUNT_DELETION_CONFIRMATION,
+  AccountDataService,
+} from "@/application/account-data-service";
 import type { AuditEvent } from "@/application/ports/production";
 import {
   toReproductionProgress,
   type ProgressView,
 } from "@/application/progress";
 import type { ReproductionSnapshot } from "@/application/reproduction-contracts";
+import { parsePortableTenantBackup } from "@/application/tenant-backup";
 import { createCase, transitionCase } from "@/domain/case";
 import { createJob, transitionJob } from "@/domain/job";
 import { AuditSandboxQuarantineSink } from "@/infrastructure/execution/audit-sandbox-quarantine-sink";
+import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
+import { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
 import {
   PostgresSandboxQuarantineOperator,
   type QuarantineResource,
 } from "@/infrastructure/operations/postgres-sandbox-quarantine-operator";
 import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
+import { PostgresAccountExportQuota } from "@/infrastructure/operations/postgres-account-export-quota";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import { PostgresAuditSink } from "@/infrastructure/postgres/repositories";
+import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { toReproductionView } from "@/mcp/contracts";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
+import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
+import {
+  seedVerifiedBackupTenant,
+  type VerifiedBackupFixture,
+} from "../../tests/helpers/tenant-backup-fixture";
 import type { ReproForgeWorld } from "../support/world";
 
 const AT = new Date("2026-07-20T12:00:00.000Z");
 
 type PrivateBetaScenarioState = {
+  accountData?: {
+    blobs: MemoryPrivateBlobClient;
+    deletionResult?: Awaited<
+      ReturnType<PostgresTenantDataRetention["executeNext"]>
+    >;
+    exported?: Awaited<ReturnType<AccountDataService["exportAccountData"]>>;
+    fixture: VerifiedBackupFixture;
+    retention: PostgresTenantDataRetention;
+    service: AccountDataService;
+  };
   completedRead?: ReproductionSnapshot;
   completedSnapshot?: ReproductionSnapshot;
   denialAudits: AuditEvent[];
@@ -334,6 +358,135 @@ Then(
     assert.deepEqual(audits.rows, [
       { action: "sandbox.cleanup-quarantined", outcome: "failure" },
       { action: "sandbox.cleanup-resolved", outcome: "success" },
+    ]);
+  },
+);
+
+Given(
+  "a signed-in private-beta tenant with a retained verified case",
+  { timeout: 30_000 },
+  async function (this: ReproForgeWorld) {
+    this.durableDatabase = new PGlite();
+    await applyPostgresMigrations(
+      pgliteMigrationClient(this.durableDatabase),
+    );
+    this.durablePostgres = pglitePostgresDatabase(this.durableDatabase);
+    const blobs = new MemoryPrivateBlobClient();
+    const fixture = await seedVerifiedBackupTenant(
+      this.durableDatabase,
+      blobs,
+      "tenant_private_beta_data",
+    );
+    await this.durableDatabase.query(
+      `INSERT INTO principals (
+         tenant_id, id, provider, issuer, external_subject
+       ) VALUES ($1, $2, 'auth0', $3, $4)`,
+      [
+        fixture.tenantId,
+        fixture.callerId,
+        "https://identity.private-beta.example/",
+        "subject_private_beta_data",
+      ],
+    );
+    const clock = { now: () => new Date("2026-07-20T18:00:00.000Z") };
+    const audit = new PostgresAuditSink(this.durablePostgres);
+    const retention = new PostgresTenantDataRetention(
+      this.durablePostgres,
+      blobs,
+    );
+    const backup = new PostgresTenantBackupService(
+      this.durablePostgres,
+      blobs,
+      clock,
+      new JsonTenantBackupLogger({
+        sink: { error: () => undefined, info: () => undefined },
+      }),
+    );
+    scenarioState(this).accountData = {
+      blobs,
+      fixture,
+      retention,
+      service: new AccountDataService({
+        audit,
+        backup,
+        clock,
+        exportQuota: new PostgresAccountExportQuota(this.durablePostgres),
+        nextAuditEventId: () => "audit_private_beta_account_export",
+        retention,
+      }),
+    };
+  },
+);
+
+When(
+  "the user exports the account and confirms deletion",
+  async function (this: ReproForgeWorld) {
+    const current = scenarioState(this).accountData;
+    assert(current);
+    const scope = {
+      callerId: current.fixture.callerId,
+      principalId: current.fixture.callerId,
+      tenantId: current.fixture.tenantId,
+    };
+    current.exported = await current.service.exportAccountData(scope, {
+      idempotencyKey: "private-beta-account-export",
+    });
+    await current.service.requestAccountDeletion(scope, {
+      confirmation: ACCOUNT_DELETION_CONFIRMATION,
+      idempotencyKey: "private-beta-account-delete",
+    });
+    current.deletionResult = await current.retention.executeNext({
+      at: "2026-07-20T18:00:01.000Z",
+      ownerId: "retention_private_beta_data",
+    });
+  },
+);
+
+Then(
+  "the portable export preserves the verified private bundle",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this).accountData;
+    assert(current?.exported);
+    const archive = parsePortableTenantBackup(current.exported.bytes);
+    assert.equal(
+      archive.manifest.tenant.tenantId,
+      current.fixture.tenantId,
+    );
+    assert.equal(archive.manifest.reproductions.length, 1);
+    assert.deepEqual(
+      archive.objects[current.fixture.artifact.objectKey],
+      current.fixture.body,
+    );
+  },
+);
+
+Then(
+  "the tenant data is deleted with only a sanitized tombstone",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    const current = scenarioState(this).accountData;
+    assert(current?.deletionResult);
+    assert.equal(
+      current.blobs.has(current.fixture.artifact.objectKey),
+      false,
+    );
+    const lifecycle = await this.durableDatabase.query<{
+      action: string;
+      metadata: unknown;
+      status: string;
+    }>(
+      `SELECT t.status, a.action, a.metadata
+         FROM tenants t
+         JOIN audit_events a ON a.tenant_id = t.id
+        WHERE t.id = $1`,
+      [current.fixture.tenantId],
+    );
+    assert.deepEqual(lifecycle.rows, [
+      {
+        action: "account.deleted",
+        metadata: { reason: "user-request" },
+        status: "DELETED",
+      },
     ]);
   },
 );

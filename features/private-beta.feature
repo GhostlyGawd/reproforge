@@ -30,3 +30,9 @@ Feature: Private-beta ReproForge
     When the operator resolves the exact sandbox twice
     Then the quarantined sandbox is deleted exactly once
     And the quarantine resolution is audited and no longer open
+
+  Scenario: A user exports then deletes retained case data
+    Given a signed-in private-beta tenant with a retained verified case
+    When the user exports the account and confirms deletion
+    Then the portable export preserves the verified private bundle
+    And the tenant data is deleted with only a sanitized tombstone

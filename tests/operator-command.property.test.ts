@@ -8,6 +8,10 @@ import {
 } from "@/application/operator-command";
 
 const unusedTools: OperatorCommandTools = {
+  backupExport: async () => ({}),
+  backupRestore: async () => ({}),
+  backupVerify: async () => ({}),
+  executeRetention: async () => null,
   listQuarantine: async () => [],
   publishOutbox: async () => ({
     claimed: 0,
@@ -22,6 +26,7 @@ const unusedTools: OperatorCommandTools = {
     requeued: 0,
   }),
   resolveQuarantine: async () => ({ changed: false }),
+  scheduleRetention: async () => ({ scheduled: 0 }),
 };
 
 describe("operator command properties", () => {
@@ -33,8 +38,13 @@ describe("operator command properties", () => {
             ![
               "leases:recover",
               "outbox:publish",
+              "backup:export",
+              "backup:restore",
+              "backup:verify",
               "quarantine:list",
               "quarantine:resolve",
+              "retention:execute",
+              "retention:schedule",
             ].includes(value),
         ),
         async (sensitiveArgument) => {
