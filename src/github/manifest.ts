@@ -27,7 +27,6 @@ export function createGitHubAppManifest(input: {
   const baseUrl = parsed.baseUrl.toString();
   return {
     callback_urls: [new URL("api/github/callback", baseUrl).toString()],
-    default_events: ["installation", "installation_repositories"],
     default_permissions: {
       contents: "read",
       issues: "read",

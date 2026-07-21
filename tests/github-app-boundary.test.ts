@@ -15,6 +15,7 @@ import {
   createGitHubWebhookHandler,
   verifyGitHubWebhookSignature,
 } from "@/github/webhook";
+import githubAppManifestExample from "../config/github-app-manifest.example.json";
 
 const actor = {
   principalId: "principal-alpha",
@@ -23,15 +24,14 @@ const actor = {
 const now = new Date("2026-07-20T00:00:00.000Z");
 
 describe("least-privilege GitHub App specification", () => {
-  it("requests only read permissions and installation lifecycle events", () => {
-    expect(
-      createGitHubAppManifest({
-        baseUrl: "https://reproforge.example",
-        name: "ReproForge Development",
-      }),
-    ).toEqual({
+  it("requests only read permissions and leaves automatic lifecycle events unsubscribed", () => {
+    const manifest = createGitHubAppManifest({
+      baseUrl: "https://reproforge.example",
+      name: "ReproForge Development",
+    });
+
+    expect(manifest).toEqual({
       callback_urls: ["https://reproforge.example/api/github/callback"],
-      default_events: ["installation", "installation_repositories"],
       default_permissions: {
         contents: "read",
         issues: "read",
@@ -49,13 +49,18 @@ describe("least-privilege GitHub App specification", () => {
       setup_on_update: false,
       url: "https://reproforge.example/",
     });
-    const serialized = JSON.stringify(
+    expect(manifest).not.toHaveProperty("default_events");
+    const serialized = JSON.stringify(manifest);
+    expect(serialized).not.toMatch(/write|admin|actions|secret/i);
+  });
+
+  it("keeps the checked-in registration example aligned with the generator", () => {
+    expect(githubAppManifestExample).toEqual(
       createGitHubAppManifest({
         baseUrl: "https://reproforge.example",
         name: "ReproForge Development",
       }),
     );
-    expect(serialized).not.toMatch(/write|admin|actions|secret/i);
   });
 });
 
