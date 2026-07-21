@@ -6,7 +6,7 @@ import { describe, expect, it, vi } from "vitest";
 import { GitHubAppClient } from "@/github/app-client";
 
 const privateKey = generateKeyPairSync("rsa", { modulusLength: 2048 })
-  .privateKey.export({ format: "pem", type: "pkcs8" })
+  .privateKey.export({ format: "pem", type: "pkcs1" })
   .toString();
 
 const config = {

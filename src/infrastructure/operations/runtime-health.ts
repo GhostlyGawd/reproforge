@@ -41,6 +41,26 @@ function fixedProbe(
   return { check: async () => ({ code, status }), component };
 }
 
+function configurationFailure(
+  options: Pick<RuntimeHealthOptions, "clock" | "logger" | "metrics">,
+  code: string,
+): HealthService {
+  return new HealthService({
+    clock: options.clock,
+    logger: options.logger,
+    metrics: options.metrics,
+    readinessProbes: [
+      fixedProbe("configuration", code, "unavailable"),
+    ],
+    runnerProbe: fixedProbe(
+      "runner",
+      "RUNNER_NOT_CONFIGURED",
+      "unavailable",
+    ),
+    timeoutMs: 2_000,
+  });
+}
+
 const RUNNER_HEALTH_MARKER = "reproforge-runner-ready\n";
 
 type SandboxRunnerHealthProbeOptions = Readonly<{
@@ -133,24 +153,7 @@ export function createRuntimeHealthService(
   try {
     config = parseRuntimeConfig(options.environment);
   } catch {
-    return new HealthService({
-      clock: options.clock,
-      logger: options.logger,
-      metrics: options.metrics,
-      readinessProbes: [
-        fixedProbe(
-          "configuration",
-          "INVALID_RUNTIME_CONFIGURATION",
-          "unavailable",
-        ),
-      ],
-      runnerProbe: fixedProbe(
-        "runner",
-        "RUNNER_NOT_CONFIGURED",
-        "unavailable",
-      ),
-      timeoutMs: 2_000,
-    });
+    return configurationFailure(options, "INVALID_RUNTIME_CONFIGURATION");
   }
 
   if (!("credentials" in config)) {
@@ -171,36 +174,33 @@ export function createRuntimeHealthService(
   }
 
   const hostedConfig = config;
+  let webAuthentication: ReturnType<typeof parseWebAuthenticationConfig>;
   try {
-    const webAuthentication = parseWebAuthenticationConfig(options.environment);
-    const oauth = parseOAuthResourceConfig(options.environment);
-    const github = parseGitHubConfig(options.environment);
-    if (
-      webAuthentication.appBaseUrl !== hostedConfig.baseUrl ||
-      oauth.baseUrl !== hostedConfig.baseUrl ||
-      github.baseUrl !== hostedConfig.baseUrl
-    ) {
-      throw new Error("Hosted product origins do not match");
-    }
+    webAuthentication = parseWebAuthenticationConfig(options.environment);
   } catch {
-    return new HealthService({
-      clock: options.clock,
-      logger: options.logger,
-      metrics: options.metrics,
-      readinessProbes: [
-        fixedProbe(
-          "configuration",
-          "INVALID_RUNTIME_CONFIGURATION",
-          "unavailable",
-        ),
-      ],
-      runnerProbe: fixedProbe(
-        "runner",
-        "RUNNER_NOT_CONFIGURED",
-        "unavailable",
-      ),
-      timeoutMs: 2_000,
-    });
+    return configurationFailure(
+      options,
+      "INVALID_WEB_AUTHENTICATION_CONFIGURATION",
+    );
+  }
+  let oauth: ReturnType<typeof parseOAuthResourceConfig>;
+  try {
+    oauth = parseOAuthResourceConfig(options.environment);
+  } catch {
+    return configurationFailure(options, "INVALID_OAUTH_CONFIGURATION");
+  }
+  let github: ReturnType<typeof parseGitHubConfig>;
+  try {
+    github = parseGitHubConfig(options.environment);
+  } catch {
+    return configurationFailure(options, "INVALID_GITHUB_CONFIGURATION");
+  }
+  if (
+    webAuthentication.appBaseUrl !== hostedConfig.baseUrl ||
+    oauth.baseUrl !== hostedConfig.baseUrl ||
+    github.baseUrl !== hostedConfig.baseUrl
+  ) {
+    return configurationFailure(options, "HOSTED_ORIGIN_MISMATCH");
   }
 
   const databaseProbe: HealthProbe =

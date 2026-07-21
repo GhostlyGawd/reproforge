@@ -113,7 +113,11 @@ test cases/artifacts, and zero temporary restore schemas.
 Do not route customer traffic when readiness is unavailable. Do not replace a
 failed hosted dependency with local memory. Health output contains stable codes
 and timings only; raw provider errors and credentials stay in server-side
-diagnostics after redaction.
+diagnostics after redaction. Hosted configuration failures identify only the
+failed boundary: `INVALID_RUNTIME_CONFIGURATION`,
+`INVALID_WEB_AUTHENTICATION_CONFIGURATION`, `INVALID_OAUTH_CONFIGURATION`,
+`INVALID_GITHUB_CONFIGURATION`, or `HOSTED_ORIGIN_MISMATCH`. They never include
+the rejected value or credential.
 
 ## Recovery and data lifecycle
 

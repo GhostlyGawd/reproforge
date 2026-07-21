@@ -1,4 +1,4 @@
-import { importPKCS8, SignJWT } from "jose";
+import { SignJWT } from "jose";
 import { z } from "zod";
 
 import type {
@@ -8,6 +8,10 @@ import type {
 } from "@/github/callback";
 import type { GitHubLiveRepositoryClient } from "@/github/repository-provider";
 import type { EphemeralRepositoryArchiveCredential } from "@/application/ports/repository-source";
+import {
+  isGitHubAppPrivateKey,
+  parseGitHubAppPrivateKey,
+} from "@/github/private-key";
 
 const API_VERSION = "2026-03-10";
 const REQUESTED_PERMISSIONS = Object.freeze({
@@ -30,10 +34,8 @@ const configSchema = z
       .min(256)
       .max(32_768)
       .refine(
-        (value) =>
-          value.includes("-----BEGIN PRIVATE KEY-----") &&
-          value.includes("-----END PRIVATE KEY-----"),
-        "must be a PKCS#8 private key",
+        isGitHubAppPrivateKey,
+        "must be an RSA private key in PKCS#1 or PKCS#8 PEM format",
       ),
   })
   .strict();
@@ -117,7 +119,7 @@ export class GitHubAppClient
   private readonly clientSecret: string;
   private readonly clock: { now(): Date };
   private readonly fetch: typeof fetch;
-  private readonly privateKey: ReturnType<typeof importPKCS8>;
+  private readonly privateKey: ReturnType<typeof parseGitHubAppPrivateKey>;
 
   constructor(rawConfig: GitHubAppClientConfig, dependencies: Dependencies = {}) {
     const config = configSchema.parse(rawConfig);
@@ -127,7 +129,7 @@ export class GitHubAppClient
     this.clientSecret = config.clientSecret;
     this.clock = dependencies.clock ?? { now: () => new Date() };
     this.fetch = dependencies.fetch ?? fetch;
-    this.privateKey = importPKCS8(config.privateKey, "RS256");
+    this.privateKey = parseGitHubAppPrivateKey(config.privateKey);
   }
 
   async verify(input: {

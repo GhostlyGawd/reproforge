@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+import { isGitHubAppPrivateKey } from "@/github/private-key";
+
 export type GitHubEnvironment = Readonly<Record<string, string | undefined>>;
 
 const schema = z
@@ -18,9 +20,8 @@ const schema = z
       .min(256)
       .max(32_768)
       .refine(
-        (value) =>
-          value.includes("-----BEGIN PRIVATE KEY-----") &&
-          value.includes("-----END PRIVATE KEY-----"),
+        isGitHubAppPrivateKey,
+        "must be an RSA private key in PKCS#1 or PKCS#8 PEM format",
       ),
     webhookSecret: z.string().min(32).max(1024),
   })
