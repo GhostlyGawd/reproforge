@@ -141,6 +141,29 @@ describe("server-side web session projection", () => {
     );
   });
 
+  it("uses the configured issuer after SDK validation when the persisted profile omits iss", () => {
+    const user = { ...session.user } as Record<string, unknown>;
+    delete user.iss;
+
+    expect(
+      resolveWebIdentity(
+        { ...session, user },
+        "https://reproforge.dev/tenant_id",
+        "https://tenant.us.auth0.com/",
+      ).issuer,
+    ).toBe("https://tenant.us.auth0.com/");
+  });
+
+  it("rejects a persisted issuer that conflicts with the configured issuer", () => {
+    expect(() =>
+      resolveWebIdentity(
+        session,
+        "https://reproforge.dev/tenant_id",
+        "https://other-tenant.us.auth0.com/",
+      ),
+    ).toThrowError(WebSessionError);
+  });
+
   it.each([
     ["missing session", null, "invalid_session"],
     [

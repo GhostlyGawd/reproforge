@@ -62,9 +62,17 @@ function optionalHttpsUrl(value: unknown): string | null {
   }
 }
 
+function httpsIssuer(value: unknown): string | null {
+  const parsed = z.url().safeParse(value);
+  if (!parsed.success) return null;
+  const url = new URL(parsed.data);
+  return url.protocol === "https:" ? url.toString() : null;
+}
+
 export function resolveWebIdentity(
   session: unknown,
   tenantClaim: string,
+  configuredIssuer?: string,
 ): WebIdentity {
   if (
     typeof session !== "object" ||
@@ -76,10 +84,18 @@ export function resolveWebIdentity(
     throw new WebSessionError("invalid_session");
   }
   const user = session.user as Record<string, unknown>;
-  const issuer = z.url().safeParse(user.iss);
   const subject = opaqueId.safeParse(user.sub);
-  if (!issuer.success || new URL(issuer.data).protocol !== "https:")
+  const sessionIssuer = httpsIssuer(user.iss);
+  const trustedIssuer =
+    configuredIssuer === undefined ? null : httpsIssuer(configuredIssuer);
+  if (
+    (user.iss !== undefined && !sessionIssuer) ||
+    (configuredIssuer !== undefined && !trustedIssuer) ||
+    (sessionIssuer && trustedIssuer && sessionIssuer !== trustedIssuer)
+  )
     throw new WebSessionError("invalid_issuer");
+  const issuer = sessionIssuer ?? trustedIssuer;
+  if (!issuer) throw new WebSessionError("invalid_issuer");
   if (!subject.success) throw new WebSessionError("invalid_subject");
   const rawTenantId = user[tenantClaim];
   const tenantId =
@@ -89,7 +105,7 @@ export function resolveWebIdentity(
   if (!tenantId) throw new WebSessionError("invalid_tenant");
   return {
     email: optionalString(user.email, 320),
-    issuer: issuer.data,
+    issuer,
     name: optionalString(user.name, 160),
     picture: optionalHttpsUrl(user.picture),
     subject: subject.data,
