@@ -1,4 +1,4 @@
-import { getDefaultGitHubServices } from "@/github/default-services";
+import { getDefaultGitHubAuthorizationServices } from "@/github/default-services";
 import { createGitHubWebhookHandler } from "@/github/webhook";
 
 export const runtime = "nodejs";
@@ -6,7 +6,7 @@ export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const services = await getDefaultGitHubServices();
+    const services = await getDefaultGitHubAuthorizationServices();
     return createGitHubWebhookHandler({
       process: (envelope) => services.store.processWebhook(envelope),
       secret: services.config.credentials.webhookSecret,

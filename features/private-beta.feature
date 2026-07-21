@@ -11,6 +11,11 @@ Feature: Private-beta ReproForge
     When the user submits an exact same-origin failure contract
     Then one repository command is accepted and the web redirects to durable progress
 
+  Scenario: GitHub connection stays available while execution dependencies are degraded
+    Given a signed-in GitHub authorization surface with failed execution composition
+    When the user starts the isolated GitHub App authorization
+    Then the browser redirects to GitHub without reinitializing execution dependencies
+
   Scenario: A GitHub login establishes a stable tenant without a custom ID-token claim
     Given a validated GitHub web session without a tenant claim
     When ReproForge resolves the signed-in web identity

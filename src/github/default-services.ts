@@ -15,6 +15,7 @@ import { IsolatedRepositoryRunner } from "@/execution/isolated-repository-runner
 import { VercelSandboxProvider } from "@/execution/vercel-sandbox";
 import { GitHubAppClient } from "@/github/app-client";
 import { GitHubRepositoryProvider } from "@/github/repository-provider";
+import { createGitHubServiceRegistry } from "@/github/service-registry";
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
 import { JsonTenantBackupLogger } from "@/infrastructure/backup/observability";
@@ -54,21 +55,22 @@ export class GitHubRuntimeUnavailableError extends Error {
   }
 }
 
-export type DefaultGitHubServices = {
-  accountData: AccountDataService;
+export type DefaultGitHubAuthorizationServices = {
   client: GitHubAppClient;
   config: GitHubConfig;
   database: NeonPostgresDatabase;
-  provider: GitHubRepositoryProvider;
-  queueConsumer: Pick<DurableQueueConsumer, "consume">;
-  repositoryOperations: RepositoryOperations;
   store: PostgresGitHubAuthorizationStore;
   webPrincipals: PostgresWebPrincipalSession;
 };
 
-let services: Promise<DefaultGitHubServices> | undefined;
+export type DefaultGitHubServices = DefaultGitHubAuthorizationServices & {
+  accountData: AccountDataService;
+  provider: GitHubRepositoryProvider;
+  queueConsumer: Pick<DurableQueueConsumer, "consume">;
+  repositoryOperations: RepositoryOperations;
+};
 
-async function createServices(): Promise<DefaultGitHubServices> {
+async function createAuthorizationServices(): Promise<DefaultGitHubAuthorizationServices> {
   const runtime = getRuntimeConfig();
   if (runtime.mode !== "preview" && runtime.mode !== "production") {
     throw new GitHubRuntimeUnavailableError();
@@ -84,6 +86,23 @@ async function createServices(): Promise<DefaultGitHubServices> {
     clientSecret: config.credentials.clientSecret,
     privateKey: config.credentials.privateKey,
   });
+  return {
+    client,
+    config,
+    database,
+    store,
+    webPrincipals: new PostgresWebPrincipalSession(database),
+  };
+}
+
+async function createServices(
+  authorization: DefaultGitHubAuthorizationServices,
+): Promise<DefaultGitHubServices> {
+  const runtime = getRuntimeConfig();
+  if (runtime.mode !== "preview" && runtime.mode !== "production") {
+    throw new GitHubRuntimeUnavailableError();
+  }
+  const { client, config, database, store, webPrincipals } = authorization;
   const provider = new GitHubRepositoryProvider(store, client, {
     audit: new PostgresAuditSink(database),
   });
@@ -179,17 +198,25 @@ async function createServices(): Promise<DefaultGitHubServices> {
     queueConsumer,
     repositoryOperations: repositoryRuntime,
     store,
-    webPrincipals: new PostgresWebPrincipalSession(database),
+    webPrincipals,
   };
 }
 
+const defaultGitHubServices = createGitHubServiceRegistry({
+  createAuthorization: createAuthorizationServices,
+  createRuntime: createServices,
+});
+
+export function getDefaultGitHubAuthorizationServices(): Promise<DefaultGitHubAuthorizationServices> {
+  return defaultGitHubServices.getAuthorizationServices();
+}
+
 export function getDefaultGitHubServices(): Promise<DefaultGitHubServices> {
-  services ??= createServices();
-  return services;
+  return defaultGitHubServices.getRuntimeServices();
 }
 
 export async function listWebRepositories(identity: WebIdentity) {
-  const resolved = await getDefaultGitHubServices();
+  const resolved = await getDefaultGitHubAuthorizationServices();
   const actor = await resolved.webPrincipals.resolve(identity);
   return resolved.store.listRepositories({ limit: 100, tenantId: actor.tenantId });
 }
@@ -211,7 +238,7 @@ export async function getWebRepositoryCase(
 }
 
 export async function resolveWebRepositoryPrincipal(identity: WebIdentity) {
-  const resolved = await getDefaultGitHubServices();
+  const resolved = await getDefaultGitHubAuthorizationServices();
   const actor = await resolved.webPrincipals.resolve(identity);
   return {
     callerId: actor.principalId,

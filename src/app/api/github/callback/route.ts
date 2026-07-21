@@ -1,6 +1,6 @@
 import { getWebSessionState } from "@/auth/auth0-client";
 import { createGitHubInstallationCallbackHandler } from "@/github/callback";
-import { getDefaultGitHubServices } from "@/github/default-services";
+import { getDefaultGitHubAuthorizationServices } from "@/github/default-services";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -18,7 +18,7 @@ export async function GET(request: Request): Promise<Response> {
   try {
     const session = await getWebSessionState();
     if (session.status !== "signed_in") return invalidRedirect(request);
-    const services = await getDefaultGitHubServices();
+    const services = await getDefaultGitHubAuthorizationServices();
     return createGitHubInstallationCallbackHandler({
       actor: () => services.webPrincipals.resolve(session.identity),
       baseUrl: services.config.baseUrl,

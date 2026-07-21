@@ -40,7 +40,9 @@ import {
 } from "@/infrastructure/postgres/repositories";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import { toReproductionView } from "@/mcp/contracts";
+import { createGitHubInstallHandler } from "@/github/install-route";
 import { createWebRepositoryStartHandler } from "@/github/repository-start-route";
+import { createGitHubServiceRegistry } from "@/github/service-registry";
 import { pgliteMigrationClient } from "../../tests/helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "../../tests/helpers/pglite-postgres-database";
 import { MemoryPrivateBlobClient } from "../../tests/helpers/memory-private-blob-client";
@@ -81,6 +83,13 @@ type PrivateBetaScenarioState = {
   rawWebSession?: unknown;
   resolvedWebIdentity?: WebIdentity;
   expectedWebTenantId?: string;
+  githubAuthorizationIsolation?: {
+    authorize: () => Promise<Response>;
+    executionAttempts: number;
+    response?: Response;
+    retryExecution: () => Promise<unknown>;
+    stateCreates: number;
+  };
   webStart?: {
     calls: Array<{
       input: Parameters<RepositoryOperations["startRepositoryReproduction"]>[1];
@@ -291,6 +300,83 @@ Then(
       type?: unknown;
     };
     assert.equal(root.type, "all");
+  },
+);
+
+Given(
+  "a signed-in GitHub authorization surface with failed execution composition",
+  async function (this: ReproForgeWorld) {
+    const isolated = {
+      authorize: async () => new Response(null, { status: 503 }),
+      executionAttempts: 0,
+      retryExecution: async () => undefined,
+      stateCreates: 0,
+    } satisfies NonNullable<
+      PrivateBetaScenarioState["githubAuthorizationIsolation"]
+    >;
+    const registry = createGitHubServiceRegistry({
+      createAuthorization: async () => ({
+        authorize: createGitHubInstallHandler({
+          actor: async () => ({
+            principalId: "principal_private_beta_github",
+            tenantId: "tenant_private_beta_github",
+          }),
+          appSlug: "reproforge-ghostlygawd-beta-2",
+          baseUrl: "https://reproforge.example/",
+          randomBytes: () => new Uint8Array(32).fill(7),
+          states: {
+            consume: async () => null,
+            create: async () => {
+              isolated.stateCreates += 1;
+            },
+          },
+        }),
+      }),
+      createRuntime: async () => {
+        isolated.executionAttempts += 1;
+        throw new Error("synthetic execution composition failure");
+      },
+    });
+
+    await assert.rejects(
+      registry.getRuntimeServices(),
+      /synthetic execution composition failure/,
+    );
+    const authorization = await registry.getAuthorizationServices();
+    isolated.authorize = authorization.authorize;
+    isolated.retryExecution = registry.getRuntimeServices;
+    scenarioState(this).githubAuthorizationIsolation = isolated;
+  },
+);
+
+When(
+  "the user starts the isolated GitHub App authorization",
+  async function (this: ReproForgeWorld) {
+    const isolated = scenarioState(this).githubAuthorizationIsolation;
+    assert.ok(isolated);
+    isolated.response = await isolated.authorize();
+  },
+);
+
+Then(
+  "the browser redirects to GitHub without reinitializing execution dependencies",
+  async function (this: ReproForgeWorld) {
+    const isolated = scenarioState(this).githubAuthorizationIsolation;
+    assert.ok(isolated?.response);
+    assert.equal(isolated.response.status, 303);
+    const location = new URL(isolated.response.headers.get("location") ?? "");
+    assert.equal(location.origin, "https://github.com");
+    assert.equal(
+      location.pathname,
+      "/apps/reproforge-ghostlygawd-beta-2/installations/new",
+    );
+    assert.ok(location.searchParams.get("state"));
+    assert.equal(isolated.stateCreates, 1);
+    await assert.rejects(
+      isolated.retryExecution(),
+      /synthetic execution composition failure/,
+    );
+    assert.equal(isolated.executionAttempts, 1);
   },
 );
 
