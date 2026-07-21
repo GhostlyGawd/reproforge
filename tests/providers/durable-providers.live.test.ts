@@ -177,13 +177,13 @@ describe.skipIf(!LIVE)("live private Blob and Vercel Queue transports", () => {
       etag = stored.etag;
       const metadata = await head(pathname, { token: blobToken });
       const unauthorized = await fetch(metadata.url, { redirect: "manual" });
-      const authorized = await blobClient.get(pathname);
+      const authorized = await blobClient.get(pathname, bytes.byteLength);
 
       expect([401, 403, 404]).toContain(unauthorized.status);
       expect(authorized?.bytes).toEqual(bytes);
       await expect(blobClient.delete(pathname, stored.etag)).resolves.toBe(true);
       etag = undefined;
-      await expect(blobClient.get(pathname)).resolves.toBeNull();
+      await expect(blobClient.get(pathname, bytes.byteLength)).resolves.toBeNull();
     } finally {
       const remaining = await blobClient.head(pathname).catch(() => null);
       if (remaining) {
@@ -328,6 +328,20 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
       });
       expect(retried).toEqual({ reused: true, snapshot: first.snapshot });
       expect(executeTrustedSample).toHaveBeenCalledTimes(1);
+
+      const exported = await createService().exportReproBundle({
+        callerId,
+        caseId: first.snapshot.case.id,
+      });
+      expect(exported).toMatchObject({
+        bundle: {
+          bundleHash: first.snapshot.result?.bundle?.bundleHash,
+          caseId: first.snapshot.case.id,
+        },
+        caseId: first.snapshot.case.id,
+        schemaVersion: "2.0",
+      });
+      expect(exported.files).toHaveProperty("REPRO.md");
 
       const foreignRead = await repository.findByCaseId(
         tenantScope(`tenant_foreign_${id}`, callerId),
@@ -546,7 +560,9 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
       await expect(
         blobClient.delete(objectKey, sourceObject?.etag),
       ).resolves.toBe(true);
-      await expect(blobClient.get(objectKey)).resolves.toBeNull();
+      await expect(
+        blobClient.get(objectKey, fixture.artifact.byteCount),
+      ).resolves.toBeNull();
 
       const restored = await destinationService.restoreTenant({
         archive,
