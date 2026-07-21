@@ -20,7 +20,7 @@ the hosted product journey remain separate 8B/8D gates.
 | Cancellation | Aborting an active infinite process returned the stable `PROVIDER_INTERRUPTED` boundary and did not leave the provider test running. |
 | Fresh isolation | Two microVMs restored from one prepared snapshot; both saw the immutable marker and neither inherited the first restore's mutation. |
 | Cleanup | Both restores and the source snapshot were deleted; no quarantine record was required. |
-| Full public canary | Exact revision `804d2da174060b40981e6a0437e6b212fc64d36d` completed one control and three candidates in four fresh deny-all microVMs, produced `VERIFIED`, emitted a valid portable bundle, and cleaned every resource. Public acquisition did not mint a GitHub credential. |
+| Full public canary | Dedicated synthetic repository `GhostlyGawd/reproforge-canary` at exact failing revision `d3d69d4c5222bb7f4e6cded27a965258247942b2` completed one control and three candidates in four fresh deny-all microVMs, produced `VERIFIED`, emitted a valid portable bundle, and cleaned every resource. Public acquisition did not mint a GitHub credential; fixed revision `8217e07601bfce879fe8f6f5121fee19a23ade51` is the clear comparison. |
 | Durable providers | The same gate also passed six live Neon, private Blob, Queue, concurrency, restore, and cleanup tests. |
 
 The direct command was `npm run test:providers`: 9 tests passed, 0 failed, and
@@ -43,7 +43,7 @@ provider cases pass separately through `npm run test:providers`.
 ## Public canary bundle
 
 The committed evidence file is 11,187 bytes with outer SHA-256
-`7d6908cfe7a2f34916b739fbde0c46ec71d5dab7872bbcfbc37b7d6ea10eb52f`.
+`e859ee6079f26a69b539750f3cf7c09489ca9fa3e0fdebe41331bda48aa101dd`.
 It records the exact source revision, Node/npm and policy provenance, a
 non-matching control, three matching candidates, content hashes, and all eight
 portable bundle files. `npm run evidence:public-canary` regenerates it against
