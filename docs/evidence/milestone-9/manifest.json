@@ -1,0 +1,61 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-9-hosted-public-boundary",
+  "capturedAt": "2026-07-21T00:56:22.2750328Z",
+  "sourceCommit": "891749b4fcce7faabf6424b565cdc45a6eb3cd3a",
+  "origin": "https://reproforge.vercel.app",
+  "deploymentId": "dpl_2KwXZ88yZE1fPTa9wXomJKwPiBdm",
+  "captureMethod": {
+    "tool": "Playwright 1.61.1 screenshot CLI",
+    "browser": "headless Chromium",
+    "mode": "public Vercel production origin",
+    "fullPage": true
+  },
+  "verification": {
+    "componentContractTests": 7,
+    "focusedBoundaryTests": 14,
+    "browserTests": 26,
+    "browserPolicyTests": 5,
+    "axeViolations": 0,
+    "desktopHorizontalOverflow": false,
+    "mobileHorizontalOverflow": false,
+    "productionBuild": "passed",
+    "githubCi": "passed",
+    "hostedBoundaryReport": "hosted-boundary-report.json"
+  },
+  "captures": [
+    {
+      "file": "hosted-privacy-desktop.png",
+      "capturedAt": "2026-07-21T00:54:56.2049172Z",
+      "route": "/privacy",
+      "viewport": { "width": 1440, "height": 1200 },
+      "image": {
+        "width": 1440,
+        "height": 1826,
+        "bytes": 381427,
+        "sha256": "5344694563bb1c6434b1e560314d679b678f38717e01895e87726c3c3a80b490"
+      },
+      "theme": "dark",
+      "alt": "Desktop production ReproForge privacy notice showing bounded inputs, provider purposes, 30-day and 365-day retention, account export and deletion, and the no-analytics disclosure.",
+      "caption": "Real public production privacy page at the stable ReproForge origin."
+    },
+    {
+      "file": "hosted-security-mobile.png",
+      "capturedAt": "2026-07-21T00:55:12.0224978Z",
+      "route": "/security",
+      "viewport": { "width": 390, "height": 844 },
+      "image": {
+        "width": 390,
+        "height": 2042,
+        "bytes": 295799,
+        "sha256": "6f10ab8c4c3c66ce265cb8f4a7b6a759cc6a1b334a2158f786e181f0055b6d2d"
+      },
+      "theme": "dark",
+      "alt": "Mobile production ReproForge security page showing private vulnerability reporting, immutable repository authorization, deny-all sandbox execution, OAuth checks, and private-beta limits without horizontal overflow.",
+      "caption": "Real public production security page at a 390-pixel mobile viewport."
+    }
+  ],
+  "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",
+  "provenance": "First-party captures of the exact ReproForge production deployment recorded above; not concept art, generated imagery, or a ChatGPT-host screenshot.",
+  "openGates": "Auth0, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."
+}
