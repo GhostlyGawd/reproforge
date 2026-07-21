@@ -55,6 +55,19 @@ and no resource entered quarantine.
 The corresponding review case remains pending until the repository is selected
 through the GitHub App and the production flow is exercised through ChatGPT.
 
+## Hosted load and latency gate
+
+The [hosted load report](hosted-load-gate.json) separates the configured
+private-beta capacity from a larger burst. At the configured three-active-job
+limit, same-idempotency start p95 was 501.02 ms, the eventual read was 96.71
+ms, no request failed, every retry shared one case/job identity, and the case
+became `VERIFIED`. Both documented latency targets passed.
+
+At 16 simultaneous duplicate starts, correctness and availability still held,
+but start p95 rose to 2716.84 ms and missed the 2000 ms target. The report
+retains that failed threshold as a capacity boundary; ReproForge does not claim
+sub-two-second start latency above its configured private-beta limit.
+
 ## Scope boundary
 
 This is deliberately partial Milestone 9 evidence. It does not claim Auth0

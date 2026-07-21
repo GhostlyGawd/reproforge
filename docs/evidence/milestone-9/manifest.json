@@ -70,6 +70,14 @@
       "sourceCommit": "61a9fbfe6bf2e2f8c00f2f55b142dafd810b99be",
       "result": "passed",
       "scope": "public intermittent fixture and isolated provider outcome"
+    },
+    {
+      "report": "hosted-load-gate.json",
+      "checkedAt": "2026-07-21T01:56:18.751Z",
+      "sourceCommit": "eee99411be91c05225ac0d5d95a9997ab01af068",
+      "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
+      "result": "configured-capacity-passed; 16-way burst latency target missed",
+      "scope": "production MCP discovery, idempotent start, and read latency"
     }
   ],
   "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",

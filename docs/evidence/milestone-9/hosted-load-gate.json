@@ -1,0 +1,80 @@
+{
+  "schemaVersion": "1.0",
+  "origin": "https://reproforge.vercel.app",
+  "configuredPrivateBetaCapacity": {
+    "checkedAt": "2026-07-21T01:56:18.751Z",
+    "activeJobLimit": 3,
+    "workload": {
+      "sameIdempotencyStartConcurrency": 3,
+      "uniqueSyntheticJobsExpected": 1,
+      "eventualReads": 1
+    },
+    "start": {
+      "count": 3,
+      "errors": 0,
+      "p50Ms": 360.62,
+      "p95Ms": 501.02,
+      "p99Ms": 501.02,
+      "targetP95Ms": 2000,
+      "targetPassed": true
+    },
+    "eventualRead": {
+      "durationMs": 96.71,
+      "targetMs": 1000,
+      "targetPassed": true
+    },
+    "observedStartStates": {
+      "DRAFT": 2,
+      "VERIFIED": 1
+    },
+    "invariants": {
+      "zeroErrors": true,
+      "oneCaseIdentity": true,
+      "oneJobIdentity": true,
+      "eventualVerified": true
+    },
+    "passed": true
+  },
+  "burstCapacityObservation": {
+    "checkedAt": "2026-07-21T01:55:14.637Z",
+    "workload": {
+      "discoveryConcurrency": 32,
+      "sameIdempotencyStartConcurrency": 16,
+      "readConcurrency": 32,
+      "uniqueSyntheticJobsExpected": 1
+    },
+    "discovery": {
+      "errors": 0,
+      "p50Ms": 1333.21,
+      "p95Ms": 1885.35,
+      "p99Ms": 1914.03
+    },
+    "start": {
+      "errors": 0,
+      "p50Ms": 2498.52,
+      "p95Ms": 2716.84,
+      "p99Ms": 2716.84,
+      "targetP95Ms": 2000,
+      "targetPassed": false
+    },
+    "read": {
+      "errors": 0,
+      "p50Ms": 118.12,
+      "p95Ms": 474.51,
+      "p99Ms": 595.53,
+      "targetP95Ms": 1000,
+      "targetPassed": true
+    },
+    "invariants": {
+      "toolInventoryStable": true,
+      "oneCaseIdentity": true,
+      "oneJobIdentity": true,
+      "concurrentStartResponsesMayBeIntermediate": true,
+      "eventualReadsVerified": true,
+      "zeroErrors": true
+    },
+    "interpretation": "The burst exceeded the configured active-job capacity. Correctness and availability held, but start latency exceeded the private-beta target; no sub-two-second claim is made at concurrency 16."
+  },
+  "sanitization": "Only aggregate counts, durations, states, thresholds, and booleans are included; no case, job, tenant, principal, repository, provider resource, credential, cookie, or user identifier is recorded.",
+  "scopeLimitations": "This bounded synthetic load shape is not a general availability, global-region, sustained-throughput, or paid-plan capacity claim."
+}
