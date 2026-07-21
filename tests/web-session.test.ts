@@ -142,9 +142,17 @@ describe("server-side web session projection", () => {
   });
 
   it.each([
-    ["missing session", null],
-    ["missing issuer", { ...session, user: { ...session.user, iss: "" } }],
-    ["missing subject", { ...session, user: { ...session.user, sub: "" } }],
+    ["missing session", null, "invalid_session"],
+    [
+      "missing issuer",
+      { ...session, user: { ...session.user, iss: "" } },
+      "invalid_issuer",
+    ],
+    [
+      "missing subject",
+      { ...session, user: { ...session.user, sub: "" } },
+      "invalid_subject",
+    ],
     [
       "missing tenant",
       {
@@ -154,10 +162,15 @@ describe("server-side web session projection", () => {
           "https://reproforge.dev/tenant_id": "",
         },
       },
+      "invalid_tenant",
     ],
-  ])("fails closed for %s", (_label, candidate) => {
-    expect(() =>
-      resolveWebIdentity(candidate, "https://reproforge.dev/tenant_id"),
-    ).toThrowError(WebSessionError);
+  ])("fails closed for %s", (_label, candidate, reason) => {
+    try {
+      resolveWebIdentity(candidate, "https://reproforge.dev/tenant_id");
+      throw new Error("expected the session to fail closed");
+    } catch (error) {
+      expect(error).toBeInstanceOf(WebSessionError);
+      expect(error).toMatchObject({ reason });
+    }
   });
 });

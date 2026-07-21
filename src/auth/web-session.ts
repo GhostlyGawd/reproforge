@@ -24,18 +24,24 @@ export type WebAccountView = {
   signedIn: true;
 };
 
+export type WebSessionFailureReason =
+  | "invalid_issuer"
+  | "invalid_session"
+  | "invalid_subject"
+  | "invalid_tenant";
+
 export class WebSessionError extends Error {
   readonly code = "INVALID_WEB_SESSION" as const;
 
-  constructor() {
-    super("The authenticated web session is unavailable");
+  constructor(readonly reason: WebSessionFailureReason = "invalid_session") {
+    super(`The authenticated web session is unavailable: ${reason}`);
     this.name = "WebSessionError";
   }
 }
 
 export function deriveWebTenantId(subject: string): string {
   const parsed = opaqueId.safeParse(subject);
-  if (!parsed.success) throw new WebSessionError();
+  if (!parsed.success) throw new WebSessionError("invalid_subject");
   return `tenant_${createHash("sha256").update(parsed.data, "utf8").digest("hex")}`;
 }
 
@@ -67,20 +73,20 @@ export function resolveWebIdentity(
     typeof session.user !== "object" ||
     session.user === null
   ) {
-    throw new WebSessionError();
+    throw new WebSessionError("invalid_session");
   }
   const user = session.user as Record<string, unknown>;
   const issuer = z.url().safeParse(user.iss);
   const subject = opaqueId.safeParse(user.sub);
-  if (!issuer.success || new URL(issuer.data).protocol !== "https:" || !subject.success) {
-    throw new WebSessionError();
-  }
+  if (!issuer.success || new URL(issuer.data).protocol !== "https:")
+    throw new WebSessionError("invalid_issuer");
+  if (!subject.success) throw new WebSessionError("invalid_subject");
   const rawTenantId = user[tenantClaim];
   const tenantId =
     rawTenantId === undefined
       ? deriveWebTenantId(subject.data)
       : opaqueId.safeParse(rawTenantId).data;
-  if (!tenantId) throw new WebSessionError();
+  if (!tenantId) throw new WebSessionError("invalid_tenant");
   return {
     email: optionalString(user.email, 320),
     issuer: issuer.data,
