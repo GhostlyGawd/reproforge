@@ -4,6 +4,11 @@ import { PGlite } from "@electric-sql/pglite";
 import { Given, Then, When } from "@cucumber/cucumber";
 
 import {
+  deriveWebTenantId,
+  resolveWebIdentity,
+  type WebIdentity,
+} from "@/auth/web-session";
+import {
   ACCOUNT_DELETION_CONFIRMATION,
   AccountDataService,
 } from "@/application/account-data-service";
@@ -73,6 +78,9 @@ type PrivateBetaScenarioState = {
     operator: PostgresSandboxQuarantineOperator;
     results: Array<{ changed: boolean }>;
   };
+  rawWebSession?: unknown;
+  resolvedWebIdentity?: WebIdentity;
+  expectedWebTenantId?: string;
   webStart?: {
     calls: Array<{
       input: Parameters<RepositoryOperations["startRepositoryReproduction"]>[1];
@@ -82,6 +90,47 @@ type PrivateBetaScenarioState = {
     response?: Response;
   };
 };
+
+Given(
+  "a validated GitHub web session without a tenant claim",
+  function (this: ReproForgeWorld) {
+    const subject = "github|bdd-user";
+    const current = scenarioState(this);
+    current.rawWebSession = {
+      user: {
+        email: "synthetic@example.test",
+        iss: "https://tenant.example/",
+        name: "Synthetic GitHub User",
+        picture: "https://images.example.test/avatar.png",
+        sub: subject,
+      },
+    };
+    current.expectedWebTenantId = deriveWebTenantId(subject);
+  },
+);
+
+When(
+  "ReproForge resolves the signed-in web identity",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    current.resolvedWebIdentity = resolveWebIdentity(
+      current.rawWebSession,
+      "https://reproforge.example/tenant_id",
+    );
+  },
+);
+
+Then(
+  "the web identity uses the deterministic tenant ID",
+  function (this: ReproForgeWorld) {
+    const current = scenarioState(this);
+    assert.equal(
+      current.resolvedWebIdentity?.tenantId,
+      current.expectedWebTenantId,
+    );
+    assert.match(current.resolvedWebIdentity?.tenantId ?? "", /^tenant_[a-f0-9]{64}$/);
+  },
+);
 
 const scenarioStates = new WeakMap<ReproForgeWorld, PrivateBetaScenarioState>();
 

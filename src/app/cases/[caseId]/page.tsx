@@ -56,13 +56,13 @@ export default async function CasePage({
               </p>
               <p className="account-name">
                 {session.status === "unconfigured"
-                  ? "The case view is unavailable until Auth0 is configured."
+                  ? "The case view is unavailable until identity is configured."
                   : "Sign in to read this case."}
               </p>
             </div>
             {session.status === "signed_out" ? (
               <a className="primary-button" href={`/auth/login?returnTo=/cases/${encodeURIComponent(caseId)}`}>
-                Sign in with Auth0
+                Continue with GitHub
               </a>
             ) : null}
           </div>

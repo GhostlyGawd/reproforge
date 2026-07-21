@@ -19,8 +19,8 @@ export default function PrivacyPage() {
         <h2>What the product processes</h2>
         <p>
           The offline demo uses only a bundled synthetic issue and fixture. The hosted
-          private beta may process your Auth0 account identifier, the GitHub repositories
-          you explicitly authorize, an exact commit, issue metadata, bounded command
+          private beta may process your GitHub sign-in identifier (brokered by Auth0),
+          the GitHub repositories you explicitly authorize, an exact commit, issue metadata, bounded command
           output, reproduction evidence, bundle bytes, and operational audit records.
         </p>
         <p>
@@ -80,4 +80,3 @@ export default function PrivacyPage() {
     </PolicyPage>
   );
 }
-

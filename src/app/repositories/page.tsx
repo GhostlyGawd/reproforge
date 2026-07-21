@@ -232,7 +232,7 @@ export default async function RepositoriesPage({
             {session.status === "signed_out" ? (
               <a className="primary-button" href="/auth/login?returnTo=/repositories">
                 <LogIn size={17} aria-hidden="true" />
-                Sign in with Auth0
+                Continue with GitHub
               </a>
             ) : (
               <Link className="secondary-button" href="/">

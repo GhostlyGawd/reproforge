@@ -49,9 +49,9 @@
       "id": "positive-authorized-list",
       "polarity": "positive",
       "title": "Least-privilege authorized repository list",
-      "prompt": "Link my ReproForge account if needed, then list only the GitHub repositories I explicitly authorized for this private-beta review.",
+      "prompt": "Connect my GitHub identity if needed, then list only the GitHub repositories I explicitly authorized for this private-beta review.",
       "prerequisites": [
-        "The reviewer Auth0 account is available.",
+        "A reviewer GitHub account is available; no separate ReproForge password is required.",
         "The read-only GitHub App is installed on selected synthetic canaries.",
         "The OAuth grant includes reproforge:repositories:read."
       ],
@@ -60,7 +60,7 @@
         "outcome": "REPOSITORY_LIST",
         "bundle": "not_applicable",
         "assertions": [
-          "account_link_completed",
+          "github_identity_link_completed",
           "authorized_repositories_only",
           "repository_ids_are_server_issued",
           "no_installation_credential_disclosed"

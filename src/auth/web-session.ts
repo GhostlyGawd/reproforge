@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { z } from "zod";
 
 const opaqueId = z
@@ -29,6 +31,12 @@ export class WebSessionError extends Error {
     super("The authenticated web session is unavailable");
     this.name = "WebSessionError";
   }
+}
+
+export function deriveWebTenantId(subject: string): string {
+  const parsed = opaqueId.safeParse(subject);
+  if (!parsed.success) throw new WebSessionError();
+  return `tenant_${createHash("sha256").update(parsed.data, "utf8").digest("hex")}`;
 }
 
 function optionalString(value: unknown, max: number): string | null {
@@ -64,22 +72,22 @@ export function resolveWebIdentity(
   const user = session.user as Record<string, unknown>;
   const issuer = z.url().safeParse(user.iss);
   const subject = opaqueId.safeParse(user.sub);
-  const tenantId = opaqueId.safeParse(user[tenantClaim]);
-  if (
-    !issuer.success ||
-    new URL(issuer.data).protocol !== "https:" ||
-    !subject.success ||
-    !tenantId.success
-  ) {
+  if (!issuer.success || new URL(issuer.data).protocol !== "https:" || !subject.success) {
     throw new WebSessionError();
   }
+  const rawTenantId = user[tenantClaim];
+  const tenantId =
+    rawTenantId === undefined
+      ? deriveWebTenantId(subject.data)
+      : opaqueId.safeParse(rawTenantId).data;
+  if (!tenantId) throw new WebSessionError();
   return {
     email: optionalString(user.email, 320),
     issuer: issuer.data,
     name: optionalString(user.name, 160),
     picture: optionalHttpsUrl(user.picture),
     subject: subject.data,
-    tenantId: tenantId.data,
+    tenantId,
   };
 }
 

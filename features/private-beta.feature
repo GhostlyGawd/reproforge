@@ -11,6 +11,11 @@ Feature: Private-beta ReproForge
     When the user submits an exact same-origin failure contract
     Then one repository command is accepted and the web redirects to durable progress
 
+  Scenario: A GitHub login establishes a stable tenant without a custom ID-token claim
+    Given a validated GitHub web session without a tenant claim
+    When ReproForge resolves the signed-in web identity
+    Then the web identity uses the deterministic tenant ID
+
   Scenario: A worker loss recovers an expired lease
     Given an empty durable Postgres store for a tenant
     When the caller reserves a durable reproduction

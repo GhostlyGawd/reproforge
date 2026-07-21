@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -124,6 +126,19 @@ describe("server-side web session projection", () => {
     ]) {
       expect(serialized).not.toContain(forbidden);
     }
+  });
+
+  it("derives the same stable tenant as the Auth0 Action when the ID token omits the custom claim", () => {
+    const user = { ...session.user } as Record<string, unknown>;
+    delete user["https://reproforge.dev/tenant_id"];
+    const identity = resolveWebIdentity(
+      { ...session, user },
+      "https://reproforge.dev/tenant_id",
+    );
+
+    expect(identity.tenantId).toBe(
+      `tenant_${createHash("sha256").update(session.user.sub, "utf8").digest("hex")}`,
+    );
   });
 
   it.each([

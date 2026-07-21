@@ -40,6 +40,9 @@ following before treating the deployment as ChatGPT-compatible:
    the ID token and access token at
    `https://reproforge.vercel.app/tenant_id`. The value is derived from the
    authenticated Auth0 user ID and contains no email address or credential.
+   The server-side web session independently derives the same opaque value when
+   an otherwise valid ID token omits the custom claim; protected MCP access
+   tokens still fail closed unless the Action-supplied claim is present.
 
 Client ID Metadata Documents (CIMD) can replace DCR after the ChatGPT connector
 provides its deployment-specific CIMD URL. Until that client has been imported

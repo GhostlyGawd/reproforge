@@ -76,7 +76,7 @@ export default async function AccountPage() {
             {session.status === "signed_out" ? (
               <a className="primary-button" href="/auth/login?returnTo=/account">
                 <LogIn size={17} aria-hidden="true" />
-                Sign in with Auth0
+                Continue with GitHub
               </a>
             ) : null}
           </div>
