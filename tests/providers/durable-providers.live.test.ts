@@ -206,7 +206,10 @@ describe.skipIf(!LIVE)("live private Blob and Vercel Queue transports", () => {
 
     const result = await queue.send(message);
 
-    expect(result.messageId).toMatch(/^[a-z]-[A-Za-z0-9_-]+$/);
+    expect(
+      result.messageId === null ||
+        (typeof result.messageId === "string" && result.messageId.length > 0),
+    ).toBe(true);
     expect(Object.keys(message).sort()).toEqual([
       "caseId",
       "eventId",

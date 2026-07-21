@@ -997,7 +997,7 @@ export class PostgresDurableReproductionRepository
                 cancellation_requested_at = $4, cancelled_at = $4,
                 updated_at = $4, version = version + 1
           WHERE tenant_id = $1 AND id = $2 AND version = $3
-            AND state = 'QUEUED' AND attempt = 0
+            AND state = 'QUEUED'
           RETURNING version`,
         [scope.tenantId, jobId, record.version, at],
       );

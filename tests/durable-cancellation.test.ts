@@ -86,6 +86,44 @@ describe("durable cancellation", () => {
     expect(state.rows[0]?.cancelled_at.toISOString()).toBe(DURABLE_AT);
   });
 
+  it("terminally cancels a queued job after an expired lease is recovered", async () => {
+    const tenantId = "tenant_cancel_recovered";
+    const record = await seedDurableTenant(database, unitOfWork, tenantId);
+    const lease = await repository.claimLease({
+      at: DURABLE_AT,
+      jobId: record.jobId,
+      leaseSeconds: 60,
+      ownerId: "worker_cancel_recovered",
+      tenantId,
+    });
+    expect(lease).not.toBeNull();
+    const recoveredAt = "2026-07-19T20:02:00.000Z";
+    await expect(
+      repository.recoverExpiredLeases({ at: recoveredAt, limit: 10 }),
+    ).resolves.toEqual({ cancelled: 0, exhausted: 0, requeued: 1 });
+
+    await expect(
+      requestDurableCancellation(unitOfWork, {
+        at: "2026-07-19T20:02:01.000Z",
+        jobId: record.jobId,
+        scope: durableScope(tenantId),
+      }),
+    ).resolves.toEqual({
+      accepted: true,
+      changed: true,
+      disposition: "cancelled",
+    });
+    await expect(
+      repository.findByJobId(durableScope(tenantId), record.jobId),
+    ).resolves.toMatchObject({
+      snapshot: {
+        case: { state: "CANCELLED" },
+        job: { attempt: 1, progressPhase: "CANCELLED", state: "CANCELLED" },
+      },
+      version: 4,
+    });
+  });
+
   it("is idempotent and emits one sanitized audit and cancellation intent", async () => {
     const tenantId = "tenant_cancel_idempotent";
     const record = await seedDurableTenant(database, unitOfWork, tenantId);
