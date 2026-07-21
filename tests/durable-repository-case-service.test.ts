@@ -85,7 +85,7 @@ beforeAll(async () => {
   await applyPostgresMigrations(pgliteMigrationClient(database));
   const postgres = pglitePostgresDatabase(database);
   await database.query("INSERT INTO tenants (id) VALUES ($1)", [tenantId]);
-  const clock = { now: () => new Date("2026-07-21T16:00:00.000Z") };
+  const clock = { now: () => new Date() };
   const artifacts = new ContentAddressedArtifactStore(
     postgres,
     new MemoryPrivateBlobClient(),
@@ -131,7 +131,7 @@ beforeAll(async () => {
         },
         limitsPolicyVersion: "sandbox-limits-v1",
         source: {
-          acquiredAt: "2026-07-21T16:00:00.000Z",
+          acquiredAt: input.case.createdAt,
           archiveBytes: 4_096,
           archiveSha256: "b".repeat(64),
           commitSha: input.source.commitSha,
