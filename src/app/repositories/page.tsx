@@ -5,9 +5,20 @@ import Link from "next/link";
 import { connection } from "next/server";
 
 import { getWebSessionState } from "@/auth/auth0-client";
+import type { WebIdentity } from "@/auth/web-session";
 import { listWebRepositories } from "@/github/default-services";
+import { reportGitHubRuntimeFailure } from "@/github/runtime-observability";
 
 export const dynamic = "force-dynamic";
+
+async function loadRepositoryPage(identity: WebIdentity) {
+  try {
+    return await listWebRepositories(identity);
+  } catch (error) {
+    reportGitHubRuntimeFailure("list-repositories", error);
+    return null;
+  }
+}
 
 export default async function RepositoriesPage({
   searchParams,
@@ -19,7 +30,7 @@ export default async function RepositoriesPage({
   const session = await getWebSessionState();
   const repositoryPage =
     session.status === "signed_in"
-      ? await listWebRepositories(session.identity).catch(() => null)
+      ? await loadRepositoryPage(session.identity)
       : null;
 
   return (

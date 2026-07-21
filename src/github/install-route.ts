@@ -9,6 +9,7 @@ type InstallDependencies = {
   appSlug: string;
   baseUrl: string;
   clock?: { now(): Date };
+  onError?: (error: unknown) => void;
   randomBytes?: () => Uint8Array;
   states: GitHubInstallationStateStore;
 };
@@ -39,7 +40,12 @@ export function createGitHubInstallHandler(
         states: dependencies.states,
       });
       return redirect(authorization.url);
-    } catch {
+    } catch (error) {
+      try {
+        dependencies.onError?.(error);
+      } catch {
+        // Observability must never replace the stable fail-closed response.
+      }
       return Response.json(
         { error: "github_installation_unavailable" },
         { headers: { "Cache-Control": "no-store" }, status: 503 },
