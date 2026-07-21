@@ -332,6 +332,12 @@ export function ReproForgeApp({
           Repository work requires a linked account, authorized immutable source, and
           configured isolated hosted runner.
         </p>
+        <nav className="footer-policy-links" aria-label="Product policies">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/support">Support</Link>
+          <Link href="/security">Security</Link>
+        </nav>
       </main>
     </div>
   );
