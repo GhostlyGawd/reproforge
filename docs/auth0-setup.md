@@ -11,7 +11,11 @@ following before treating the deployment as ChatGPT-compatible:
 
 1. Create a regular web application for the ReproForge browser session. Allow
    `<origin>/auth/callback` as a callback, `<origin>` as a logout URL and web
-   origin, and authorization-code plus refresh-token grants.
+   origin, and authorization-code plus refresh-token grants. Set both the
+   application's **Application Login URI** and the tenant's **Default Login
+   Route** to `<origin>/auth/login?returnTo=%2Frepositories`. This recovers a
+   direct or stale Universal Login visit by starting a fresh application-owned
+   authorization transaction instead of showing Auth0's generic error page.
 2. Create an RS256 API whose identifier exactly equals `<origin>/mcp`. Define
    the five ReproForge scopes documented in
    [the ChatGPT guide](chatgpt-plugin.md).
@@ -27,7 +31,11 @@ following before treating the deployment as ChatGPT-compatible:
    third-party applications and cannot receive API access without this grant.
 6. Promote the chosen database or social login connection to domain level.
    Dynamically registered third-party applications cannot use an ordinary
-   application-only connection.
+   application-only connection. Enable or disable first-party application
+   connections through Auth0's dedicated
+   `PATCH /api/v2/connections/{id}/clients` endpoint. Do not expose a social
+   connection backed only by Auth0 development keys in production; configure
+   provider-owned credentials first or leave that connection disabled.
 7. Add a post-login Action that writes the same stable, namespaced tenant ID to
    the ID token and access token at
    `https://reproforge.vercel.app/tenant_id`. The value is derived from the

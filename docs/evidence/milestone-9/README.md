@@ -83,6 +83,20 @@ production RFC 8707 resource, and ReproForge scopes, then reached the expected
 was deleted. This proves machine configuration, not a completed human login or
 ChatGPT-host interaction.
 
+An initial direct Universal Login visit then exposed one missing recovery
+setting: Auth0 had neither an application login URI nor a tenant default login
+route. Both now point to ReproForge's server-owned `/auth/login` entry point.
+The sanitized recovery canary follows the resulting `302 -> 307 -> 302 -> 200`
+chain into a fresh `ReproForge Web` transaction. The only Google connection was
+backed by Auth0 development keys, so it was disabled for the production web
+application pending provider-owned credentials.
+
+![Mobile Auth0 login reached from ReproForge production after the routing repair, showing email and password fields plus sign-up without a generic error, Google option, or development-key warning.](production-auth0-login-mobile.png)
+
+This live unauthenticated capture proves that the repaired entry path renders;
+it does not claim that a human login or principal-provisioning callback has
+completed.
+
 ## Scope boundary
 
 This is deliberately partial Milestone 9 evidence. It proves Auth0 tenant/DCR

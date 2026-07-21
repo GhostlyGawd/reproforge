@@ -1,6 +1,7 @@
 {
   "schemaVersion": "1.0",
-  "capturedAt": "2026-07-21T19:10:19.729Z",
+  "capturedAt": "2026-07-21T20:12:11.728Z",
+  "initialCompatibilityCapturedAt": "2026-07-21T19:10:19.729Z",
   "sourceCommit": "0449ddbee8ce406a18fec9926b29bd7a33ac0c2c",
   "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
   "origin": "https://reproforge.vercel.app",
@@ -43,7 +44,10 @@
     "authorizationResponseIssuerParameter": true,
     "dynamicClientRegistration": true,
     "registrationEndpoint": "https://dev-zrjckn7bm7og6sdc.us.auth0.com/oidc/register",
+    "applicationLoginUri": "https://reproforge.vercel.app/auth/login?returnTo=%2Frepositories",
+    "tenantDefaultRedirectionUri": "https://reproforge.vercel.app/auth/login?returnTo=%2Frepositories",
     "domainLevelDatabaseConnection": true,
+    "firstPartyGoogleDevelopmentKeysEnabled": false,
     "postLoginTenantClaimAction": "deployed-and-bound",
     "thirdPartyDefaultGrantTemplates": [
       {
@@ -57,6 +61,38 @@
         "scopeCount": 5
       }
     ]
+  },
+  "defaultLoginRecoveryCanary": {
+    "observedFailureAt": "2026-07-21T20:02:06.952Z",
+    "observedFailure": "direct Universal Login visit had no application or tenant login URI",
+    "redirectTrace": [
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/u/login",
+        "httpStatus": 302
+      },
+      {
+        "host": "reproforge.vercel.app",
+        "path": "/auth/login",
+        "httpStatus": 307
+      },
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/authorize",
+        "httpStatus": 302
+      },
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/u/login",
+        "httpStatus": 200
+      }
+    ],
+    "applicationContext": "ReproForge Web",
+    "genericErrorPresent": false,
+    "emailPasswordLoginPresent": true,
+    "signUpPresent": true,
+    "googleDevelopmentKeysPresented": false,
+    "visualEvidence": "production-auth0-login-mobile.png"
   },
   "dynamicRegistrationCanary": {
     "clientClass": "strict-third-party-public-client",

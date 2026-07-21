@@ -53,6 +53,21 @@
       "theme": "dark",
       "alt": "Mobile production ReproForge security page showing private vulnerability reporting, immutable repository authorization, deny-all sandbox execution, OAuth checks, and private-beta limits without horizontal overflow.",
       "caption": "Real public production security page at a 390-pixel mobile viewport."
+    },
+    {
+      "file": "production-auth0-login-mobile.png",
+      "capturedAt": "2026-07-21T20:11:41.0326316Z",
+      "route": "/auth/login?returnTo=%2Frepositories",
+      "viewport": { "width": 390, "height": 844 },
+      "image": {
+        "width": 390,
+        "height": 844,
+        "bytes": 21334,
+        "sha256": "a3054cf08dfb9f566e6438bb81ab8f8c53a16d4512d85644a0fb2b4fffcbe66a"
+      },
+      "theme": "light",
+      "alt": "Mobile Auth0 login reached from ReproForge production after the routing repair, showing email and password fields plus sign-up without a generic error, Google option, or development-key warning.",
+      "caption": "Live unauthenticated Auth0 Universal Login reached through the repaired ReproForge production entry path."
     }
   ],
   "subsequentProductionGates": [
@@ -81,14 +96,14 @@
     },
     {
       "report": "production-auth0-gate.json",
-      "checkedAt": "2026-07-21T19:10:19.729Z",
+      "checkedAt": "2026-07-21T20:12:11.728Z",
       "sourceCommit": "0449ddbee8ce406a18fec9926b29bd7a33ac0c2c",
       "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
       "result": "passed",
-      "scope": "production readiness, runner capability, Auth0 OAuth compatibility, and disposable DCR canary"
+      "scope": "production readiness, runner capability, Auth0 OAuth compatibility, disposable DCR canary, and direct-login recovery"
     }
   ],
-  "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",
-  "provenance": "First-party captures of the exact ReproForge production deployment recorded above; not concept art, generated imagery, or a ChatGPT-host screenshot.",
+  "sanitization": "Public static policy content and an unauthenticated hosted login form only; no account, credential, private repository, provider resource, cookie, or user data.",
+  "provenance": "Policy captures are first-party pages from the exact ReproForge production deployment; the Auth0 capture is the live hosted login reached from that deployment. None are concept art, generated imagery, or ChatGPT-host screenshots.",
   "openGates": "Browser login, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."
 }
