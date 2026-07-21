@@ -78,9 +78,17 @@
       "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
       "result": "configured-capacity-passed; 16-way burst latency target missed",
       "scope": "production MCP discovery, idempotent start, and read latency"
+    },
+    {
+      "report": "production-auth0-gate.json",
+      "checkedAt": "2026-07-21T19:10:19.729Z",
+      "sourceCommit": "0449ddbee8ce406a18fec9926b29bd7a33ac0c2c",
+      "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
+      "result": "passed",
+      "scope": "production readiness, runner capability, Auth0 OAuth compatibility, and disposable DCR canary"
     }
   ],
   "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",
   "provenance": "First-party captures of the exact ReproForge production deployment recorded above; not concept art, generated imagery, or a ChatGPT-host screenshot.",
-  "openGates": "Auth0, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."
+  "openGates": "Browser login, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."
 }

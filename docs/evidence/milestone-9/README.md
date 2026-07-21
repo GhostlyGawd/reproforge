@@ -68,9 +68,25 @@ but start p95 rose to 2716.84 ms and missed the 2000 ms target. The report
 retains that failed threshold as a capacity boundary; ReproForge does not claim
 sub-two-second start latency above its configured private-beta limit.
 
+## Production Auth0 and readiness gate
+
+The sanitized [production Auth0 gate](production-auth0-gate.json) records the
+exact production deployment and source commit after Auth0 and GitHub App
+credentials were configured. Production liveness, dependency readiness, and a
+real deny-all Vercel Sandbox runner probe all returned `200`. All seven OAuth
+compatibility checks passed with DCR as the client-registration method.
+
+A disposable strict third-party public client was registered with a `tpc_`
+identifier. Auth0 accepted authorization code, refresh token, S256 PKCE, the
+production RFC 8707 resource, and ReproForge scopes, then reached the expected
+`login_required` boundary without a browser session. Every disposable client
+was deleted. This proves machine configuration, not a completed human login or
+ChatGPT-host interaction.
+
 ## Scope boundary
 
-This is deliberately partial Milestone 9 evidence. It does not claim Auth0
-tenant configuration, a GitHub App installation, signed-in public/private
-canaries, a real ChatGPT developer-mode app, or ChatGPT-host screenshots. Those
-external-account gates remain open and prevent a completion claim.
+This is deliberately partial Milestone 9 evidence. It proves Auth0 tenant/DCR
+configuration but does not claim a completed browser login, GitHub App
+installation, signed-in public/private canaries, a real ChatGPT developer-mode
+app, or ChatGPT-host screenshots. Those interactive external-account gates
+remain open and prevent a completion claim.
