@@ -35,6 +35,13 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 - GitHub App state and callback inputs are signed, single-use, time-bounded, and
   installation/repository scoped. Webhook ordering and revocation are durable.
 - The MCP App resource has an empty external connect/resource/frame allowlist and loads no third-party assets.
+- Hosted responses apply a closed same-origin content security policy, deny
+  framing and browser capabilities, suppress referrers and MIME sniffing, and
+  enable HSTS on HTTPS. Development alone permits `unsafe-eval` for hot reload;
+  production does not.
+- The OpenAI Apps domain-challenge route is a non-cached 404 unless one exact
+  printable token is explicitly configured. When enabled it returns only that
+  token as plain text and is removed again after verification.
 - `/mcp` uses no auth and wildcard CORS only for the public synthetic fixture. It must not be expanded to customer data or arbitrary execution under that policy.
 - Investigator tools are strict data contracts, not shell or filesystem tools.
 - The OpenAI client is initialized only for an explicit live request with a configured key.
@@ -97,7 +104,8 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
   public repositories.
 - Private-repository/customer use before live Auth0, GitHub installation,
   revocation, and composed hosted end-to-end evidence passes.
-- Attaching to a production environment.
+- Treating the current fail-closed production deployment as ready before its
+  Auth0, GitHub App, readiness, and end-to-end canaries pass.
 - Supplying production credentials, customer datasets, or private source code.
 - Multi-user or customer-data operation without OAuth principal/tenant resolution, repository authorization, abuse controls, and a deployment review.
 - Treating the anonymous trusted-sample caller scope as tenant isolation.
