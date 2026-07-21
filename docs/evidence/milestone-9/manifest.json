@@ -55,6 +55,16 @@
       "caption": "Real public production security page at a 390-pixel mobile viewport."
     }
   ],
+  "subsequentProductionGates": [
+    {
+      "report": "production-mcp-gate.json",
+      "checkedAt": "2026-07-21T01:45:08.696Z",
+      "sourceCommit": "eee99411be91c05225ac0d5d95a9997ab01af068",
+      "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
+      "result": "passed",
+      "scope": "production MCP protocol and live provider regression gate"
+    }
+  ],
   "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",
   "provenance": "First-party captures of the exact ReproForge production deployment recorded above; not concept art, generated imagery, or a ChatGPT-host screenshot.",
   "openGates": "Auth0, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."

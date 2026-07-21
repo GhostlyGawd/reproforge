@@ -25,6 +25,23 @@ sanitization statement are recorded in [the manifest](manifest.json). The
 built Playwright run passed all 26 browser checks, including five public-policy
 checks and zero automated accessibility violations.
 
+## Production MCP regression gate
+
+After the visual capture, commit
+`eee99411be91c05225ac0d5d95a9997ab01af068` fixed and regression-tested
+decoded private-Blob reads. GitHub CI passed on the exact commit, and Vercel
+promoted it as production deployment `dpl_HvTttjPzKFuYR68z45eLyeTF2Xir`.
+
+The sanitized [production MCP gate](production-mcp-gate.json) records an
+official MCP SDK run against the stable production origin. Tool discovery,
+verified start, idempotent retry, durable read, matching-hash bundle export,
+and `REPRO.md` presence all passed. Strict schemas also rejected arbitrary
+source/command and destructive/fabricated-proof inputs, while an unknown case
+was rejected or challenged. All nine live provider tests passed separately.
+
+This protocol evidence is not presented as ChatGPT-host evidence. The review
+case remains pending until it is exercised through ChatGPT developer mode.
+
 ## Scope boundary
 
 This is deliberately partial Milestone 9 evidence. It does not claim Auth0
