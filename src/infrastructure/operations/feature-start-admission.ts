@@ -33,6 +33,16 @@ type RepositoryFeatureFlags = Pick<
   | "disabledExecutionProfiles"
 >;
 
+export function selectRepositoryFeatureFlags(
+  runtime: RuntimeConfig,
+): RepositoryFeatureFlags {
+  return {
+    disablePrivateRepositories: runtime.disablePrivateRepositories,
+    disableRepositoryStarts: runtime.disableRepositoryStarts,
+    disabledExecutionProfiles: [...runtime.disabledExecutionProfiles],
+  };
+}
+
 type Dependencies = Readonly<{
   audit: AuditSink;
   clock?: { now(): Date };

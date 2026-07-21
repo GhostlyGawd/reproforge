@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 import { RepositoryStartPolicyError } from "@/application/case-service";
+import { parseRuntimeConfig } from "@/config/runtime";
 import {
   CompositeRepositoryStartAdmission,
   FeatureFlagRepositoryStartAdmission,
+  selectRepositoryFeatureFlags,
 } from "@/infrastructure/operations/feature-start-admission";
 
 const principal = {
@@ -53,6 +55,31 @@ function admission(
 }
 
 describe("repository feature-policy admission", () => {
+  it("projects the exact strict feature-policy shape from hosted runtime config", () => {
+    const runtime = parseRuntimeConfig({
+      BLOB_READ_WRITE_TOKEN: "synthetic-blob-token",
+      DATABASE_URL: "postgresql://synthetic:credential@example.test/reproforge",
+      REPROFORGE_BASE_URL: "https://reproforge.example.test",
+      REPROFORGE_DISABLE_PRIVATE_REPOSITORIES: "true",
+      REPROFORGE_DISABLED_EXECUTION_PROFILES: "node24,node22",
+      REPROFORGE_RUNTIME_MODE: "production",
+    });
+
+    const flags = selectRepositoryFeatureFlags(runtime);
+
+    expect(flags).toEqual({
+      disablePrivateRepositories: true,
+      disableRepositoryStarts: false,
+      disabledExecutionProfiles: ["node22", "node24"],
+    });
+    expect(() => admission(flags)).not.toThrow();
+    expect(Object.keys(flags).sort()).toEqual([
+      "disablePrivateRepositories",
+      "disableRepositoryStarts",
+      "disabledExecutionProfiles",
+    ]);
+  });
+
   it.each([
     {
       code: "REPOSITORY_STARTS_DISABLED" as const,

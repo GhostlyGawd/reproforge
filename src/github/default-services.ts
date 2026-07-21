@@ -40,6 +40,7 @@ import { PostgresAccountExportQuota } from "@/infrastructure/operations/postgres
 import {
   CompositeRepositoryStartAdmission,
   FeatureFlagRepositoryStartAdmission,
+  selectRepositoryFeatureFlags,
 } from "@/infrastructure/operations/feature-start-admission";
 import { createSandboxRunnerHealthProbe } from "@/infrastructure/operations/runtime-health";
 import { SandboxRunnerStartAdmission } from "@/infrastructure/operations/repository-start-admission";
@@ -164,7 +165,10 @@ async function createServices(
     runner,
     source: provider,
     startAdmission: new CompositeRepositoryStartAdmission([
-      new FeatureFlagRepositoryStartAdmission({ audit, flags: runtime }),
+      new FeatureFlagRepositoryStartAdmission({
+        audit,
+        flags: selectRepositoryFeatureFlags(runtime),
+      }),
       new SandboxRunnerStartAdmission({ audit, probe: runnerProbe }),
     ]),
     unitOfWork: new PostgresUnitOfWork(database, {
