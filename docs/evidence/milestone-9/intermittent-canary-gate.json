@@ -1,0 +1,33 @@
+{
+  "schemaVersion": "1.0",
+  "checkedAt": "2026-07-21T01:52:41.798Z",
+  "fixture": {
+    "repository": "GhostlyGawd/reproforge-intermittent-canary",
+    "repositoryUrl": "https://github.com/GhostlyGawd/reproforge-intermittent-canary",
+    "commitSha": "61a9fbfe6bf2e2f8c00f2f55b142dafd810b99be",
+    "issueUrl": "https://github.com/GhostlyGawd/reproforge-intermittent-canary/issues/1",
+    "visibility": "public",
+    "dataClassification": "synthetic"
+  },
+  "localContract": {
+    "controlExitCode": 0,
+    "candidateExitCodes": [1, 0, 1],
+    "markerPresentByCandidate": [true, false, true]
+  },
+  "isolatedProviderGate": {
+    "provider": "vercel-sandbox",
+    "status": "UNSTABLE",
+    "candidateMatches": 2,
+    "requiredRuns": 3,
+    "repeatability": 0.6666666666666666,
+    "controlMatched": false,
+    "runExitCodes": [0, 1, 0, 1],
+    "bundleAbsent": true,
+    "filesAbsent": true,
+    "cleanup": "clean",
+    "quarantineCount": 0,
+    "passed": true
+  },
+  "sanitization": "The public repository and evidence contain only a deterministic synthetic marker; no credential, customer, tenant, private repository, provider resource, cookie, or user data is included.",
+  "scopeLimitations": "This proves the immutable public fixture and isolated provider outcome. It does not claim GitHub App selection, an authenticated production start, or a ChatGPT-host run."
+}

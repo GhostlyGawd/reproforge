@@ -63,6 +63,13 @@
       "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
       "result": "passed",
       "scope": "production MCP protocol and live provider regression gate"
+    },
+    {
+      "report": "intermittent-canary-gate.json",
+      "checkedAt": "2026-07-21T01:52:41.798Z",
+      "sourceCommit": "61a9fbfe6bf2e2f8c00f2f55b142dafd810b99be",
+      "result": "passed",
+      "scope": "public intermittent fixture and isolated provider outcome"
     }
   ],
   "sanitization": "Public static policy content only; no account, credential, tenant, private repository, provider resource, cookie, or user data.",

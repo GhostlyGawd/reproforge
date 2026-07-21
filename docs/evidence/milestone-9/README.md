@@ -42,6 +42,19 @@ was rejected or challenged. All nine live provider tests passed separately.
 This protocol evidence is not presented as ChatGPT-host evidence. The review
 case remains pending until it is exercised through ChatGPT developer mode.
 
+## Intermittent canary provider gate
+
+The public synthetic
+[intermittent canary](https://github.com/GhostlyGawd/reproforge-intermittent-canary)
+is pinned at `61a9fbfe6bf2e2f8c00f2f55b142dafd810b99be`. Its
+[provider report](intermittent-canary-gate.json) records the real isolated
+runner result: two of three candidates matched, the control remained clear,
+the outcome was `UNSTABLE`, no bundle or files were created, cleanup was clean,
+and no resource entered quarantine.
+
+The corresponding review case remains pending until the repository is selected
+through the GitHub App and the production flow is exercised through ChatGPT.
+
 ## Scope boundary
 
 This is deliberately partial Milestone 9 evidence. It does not claim Auth0
