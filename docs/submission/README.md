@@ -15,3 +15,10 @@ private commit, foreign-tenant case ID, OAuth credentials, and provider
 identifiers remain environment-bound and must never be copied into this public
 working set. Every case is currently marked `pending_hosted`; the status can
 change to `passed` only with real production and ChatGPT-host evidence.
+
+[`listing.json`](listing.json) is the portal-ready listing draft and includes
+the production URLs, customer-facing copy, proposed category, four starter
+prompts, release notes, an original logo, and checksummed desktop/mobile
+production widget captures. The category remains subject to the portal's live
+options. Publisher identity and country availability are intentionally unset,
+and the draft is explicitly not submitted.

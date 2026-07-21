@@ -1,0 +1,68 @@
+{
+  "schemaVersion": "1.0",
+  "portalStatus": "draft_not_submitted",
+  "listingSource": "https://learn.chatgpt.com/docs/submit-plugins",
+  "name": "ReproForge",
+  "shortDescription": "Turn authorized bug reports into machine-verified, portable reproductions.",
+  "longDescription": "ReproForge turns incomplete bug reports into portable reproductions backed by machine evidence. Run a fixed synthetic demonstration without linking an account, or connect an authorized GitHub repository through OAuth and select an immutable commit. ReproForge tests a negative control and repeated candidate runs in an isolated, deny-all environment, then shows the proof and exports a content-addressed bundle only when the evidence supports VERIFIED. No OpenAI API key is required from the user.",
+  "category": {
+    "proposed": "Developer tools",
+    "status": "confirm_in_portal"
+  },
+  "urls": {
+    "website": "https://reproforge.vercel.app/",
+    "mcp": "https://reproforge.vercel.app/mcp",
+    "support": "https://reproforge.vercel.app/support",
+    "privacy": "https://reproforge.vercel.app/privacy",
+    "terms": "https://reproforge.vercel.app/terms"
+  },
+  "logo": {
+    "svg": "assets/reproforge-mark.svg",
+    "png": "assets/reproforge-mark.png",
+    "width": 512,
+    "height": 512,
+    "pngSha256": "2466bd517f02fe1cc5657b9e5e9f6b013c54b7b85e1b7fdea7d67f609ec4c9c7",
+    "source": "original_repository_artwork",
+    "alt": "ReproForge geometric R mark with a proof spark and green forged leg on a dark square.",
+    "rights": "Original geometric artwork created for ReproForge in this repository; no third-party logo or icon is embedded."
+  },
+  "starterPrompts": [
+    "Run the trusted ReproForge demonstration and export its bundle after showing me the machine evidence.",
+    "List the GitHub repositories I authorized for ReproForge and explain which one is safe to use as a synthetic canary.",
+    "Reproduce the planted failure in my selected canary at its pinned commit and show the negative control and repeat runs.",
+    "Refresh the proof for my latest ReproForge case and export its bundle only if the measured outcome supports verification."
+  ],
+  "screenshots": [
+    {
+      "file": "assets/reproforge-proof-desktop.png",
+      "route": "/widget-preview",
+      "width": 1200,
+      "height": 1024,
+      "sha256": "5ed99bf74580bc5b48ba84333da68f4272622c3605033b33b9e4c7678735fc60",
+      "sourceCommit": "891749b4fcce7faabf6424b565cdc45a6eb3cd3a",
+      "alt": "Desktop ReproForge proof widget showing VERIFIED, 100 percent repeatability, three of three candidate matches, a clear negative control, evidence lanes, hypotheses, clean-room runs, and bundle export.",
+      "caption": "The real production MCP App resource rendered at desktop width with the complete machine-evidence hierarchy.",
+      "provenance": "First-party capture of the public production widget-preview route using the bundled synthetic cli-spaces fixture; not a ChatGPT-host screenshot."
+    },
+    {
+      "file": "assets/reproforge-proof-mobile.png",
+      "route": "/widget-preview",
+      "width": 390,
+      "height": 1353,
+      "sha256": "f94c5ac6083688a06c1a16da6148eb54a9ab44d1608f7901a9a14473bb070e78",
+      "sourceCommit": "891749b4fcce7faabf6424b565cdc45a6eb3cd3a",
+      "alt": "Mobile ReproForge proof widget showing the same verified evidence, clear control, hypotheses, four clean-room runs, bundle files, refresh, and export controls without horizontal overflow.",
+      "caption": "The real production MCP App resource at a 390-pixel mobile width with all proof and export controls intact.",
+      "provenance": "First-party capture of the public production widget-preview route using the bundled synthetic cli-spaces fixture; not a ChatGPT-host screenshot."
+    }
+  ],
+  "developerIdentity": {
+    "publisher": null,
+    "status": "pending_platform_verification"
+  },
+  "availability": {
+    "countries": [],
+    "status": "not_selected"
+  },
+  "releaseNotes": "Initial ReproForge submission draft: a keyless synthetic demonstration plus OAuth-linked, immutable GitHub canary reproduction with repeated candidate runs, a negative control, a proof widget, and content-addressed bundle export. Reviewer identity, demo account, supported countries, hosted account evidence, and final go/no-go remain pending; this draft has not been submitted."
+}

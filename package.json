@@ -34,7 +34,8 @@
     "verify:docs": "node scripts/verify-docs.mjs",
     "verify:hosted-oauth": "tsx scripts/verify-hosted-oauth.ts",
     "verify:review-cases": "tsx scripts/verify-review-cases.ts",
-    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run verify:docs && npm run verify:deployment-policy && npm run verify:review-cases && npm run build",
+    "verify:submission-draft": "tsx scripts/verify-submission-draft.ts",
+    "check": "npm run lint && npm run typecheck && npm run test && npm run test:bdd && npm run verify:docs && npm run verify:deployment-policy && npm run verify:review-cases && npm run verify:submission-draft && npm run build",
     "verify": "npm run check && npm run mcp:smoke && npm run eval && npm run test:browser:built"
   },
   "engines": {
