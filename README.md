@@ -213,6 +213,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Managed production-stack decision](docs/adr/0002-managed-production-stack.md)
 - [Ordered remaining delivery specifications](docs/specs/README.md)
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
+- [Auth0 setup and hosted OAuth compatibility gate](docs/auth0-setup.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Hosted operations and recovery runbook](docs/operations.md)
 - [Deployment and rollback policy](docs/deployment-rollback.md)
