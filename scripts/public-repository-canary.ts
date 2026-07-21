@@ -6,7 +6,7 @@ import type { QuarantineRecord } from "@/execution/sandbox-lifecycle";
 import { VercelSandboxProvider } from "@/execution/vercel-sandbox";
 
 export const PUBLIC_REPOSITORY_CANARY_COMMIT =
-  "804d2da174060b40981e6a0437e6b212fc64d36d";
+  "d3d69d4c5222bb7f4e6cded27a965258247942b2";
 export const PUBLIC_REPOSITORY_CANARY_SECRET =
   "SYNTHETIC_REPROFORGE_PUBLIC_CANARY_SECRET";
 
@@ -36,7 +36,7 @@ export async function runPublicRepositoryCanary(): Promise<{
     budget: { maxToolCalls: 6, requiredRuns: 3 },
     case: createCase("public_repository_canary_case", startedAt),
     issueEvidence: {
-      number: 13,
+      number: 1,
       title: "Deterministic public repository canary",
     },
     oracle: {
@@ -70,10 +70,10 @@ export async function runPublicRepositoryCanary(): Promise<{
     secrets: [PUBLIC_REPOSITORY_CANARY_SECRET],
     source: {
       commitSha: PUBLIC_REPOSITORY_CANARY_COMMIT,
-      fullName: "GhostlyGawd/reproforge",
+      fullName: "GhostlyGawd/reproforge-canary",
       private: false,
       provider: "github",
-      repositoryId: "public_reproforge_canary",
+      repositoryId: "public_repository_canary",
     },
   });
   return { proof, quarantine };
