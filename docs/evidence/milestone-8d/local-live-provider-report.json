@@ -1,0 +1,35 @@
+{
+  "schemaVersion": 1,
+  "capturedAt": "2026-07-21T00:04:03.703Z",
+  "implementationCommit": "47f893078eac9265c0c6dc4e636ee429135f128a",
+  "command": "npm run test:providers",
+  "status": "passed",
+  "testFilesPassed": 2,
+  "testsPassed": 9,
+  "durationSeconds": 76.26,
+  "durableProviders": {
+    "testsPassed": 6,
+    "privateBlobUnauthorizedAccess": "denied",
+    "privateBlobRoundTripDeletion": "passed",
+    "identifierOnlyQueuePublish": "passed",
+    "durableRestartIdentity": "passed",
+    "concurrentIdempotentStarts": "passed",
+    "expiredLeaseRecovery": "passed",
+    "runtimeReadiness": "passed",
+    "tenantExportRestoreHashVerification": "passed"
+  },
+  "isolatedExecution": {
+    "testsPassed": 3,
+    "immutablePublicRepositoryBundle": "passed",
+    "trustedHostAcquisitionAndDenyAllExecution": "passed",
+    "limitsAndCancellation": "passed",
+    "freshSnapshotRestore": "passed",
+    "resourceDeletion": "passed"
+  },
+  "regression": {
+    "red": "The live gate exposed an obsolete Queue message-ID shape assertion and cancellation failure for a recovered queued job whose attempt was greater than zero.",
+    "green": "Queue IDs are treated as the provider's opaque string-or-null contract, and a TDD regression proves an expired-lease recovery can be terminally cancelled while version and tenant checks remain enforced.",
+    "localRegressionTestsPassed": 20
+  },
+  "sanitization": "Counts, durations, stable capability names, and an exact source commit only; no database URL, Blob token, OIDC token, queue message ID, tenant ID, repository name, sandbox ID, artifact path, or provider resource identifier is present."
+}

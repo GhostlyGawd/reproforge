@@ -1,8 +1,8 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8d",
-  "capturedAt": "2026-07-20T23:55:10.671Z",
-  "implementationCommit": "ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89",
+  "capturedAt": "2026-07-21T00:04:03.703Z",
+  "implementationCommit": "47f893078eac9265c0c6dc4e636ee429135f128a",
   "scope": "private-beta runtime health, durable progress, authenticated web/REST repository starts, resilience, account data lifecycle, operations-control, and deterministic fault-campaign implementation evidence",
   "status": "in-progress",
   "tasks": {
@@ -104,6 +104,20 @@
     "productionBuild": "passed",
     "hostedOAuthCanary": "pending"
   },
+  "liveProviderValidation": {
+    "testFilesPassed": 2,
+    "testsPassed": 9,
+    "durationSeconds": 76.26,
+    "neon": "passed",
+    "privateBlob": "passed",
+    "vercelQueue": "passed",
+    "vercelSandbox": "passed",
+    "durableRestartIdentity": "passed",
+    "concurrentIdempotency": "passed",
+    "expiredLeaseRecovery": "passed",
+    "backupRestoreHashVerification": "passed",
+    "recoveredQueuedCancellationRegression": "passed"
+  },
   "browserVerification": {
     "tool": "agent-browser",
     "pageContent": "passed",
@@ -178,6 +192,13 @@
       "sha256": "970ef6a35bb0427adacba1984d82a5a71769adab361e81f3d21a758910e68229",
       "provenance": "exact-commit local OAuth repository REST contract and verification summary; not a hosted OAuth or repository canary",
       "sanitized": true
+    },
+    {
+      "file": "local-live-provider-report.json",
+      "bytes": 1643,
+      "sha256": "511ce3f0ed27a72db184189198b4313dd94def6951f5205b249cd7a257db48ae",
+      "provenance": "exact-commit live Neon, private Blob, Vercel Queue, and Vercel Sandbox verification summary; no provider identifiers",
+      "sanitized": true
     }
   ],
   "redGreenFindings": [
@@ -212,6 +233,10 @@
     {
       "red": "Authorized repository work was available through MCP and internal services but had no complete OAuth-protected REST adapter, and the web repository page could not submit a job.",
       "green": "The signed-in web journey now submits one same-origin strict failure contract, while five no-store repository REST routes map OAuth subjects to tenant principals, enforce least-privilege scopes and bounded inputs, and share the durable repository operations."
+    },
+    {
+      "red": "The live provider gate exposed an obsolete Queue message-ID prefix assertion and a real cancellation conflict after an expired running lease requeued a job with attempt greater than zero.",
+      "green": "Queue IDs now follow the provider's opaque string-or-null contract, and a TDD regression proves recovered queued work can be cancelled without relaxing version, state, caller, or tenant checks; all nine live provider tests pass."
     }
   ],
   "deferred": [

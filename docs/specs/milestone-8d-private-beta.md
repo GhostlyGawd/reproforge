@@ -117,10 +117,12 @@ the deployed canary evidence.
 - [ ] `RF-8411` Update every product/security/privacy/operations/release document and complete the Milestone 8 requirement audit.
 
 The checkboxes remain open until their deployed acceptance evidence passes.
-Commit `ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89` is the current local
+Commit `47f893078eac9265c0c6dc4e636ee429135f128a` is the current local
 implementation boundary. It adds the signed-in web repository start and a
 five-route OAuth-protected repository REST surface on top of the durable
-runtime; RF-8401/RF-8402 still require the live authenticated hosted journey,
+runtime, and its nine-test live provider gate passes across Neon, private Blob,
+Queue, and isolated Sandbox. RF-8401/RF-8402 still require the live
+authenticated hosted journey,
 RF-8403 still requires the deployed recovery/quarantine drill,
 RF-8404 still requires the deployed retention/deletion/restore drill, and
 RF-8405 still requires hosted alert delivery plus a deployment/rollback

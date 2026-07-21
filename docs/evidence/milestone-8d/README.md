@@ -11,7 +11,7 @@ Evidence is added incrementally and tied to an exact Git commit in
 ## Current verified slice
 
 Exact implementation commit
-`ebfdd463b4e34e08e2da8c1f42633ac1d8fcff89` adds a real isolated-runner
+`47f893078eac9265c0c6dc4e636ee429135f128a` adds a real isolated-runner
 capability probe, fail-closed validation of the complete hosted product
 configuration, one durable progress projection shared by REST, MCP, ChatGPT
 widget, and tenant-scoped web views, resilient worker/operator controls, the
@@ -27,6 +27,15 @@ Its focused gate passed 10 tests; all 48 BDD scenarios and 345 steps passed,
 and TypeScript, ESLint, and the production build passed at the implementation
 commit. The sanitized route/scope record is
 [`repository-rest-contract.json`](repository-rest-contract.json).
+
+The exact-commit live provider gate then passed all 9 tests across real Neon,
+private Blob, Vercel Queue, and Vercel Sandbox in 76.26 seconds. Its first run
+found an obsolete assumption about opaque Queue message IDs and a real
+recovered-job cancellation defect. A new failing regression reproduced the
+defect locally; the corrected version-checked cancellation accepts any legal
+queued attempt, and 20 focused cancellation/recovery/retention/Queue tests
+pass. The sanitized provider result is
+[`local-live-provider-report.json`](local-live-provider-report.json).
 
 The RF-8403 slice blocks new starts during runner degradation while preserving
 reads, recovers expired leases, observes cancellation before the next command,
@@ -78,6 +87,11 @@ prove alert delivery or a rollback rehearsal.
 [`local-resilience-report.json`](local-resilience-report.json) is the
 checksummed, fixed-seed RF-8406 campaign summary. It contains synthetic counts
 only and does not substitute for the deployed load and failure campaign.
+
+[`local-live-provider-report.json`](local-live-provider-report.json) records
+the exact-commit nine-test live Neon, private Blob, Queue, and Sandbox gate. It
+contains no provider or tenant identifiers and does not substitute for the
+deployed authenticated public/private canaries.
 
 ## Local visual evidence
 
