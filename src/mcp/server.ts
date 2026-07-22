@@ -43,6 +43,7 @@ import {
 import { createReproForgeWidgetHtml } from "@/mcp/widget";
 
 export const REPROFORGE_WIDGET_URI = "ui://reproforge/proof-v1.html";
+export const REPROFORGE_WIDGET_DOMAIN = "https://reproforge.vercel.app";
 
 const READ_ONLY_ANNOTATIONS = {
   destructiveHint: false,
@@ -269,6 +270,7 @@ export function createReproForgeMcpServer({
             frameDomains: [],
             resourceDomains: [],
           },
+          domain: REPROFORGE_WIDGET_DOMAIN,
           prefersBorder: true,
         },
         "openai/widgetCSP": {
@@ -277,6 +279,7 @@ export function createReproForgeMcpServer({
         },
         "openai/widgetDescription":
           "Shows verified runs, the negative control, evidence lanes, hypotheses, and bundle files.",
+        "openai/widgetDomain": REPROFORGE_WIDGET_DOMAIN,
         "openai/widgetPrefersBorder": true,
       },
     },
@@ -294,6 +297,7 @@ export function createReproForgeMcpServer({
                 frameDomains: [],
                 resourceDomains: [],
               },
+              domain: REPROFORGE_WIDGET_DOMAIN,
               prefersBorder: true,
             },
             "openai/widgetCSP": {
@@ -302,6 +306,7 @@ export function createReproForgeMcpServer({
             },
             "openai/widgetDescription":
               "Shows verified runs, the negative control, evidence lanes, hypotheses, and bundle files.",
+            "openai/widgetDomain": REPROFORGE_WIDGET_DOMAIN,
             "openai/widgetPrefersBorder": true,
           },
         },

@@ -403,6 +403,24 @@ Then(
   },
 );
 
+Then(
+  "the widget declares its unique production origin",
+  function (this: ReproForgeWorld) {
+    const meta = this.mcpWidget?._meta as
+      | {
+          "openai/widgetDomain"?: string;
+          ui?: { domain?: string };
+        }
+      | undefined;
+    const expectedDomain = "https://reproforge.vercel.app";
+    assert.equal(meta?.ui?.domain, expectedDomain);
+    assert.equal(
+      meta?.["openai/widgetDomain"],
+      expectedDomain,
+    );
+  },
+);
+
 Given("the trusted CLI spaces sample", function (this: ReproForgeWorld) {
   this.sample = undefined;
 });
