@@ -136,8 +136,12 @@ real account-side evidence at their point in the sequence:
 - publisher identity, legal URLs, reviewer account, and portal access; and
 - final public submission/publication approval.
 
-Until exercised, each remains unchecked and the full product goal remains
-active.
+Vercel provisioning, Auth0, the selected GitHub App, the stable production
+origin, and the ChatGPT developer-mode app have now been exercised with linked
+production evidence. Private canaries, protected ChatGPT review flows,
+publisher identity, availability, portal completion, and public
+submission/publication remain unchecked, so the full public-launch goal is
+still active.
 
 The planning milestone's non-visual verification record is in
 [remaining-plan evidence](../evidence/remaining-plan/README.md).

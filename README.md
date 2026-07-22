@@ -213,6 +213,7 @@ This key is required only for the current optional standalone Responses route. I
 - [Managed production-stack decision](docs/adr/0002-managed-production-stack.md)
 - [Ordered remaining delivery specifications](docs/specs/README.md)
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
+- [Validated repository-local Codex plugin wrapper](plugins/reproforge/.codex-plugin/plugin.json)
 - [Auth0 setup and hosted OAuth compatibility gate](docs/auth0-setup.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Hosted operations and recovery runbook](docs/operations.md)
@@ -247,12 +248,19 @@ alert, and rollback-policy controls are implemented and locally verified. An
 exact eight-campaign resilience gate covers fixed-seed load, duplicate, restart,
 dependency, worker, queue, storage, and sandbox failures; hosted load and fault
 injection plus the recovery, lifecycle, alert-delivery, and rollback drills
-remain open. Live account authorization, general/private repository use, the composed
-stable hosted journey, production hosting, and plugin publication remain
-intentionally unavailable. The synthetic four-case eval and public canary are
-contract checks, not claims of real-world benchmark performance.
+remain open. Production Auth0 login, least-privilege GitHub App installation,
+the selected public catalog, and one full public-canary reproduction are
+proven. A developer-mode ReproForge app is also connected inside ChatGPT: its
+anonymous trusted demonstration renders the real widget and exports a portable
+bundle without a ReproForge account or user OpenAI API key. General/private
+repository use, protected ChatGPT OAuth review cases, portal submission, and
+plugin publication remain unavailable. The synthetic four-case eval and public
+canary are contract checks, not claims of real-world benchmark performance.
 
-No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
+No package, release, stable API, or service-level promise exists. The public
+production origin is a review environment, not a compatibility or availability
+guarantee. Consult the [release status](docs/release-status.md) and
+[limitations](docs/limitations.md) before relying on the project.
 
 ## License
 

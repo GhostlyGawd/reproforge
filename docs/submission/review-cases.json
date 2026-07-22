@@ -15,7 +15,6 @@
       ],
       "expectedToolSequence": [
         "start_reproduction",
-        "get_reproduction",
         "export_repro_bundle"
       ],
       "expectedResult": {
@@ -43,7 +42,14 @@
         "tests/mcp-http.test.ts",
         "features/reproduction.feature"
       ],
-      "passEvidence": { "status": "pending_hosted", "references": [] }
+      "passEvidence": {
+        "status": "passed",
+        "references": [
+          "docs/evidence/chatgpt-host/chatgpt-host-gate.json",
+          "docs/evidence/chatgpt-host/anonymous-trusted-demo.jpg",
+          "docs/evidence/chatgpt-host/anonymous-connection.jpg"
+        ]
+      }
     },
     {
       "id": "positive-authorized-list",

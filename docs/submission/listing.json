@@ -64,5 +64,5 @@
     "countries": [],
     "status": "not_selected"
   },
-  "releaseNotes": "Initial ReproForge submission draft: a keyless synthetic demonstration plus OAuth-linked, immutable GitHub canary reproduction with repeated candidate runs, a negative control, a proof widget, and content-addressed bundle export. Reviewer identity, demo account, supported countries, hosted account evidence, and final go/no-go remain pending; this draft has not been submitted."
+  "releaseNotes": "Initial ReproForge submission draft: the keyless synthetic demonstration is connected and verified inside ChatGPT with no ReproForge account or user API key, while the OAuth-linked immutable GitHub canary completes through the production web path with repeated candidate runs, a negative control, and content-addressed bundle export. Protected ChatGPT review cases, reviewer identity, supported countries, publisher verification, and portal submission remain pending; this draft has not been submitted."
 }

@@ -6,7 +6,7 @@
 - **Decision:** [API-first core with plugin-first distribution](adr/0001-api-first-plugin-first.md)
 - **Delivery plan:** [v2 roadmap](roadmap-v2.md)
 - **Remaining execution specs:** [ordered delivery plan](specs/README.md)
-- **Implementation:** trusted REST/MCP slices and the Milestone 8A durable provider foundation are merged into `main`; identity, repository execution, hosted ChatGPT smoke, and publication remain gated
+- **Implementation:** trusted REST/MCP, durable providers, production Auth0/GitHub authorization, the public isolated canary, the anonymous ChatGPT-host journey, and the validated local plugin wrapper have evidence on the active delivery branch; protected hosted review cases, private canaries, merge to `main`, portal submission, and publication remain gated
 
 ## 1. Product promise
 

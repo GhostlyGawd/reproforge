@@ -101,9 +101,25 @@
       "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
       "result": "passed",
       "scope": "production readiness, runner capability, Auth0 OAuth compatibility, disposable DCR canary, and direct-login recovery"
+    },
+    {
+      "report": "../production-public-canary/production-public-canary-gate.json",
+      "checkedAt": "2026-07-22T00:37:35.4321613Z",
+      "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+      "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+      "result": "passed",
+      "scope": "signed-in GitHub App catalog and production isolated public-canary reproduction"
+    },
+    {
+      "report": "../chatgpt-host/chatgpt-host-gate.json",
+      "checkedAt": "2026-07-22T01:22:53.610Z",
+      "sourceCommit": "303e88e69ede66cc4a8c6c57c4d8988c25883b40",
+      "deploymentId": "dpl_YsGFHb4q5o1dAnZAwTnFHnAcenc6",
+      "result": "passed",
+      "scope": "anonymous trusted demonstration, proof widget, bundle export, connection authorization, and widget-domain refresh inside ChatGPT"
     }
   ],
   "sanitization": "Public static policy content and an unauthenticated hosted login form only; no account, credential, private repository, provider resource, cookie, or user data.",
   "provenance": "Policy captures are first-party pages from the exact ReproForge production deployment; the Auth0 capture is the live hosted login reached from that deployment. None are concept art, generated imagery, or ChatGPT-host screenshots.",
-  "openGates": "Browser login, GitHub App installation, signed-in public/private canaries, and ChatGPT-host evidence are not claimed by this record."
+  "openGates": "Protected ChatGPT OAuth/repository cases, private and intermittent signed-in canaries, seven hosted review cases, publisher/availability fields, portal submission, and publication remain open. Browser login, GitHub App installation, the public catalog/canary, and the anonymous ChatGPT trusted demonstration are claimed by linked subsequent records."
 }

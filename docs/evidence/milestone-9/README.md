@@ -39,8 +39,9 @@ and `REPRO.md` presence all passed. Strict schemas also rejected arbitrary
 source/command and destructive/fabricated-proof inputs, while an unknown case
 was rejected or challenged. All nine live provider tests passed separately.
 
-This protocol evidence is not presented as ChatGPT-host evidence. The review
-case remains pending until it is exercised through ChatGPT developer mode.
+This protocol evidence is not presented as ChatGPT-host evidence. The later
+[ChatGPT host record](../chatgpt-host/README.md) independently exercises the
+trusted review prompt inside ChatGPT and closes that case.
 
 ## Intermittent canary provider gate
 
@@ -67,6 +68,35 @@ At 16 simultaneous duplicate starts, correctness and availability still held,
 but start p95 rose to 2716.84 ms and missed the 2000 ms target. The report
 retains that failed threshold as a capacity boundary; ReproForge does not claim
 sub-two-second start latency above its configured private-beta limit.
+
+## Signed-in GitHub App and production public canary
+
+The later [production public-canary record](../production-public-canary/README.md)
+proves the composed signed-in path. The read-only GitHub App catalog contained
+exactly the two selected public repositories, and the lightweight canary ran at
+its immutable failing commit through the live queue, private object store, and
+deny-all Vercel Sandbox runner. The first durable attempt reached `VERIFIED`,
+all three candidate runs matched, the control stayed clear, cleanup was clean,
+and one private content-addressed bundle was stored.
+
+This closes the signed-in public-canary production gate. The protected
+`positive-public-canary` ChatGPT sequence remains `pending_hosted`; it is
+distinct from the anonymous trusted demonstration now proven in ChatGPT.
+
+## ChatGPT-host trusted demonstration
+
+The later [ChatGPT-host evidence](../chatgpt-host/README.md) proves the exact
+keyless review prompt inside ChatGPT Work. The production MCP app connected
+with authorization `None`, invoked `start_reproduction` and
+`export_repro_bundle`, rendered the full proof widget, reached `VERIFIED` with
+three of three matching candidates and a clear control, and produced an
+eight-file downloadable ZIP. No ReproForge account or user OpenAI API key was
+required.
+
+After deployment `dpl_YsGFHb4q5o1dAnZAwTnFHnAcenc6`, ChatGPT refreshed the
+app metadata, displayed the unique production widget domain, and removed the
+missing-domain submission warning. This closes the anonymous trusted-host gate
+without claiming the separate protected or negative review cases.
 
 ## Production Auth0 and readiness gate
 
@@ -99,8 +129,10 @@ completed.
 
 ## Scope boundary
 
-This is deliberately partial Milestone 9 evidence. It proves Auth0 tenant/DCR
-configuration but does not claim a completed browser login, GitHub App
-installation, signed-in public/private canaries, a real ChatGPT developer-mode
-app, or ChatGPT-host screenshots. Those interactive external-account gates
-remain open and prevent a completion claim.
+This remains partial Milestone 9 evidence. A completed browser login, selected
+GitHub App installation, authorized catalog, signed-in public canary, real
+ChatGPT developer-mode app connection, anonymous trusted run, widget render,
+and host screenshots are now proven. Protected ChatGPT OAuth/repository cases,
+the signed-in private and intermittent canaries, seven remaining hosted review
+cases, publisher/availability fields, portal submission, and publication remain
+open.

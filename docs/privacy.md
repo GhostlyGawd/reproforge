@@ -85,4 +85,9 @@ redaction. No Vercel log drain or analytics integration is currently claimed.
 
 ## Evidence assets
 
-Committed screenshots contain only the synthetic trusted sample and local application chrome, including the actual MCP App proof resource rendered by its preview harness. Evidence manifests document capture time, source commit, viewport, sanitization, and provenance. No screenshot is represented as a real ChatGPT-host session unless it was captured in that host.
+Committed screenshots contain only synthetic/public canary data and sanitized
+product or host chrome. Evidence manifests document capture time, source
+commit, viewport, sanitization, and provenance. Preview-harness images are not
+represented as ChatGPT sessions; the separately labeled `chatgpt-host` images
+were captured in that host and exclude account identity, sidebar, history,
+credentials, private repositories, and customer data.

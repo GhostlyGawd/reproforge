@@ -20,16 +20,16 @@ capacity.
 | Embedded widget | MCP Apps bridge, responsive layouts, closed CSP, no external assets |
 | User OpenAI API key | Not accepted or required |
 | Arbitrary repositories | Rejected; no tool input exists for a URL, branch, source body, or command |
-| Authentication | `noauth` for the public synthetic fixture; OAuth/scope/principal contracts for protected repository tools, with live account evidence still pending |
+| Authentication | `noauth` for the public synthetic fixture; production Auth0/GitHub evidence for the web path; protected ChatGPT OAuth review still pending |
 | Persistence | Local memory by default; provider-verified Neon/Blob/Queue composition for fully configured hosted modes |
-| Hosted ChatGPT app | Not created or claimed in this repository |
+| Hosted ChatGPT app | Connected in developer mode at the production MCP URL; anonymous trusted prompt/widget/export passed |
 | Public plugin | Not submitted or published |
 
 The no-auth endpoint is deliberately useful only for a fixed synthetic fixture.
-Durable storage does not authorize data. The 8C isolated runner has direct
-public-canary provider proof, but private or customer use still requires the
-8B live account/install/revocation evidence followed by 8D private-beta and
-hosted evidence.
+Durable storage does not authorize data. The isolated runner, production
+account/install flow, and public canary have direct evidence, but private or
+customer use still requires private-canary, revocation, protected ChatGPT, and
+private-beta evidence.
 
 ## Run and inspect locally
 
@@ -80,12 +80,12 @@ explicit export; they are not placed into model narration.
 
 ## Connect in ChatGPT developer mode
 
-ChatGPT cannot reach `localhost`; it needs an HTTPS URL that forwards to this
-server. A temporary development tunnel is acceptable for an account-side smoke
-but is not a production deployment. Do not expose the endpoint with real data,
-and do not treat a tunnel URL as stable hosting.
+ChatGPT cannot reach `localhost`; it needs HTTPS. The current developer-mode
+app uses the stable review endpoint `https://reproforge.vercel.app/mcp`. For a
+different environment, a temporary development tunnel is acceptable only for
+an account-side smoke. Do not expose real data through an unreviewed tunnel.
 
-Once a reviewed HTTPS endpoint exists:
+To recreate or refresh the reviewed connection:
 
 1. In ChatGPT, open **Settings → Security and login** and enable **Developer mode**.
 2. Open **Settings → Plugins** (or the Plugins page), select the plus button,
@@ -97,14 +97,13 @@ Once a reviewed HTTPS endpoint exists:
 5. Repeat the same tool call with the same idempotency key; confirm the case and
    job IDs do not change.
 6. Export the bundle and inspect its eight files.
-7. Copy the new app ID from the ChatGPT browser URL. It begins with
-   `plugin_asdk_app`.
+7. Record the app and version IDs from the developer-mode connection details.
+   Current IDs use the `asdk_app_` and `asdk_app_v_` prefixes.
 
-The repository does not contain a fabricated app ID. When the real ID is
-available, use the `plugin-creator` workflow to generate and validate a local
-Codex plugin wrapper with `.codex-plugin/plugin.json` and `.app.json`. That
-wrapper is for local plugin-directory testing; the public submission path is
-different.
+The real app/version IDs are recorded in the sanitized host evidence. The
+repository-local Codex wrapper under `plugins/reproforge` is validated against
+that evidence and is packaging only; it is not a substitute for either the
+connected ChatGPT app or the public submission path.
 
 ## Public plugin path
 

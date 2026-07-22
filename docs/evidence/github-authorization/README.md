@@ -38,3 +38,10 @@ content.
 This artifact proves installation and catalog authorization. It does not by
 itself prove a completed repository reproduction or ChatGPT-host interaction;
 those require separate end-to-end evidence.
+
+The later [production public-canary record](../production-public-canary/README.md)
+supersedes the one-repository catalog state, proves the two-repository selected
+scope, and closes the signed-in production reproduction path. The separate
+[anonymous ChatGPT trusted demonstration](../chatgpt-host/README.md) also
+passes; protected ChatGPT OAuth and repository authorization remain their own
+open review gates.

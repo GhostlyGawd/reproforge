@@ -46,12 +46,23 @@ describe("submission review case pack", () => {
       expect(reviewCase.prerequisites.length).toBeGreaterThan(0);
       expect(reviewCase.expectedResult.assertions.length).toBeGreaterThan(0);
       expect(reviewCase.fixture.dataClassification).toBe("synthetic");
-      expect(reviewCase.passEvidence.status).toBe("pending_hosted");
     }
+
+    const trustedDemo = pack.cases[0];
+    expect(trustedDemo?.passEvidence).toEqual({
+      status: "passed",
+      references: [
+        "docs/evidence/chatgpt-host/chatgpt-host-gate.json",
+        "docs/evidence/chatgpt-host/anonymous-trusted-demo.jpg",
+        "docs/evidence/chatgpt-host/anonymous-connection.jpg",
+      ],
+    });
+    expect(pack.cases.slice(1).every(({ passEvidence }) =>
+      passEvidence.status === "pending_hosted" && passEvidence.references.length === 0
+    )).toBe(true);
 
     expect(pack.cases[0]?.expectedToolSequence).toEqual([
       "start_reproduction",
-      "get_reproduction",
       "export_repro_bundle",
     ]);
     expect(pack.cases[4]?.expectedResult).toMatchObject({
