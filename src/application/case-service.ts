@@ -30,9 +30,20 @@ import {
 
 export type CaseServiceErrorCode =
   | "BUNDLE_NOT_READY"
+  | "EXECUTION_PROFILE_DISABLED"
   | "IDEMPOTENCY_CONFLICT"
   | "INTERNAL_ERROR"
-  | "NOT_FOUND";
+  | "NOT_FOUND"
+  | "PRIVATE_REPOSITORIES_DISABLED"
+  | "REPOSITORY_STARTS_DISABLED"
+  | "RUNNER_UNAVAILABLE";
+
+export type RepositoryStartPolicyErrorCode = Extract<
+  CaseServiceErrorCode,
+  | "EXECUTION_PROFILE_DISABLED"
+  | "PRIVATE_REPOSITORIES_DISABLED"
+  | "REPOSITORY_STARTS_DISABLED"
+>;
 
 export class CaseServiceError extends Error {
   constructor(
@@ -67,6 +78,24 @@ export class BundleNotReadyError extends CaseServiceError {
   constructor() {
     super("BUNDLE_NOT_READY", "The Repro Bundle is not ready", true);
     this.name = "BundleNotReadyError";
+  }
+}
+
+export class RepositoryStartUnavailableError extends CaseServiceError {
+  constructor() {
+    super(
+      "RUNNER_UNAVAILABLE",
+      "Repository starts are temporarily unavailable",
+      true,
+    );
+    this.name = "RepositoryStartUnavailableError";
+  }
+}
+
+export class RepositoryStartPolicyError extends CaseServiceError {
+  constructor(code: RepositoryStartPolicyErrorCode) {
+    super(code, "Repository starts are temporarily unavailable", true);
+    this.name = "RepositoryStartPolicyError";
   }
 }
 
@@ -234,7 +263,11 @@ export class CaseService implements CaseOperations {
 
   async exportReproBundle(rawQuery: GetReproduction): Promise<ExportResult> {
     const snapshot = await this.getReproduction(rawQuery);
-    if (!snapshot.result || snapshot.result.summary.status !== "VERIFIED") {
+    if (
+      !snapshot.result ||
+      snapshot.result.summary.status !== "VERIFIED" ||
+      !snapshot.result.bundle
+    ) {
       throw new BundleNotReadyError();
     }
     return exportResultSchema.parse({

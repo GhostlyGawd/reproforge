@@ -2,10 +2,12 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 import { expect, test } from "@playwright/test";
 
-test("serves the complete keyless MCP flow through the Next route", async () => {
+test("serves the complete keyless MCP flow through the Next route", async ({
+  baseURL,
+}) => {
   const client = new Client({ name: "reproforge-route-e2e", version: "1.0.0" });
   const transport = new StreamableHTTPClientTransport(
-    new URL("http://127.0.0.1:3000/mcp"),
+    new URL("/mcp", baseURL),
   );
 
   try {
@@ -13,13 +15,15 @@ test("serves the complete keyless MCP flow through the Next route", async () => 
     const tools = await client.listTools();
     expect(tools.tools.map((tool) => tool.name)).toEqual([
       "start_reproduction",
+      "list_authorized_repositories",
       "get_reproduction",
+      "cancel_reproduction",
       "export_repro_bundle",
     ]);
     const result = await client.callTool({
       arguments: {
         idempotencyKey: `playwright-mcp-${Date.now()}`,
-        sampleId: "cli-spaces",
+        source: { kind: "trusted_sample", sampleId: "cli-spaces" },
       },
       name: "start_reproduction",
     });

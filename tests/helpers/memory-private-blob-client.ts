@@ -34,7 +34,9 @@ export class MemoryPrivateBlobClient implements PrivateBlobClient {
 
   async get(
     pathname: string,
+    trustedSize: number,
   ): Promise<{ bytes: Uint8Array; metadata: PrivateBlobMetadata } | null> {
+    void trustedSize;
     this.gets.push(pathname);
     const stored = this.objects.get(pathname);
     return stored

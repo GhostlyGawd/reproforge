@@ -1,0 +1,62 @@
+{
+  "schemaVersion": 1,
+  "milestone": "chatgpt-host-trusted-demo",
+  "capturedAt": "2026-07-22T01:22:53.610Z",
+  "host": "https://chatgpt.com",
+  "hostSurface": "ChatGPT Work",
+  "productionOrigin": "https://reproforge.vercel.app",
+  "mcpUrl": "https://reproforge.vercel.app/mcp",
+  "appId": "asdk_app_6a60145796108191a8ab9b93493e5491",
+  "versionId": "asdk_app_v_6a60145d59388191872b0db38c2beb62",
+  "captures": [
+    {
+      "file": "anonymous-trusted-demo.jpg",
+      "capturedAt": "2026-07-22T01:02:14.3850730Z",
+      "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+      "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+      "image": {
+        "format": "jpeg",
+        "width": 1767,
+        "height": 906,
+        "bytes": 80729,
+        "sha256": "c11cebcd3ddf14ba3976675f620d94711541f30aae371c68edc041b6ec5ef2cf"
+      },
+      "alt": "ChatGPT-hosted ReproForge proof showing VERIFIED, 100 percent repeatability, three of three candidate matches, a clear negative control, the supported path-with-spaces cause, and a portable ZIP export.",
+      "caption": "Real keyless ReproForge trusted demonstration completed and exported inside ChatGPT Work."
+    },
+    {
+      "file": "anonymous-connection.jpg",
+      "capturedAt": "2026-07-22T01:13:54.0307462Z",
+      "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+      "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+      "image": {
+        "format": "jpeg",
+        "width": 680,
+        "height": 600,
+        "bytes": 52405,
+        "sha256": "5bdd8d625e8d4546607fa10ca9283ad6f9c41181b85ca0ea61ffd3ef18d9b882"
+      },
+      "alt": "ChatGPT ReproForge connection details showing Connected, the production MCP URL, support for None and OAuth, and None as the authorization used.",
+      "caption": "Sanitized proof that the trusted demonstration uses anonymous MCP authorization."
+    },
+    {
+      "file": "widget-domain.jpg",
+      "capturedAt": "2026-07-22T01:22:53.610Z",
+      "sourceCommit": "303e88e69ede66cc4a8c6c57c4d8988c25883b40",
+      "deploymentId": "dpl_YsGFHb4q5o1dAnZAwTnFHnAcenc6",
+      "image": {
+        "format": "jpeg",
+        "width": 680,
+        "height": 600,
+        "bytes": 41699,
+        "sha256": "7f4b0eaa3a95804db6c94787b1bb5a6e88f46093df808cee890c28ab6d5e286a"
+      },
+      "alt": "ChatGPT developer-mode metadata showing the production widget domain and anonymous connection details after a successful refresh.",
+      "caption": "ChatGPT accepted the unique production widget origin and removed the submission warning."
+    }
+  ],
+  "sanitization": "Only the ReproForge result and app connection metadata are visible; ChatGPT identity, profile, sidebar, history, cookies, credentials, private repositories, provider IDs, and customer data are excluded.",
+  "provenance": "All captures are first-party ChatGPT screenshots from the connected production ReproForge MCP app; none are local previews, mockups, or generated images.",
+  "rights": "Captured by the repository owner from their authorized ChatGPT session for product integration documentation; OpenAI and ChatGPT marks remain their owners' property.",
+  "openGates": "The anonymous trusted-demo review case passed. Seven protected, private, intermittent, and negative hosted review cases plus portal submission and publication remain separate gates."
+}

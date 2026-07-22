@@ -6,11 +6,15 @@ const runtimeModeSchema = z.enum(["offline", "test", "preview", "production"]);
 
 const knownReproForgeVariables = new Set([
   "REPROFORGE_BASE_URL",
+  "REPROFORGE_DISABLED_EXECUTION_PROFILES",
+  "REPROFORGE_DISABLE_PRIVATE_REPOSITORIES",
+  "REPROFORGE_DISABLE_REPOSITORY_STARTS",
   "REPROFORGE_JOB_LEASE_SECONDS",
   "REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT",
   "REPROFORGE_MAX_DELIVERY_ATTEMPTS",
   "REPROFORGE_OUTBOX_BATCH_SIZE",
   "REPROFORGE_OUTBOX_CLAIM_SECONDS",
+  "REPROFORGE_OAUTH_TENANT_CLAIM",
   "REPROFORGE_QUEUE_REGION",
   "REPROFORGE_QUEUE_RETENTION_SECONDS",
   "REPROFORGE_QUEUE_TOPIC",
@@ -18,8 +22,27 @@ const knownReproForgeVariables = new Set([
   "REPROFORGE_RUNTIME_MODE",
 ]);
 
+const disabledFeatureSchema = z
+  .enum(["true", "false"])
+  .default("false")
+  .transform((value) => value === "true");
+
+const disabledExecutionProfilesSchema = z
+  .string()
+  .max(128)
+  .regex(/^(?:node(?:22|24)(?:,node(?:22|24))*)?$/)
+  .default("")
+  .transform((value) =>
+    [...new Set(value ? value.split(",") : [])].sort() as Array<
+      "node22" | "node24"
+    >,
+  );
+
 const policySchema = z
   .object({
+    disablePrivateRepositories: disabledFeatureSchema,
+    disableRepositoryStarts: disabledFeatureSchema,
+    disabledExecutionProfiles: disabledExecutionProfilesSchema,
     jobLeaseSeconds: z.coerce.number().int().min(30).max(3600).default(90),
     maxActiveJobsPerTenant: z.coerce.number().int().min(1).max(100).default(2),
     maxDeliveryAttempts: z.coerce.number().int().min(1).max(32).default(5),
@@ -35,13 +58,13 @@ const policySchema = z
       .number()
       .int()
       .min(60)
-      .max(604_800)
-      .default(604_800),
+      .max(86_400)
+      .default(86_400),
     queueTopic: z
       .string()
       .min(1)
       .max(128)
-      .regex(/^[A-Za-z0-9_-]+$/)
+      .regex(/^reproforge-[A-Za-z0-9_-]+$/)
       .default("reproforge-jobs-v1"),
     retentionDays: z.coerce.number().int().min(1).max(365).default(30),
   })
@@ -167,6 +190,11 @@ export function parseRuntimeConfig(
 
   const mode = deriveMode(environment);
   const policyResult = policySchema.safeParse({
+    disablePrivateRepositories:
+      environment.REPROFORGE_DISABLE_PRIVATE_REPOSITORIES,
+    disableRepositoryStarts: environment.REPROFORGE_DISABLE_REPOSITORY_STARTS,
+    disabledExecutionProfiles:
+      environment.REPROFORGE_DISABLED_EXECUTION_PROFILES,
     jobLeaseSeconds: environment.REPROFORGE_JOB_LEASE_SECONDS,
     maxActiveJobsPerTenant:
       environment.REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT,
@@ -181,6 +209,11 @@ export function parseRuntimeConfig(
   if (!policyResult.success) {
     throw new RuntimeConfigurationError(
       issueFields(policyResult, {
+        disablePrivateRepositories:
+          "REPROFORGE_DISABLE_PRIVATE_REPOSITORIES",
+        disableRepositoryStarts: "REPROFORGE_DISABLE_REPOSITORY_STARTS",
+        disabledExecutionProfiles:
+          "REPROFORGE_DISABLED_EXECUTION_PROFILES",
         jobLeaseSeconds: "REPROFORGE_JOB_LEASE_SECONDS",
         maxActiveJobsPerTenant: "REPROFORGE_MAX_ACTIVE_JOBS_PER_TENANT",
         maxDeliveryAttempts: "REPROFORGE_MAX_DELIVERY_ATTEMPTS",
@@ -248,6 +281,9 @@ export function summarizeRuntimeConfig(
   return {
     baseUrlConfigured: config.baseUrl !== null,
     credentialsConfigured: config.mode === "preview" || config.mode === "production",
+    disablePrivateRepositories: config.disablePrivateRepositories,
+    disableRepositoryStarts: config.disableRepositoryStarts,
+    disabledExecutionProfiles: config.disabledExecutionProfiles,
     jobLeaseSeconds: config.jobLeaseSeconds,
     maxActiveJobsPerTenant: config.maxActiveJobsPerTenant,
     maxDeliveryAttempts: config.maxDeliveryAttempts,

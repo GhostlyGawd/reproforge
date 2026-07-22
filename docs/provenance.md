@@ -13,10 +13,15 @@ ReproForge was created in this repository for OpenAI Build Week under the reposi
 
 ## Visual assets
 
-- Product screenshots are first-party captures of the local ReproForge application populated only with synthetic sample data. Milestone 7 captures the exact MCP App HTML through its local evidence route; it is not represented as a ChatGPT-host screenshot.
+- Product screenshots are first-party captures of local and production
+  ReproForge surfaces populated only with synthetic sample data. Milestone 7's
+  preview is labeled as a local harness; the later `chatgpt-host` record is
+  separately labeled and checksummed as a real ChatGPT capture.
 - `docs/architecture.svg` is an original repository asset created for the implemented architecture.
 - Each evidence manifest records the source commit, capture method, timestamp, viewport, SHA-256 digest, sanitization statement, and rights statement.
-- No stock photography, third-party logos, generated people, or screenshots of external products are used as product evidence.
+- No stock photography, generated people, customer data, or third-party logo is
+  used as ReproForge artwork. The sanitized ChatGPT screenshots are used only
+  as host-integration evidence and are explicitly identified as such.
 
 ## Dependencies and references
 

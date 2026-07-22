@@ -10,6 +10,7 @@ import {
 } from "@/infrastructure/postgres/repositories";
 
 import { durableRecord, queueMessage } from "./helpers/durable-postgres-fixture";
+import { databaseClockAt } from "./helpers/database-clock";
 import { pgliteMigrationClient } from "./helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "./helpers/pglite-postgres-database";
 
@@ -22,7 +23,7 @@ describe("transactional outbox publisher", () => {
   beforeEach(async () => {
     database = new PGlite();
     await applyPostgresMigrations(pgliteMigrationClient(database));
-    now = new Date("2026-07-20T20:00:00.000Z");
+    now = new Date(databaseClockAt());
   });
 
   afterEach(async () => {
@@ -131,7 +132,7 @@ describe("transactional outbox publisher", () => {
       dead: 0,
       retryScheduled: 1,
     });
-    now = new Date("2026-07-20T20:00:06.000Z");
+    now = new Date(databaseClockAt(6_000));
     await expect(publisher.publishBatch()).resolves.toMatchObject({
       dead: 1,
       retryScheduled: 0,
@@ -158,7 +159,7 @@ describe("transactional outbox publisher", () => {
   it("reclaims an expired publisher claim while rejecting the stale owner", async () => {
     const { outbox } = await harness({ suffix: "claim_recovery" });
     const first = await outbox.claimPending({
-      at: "2026-07-20T20:00:00.000Z",
+      at: databaseClockAt(),
       claimSeconds: 30,
       limit: 1,
       ownerId: "publisher_crashed",
@@ -166,14 +167,14 @@ describe("transactional outbox publisher", () => {
     expect(first).toHaveLength(1);
     await expect(
       outbox.claimPending({
-        at: "2026-07-20T20:00:29.000Z",
+        at: databaseClockAt(29_000),
         claimSeconds: 30,
         limit: 1,
         ownerId: "publisher_early",
       }),
     ).resolves.toEqual([]);
     const recovered = await outbox.claimPending({
-      at: "2026-07-20T20:00:31.000Z",
+      at: databaseClockAt(31_000),
       claimSeconds: 30,
       limit: 1,
       ownerId: "publisher_recovery",
@@ -183,13 +184,13 @@ describe("transactional outbox publisher", () => {
     ]);
     await expect(
       outbox.markDelivered(first[0]!, {
-        deliveredAt: "2026-07-20T20:00:32.000Z",
+        deliveredAt: databaseClockAt(32_000),
         providerMessageId: "provider_stale",
       }),
     ).resolves.toBe(false);
     await expect(
       outbox.markDelivered(recovered[0]!, {
-        deliveredAt: "2026-07-20T20:00:32.000Z",
+        deliveredAt: databaseClockAt(32_000),
         providerMessageId: "provider_recovered",
       }),
     ).resolves.toBe(true);

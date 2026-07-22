@@ -64,6 +64,12 @@ describe("reproduction REST v2", () => {
     expect(first.status).toBe(201);
     expect(second.status).toBe(200);
     expect(firstBody.data.snapshot.case.id).toBe("case-route");
+    expect(firstBody.data.progress).toMatchObject({
+      cancellable: false,
+      phase: "VERIFIED",
+      state: "SUCCEEDED",
+      terminal: true,
+    });
     expect(secondBody.data.snapshot.case.id).toBe(firstBody.data.snapshot.case.id);
     expect(secondBody.data.reused).toBe(true);
   });
@@ -105,7 +111,15 @@ describe("reproduction REST v2", () => {
 
     expect(jobResponse.status).toBe(200);
     await expect(jobResponse.json()).resolves.toMatchObject({
-      data: { job: { id: "job-route", state: "SUCCEEDED" } },
+      data: {
+        job: { id: "job-route", state: "SUCCEEDED" },
+        progress: {
+          cancellable: false,
+          phase: "VERIFIED",
+          state: "SUCCEEDED",
+          terminal: true,
+        },
+      },
       error: null,
       requestId: "request-poll",
       schemaVersion: "2.0",

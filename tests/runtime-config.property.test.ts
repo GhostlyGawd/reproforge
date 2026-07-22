@@ -61,4 +61,23 @@ describe("runtime configuration properties", () => {
       { numRuns: 300 },
     );
   });
+
+  it("canonicalizes every generated execution-profile kill-switch set", () => {
+    fc.assert(
+      fc.property(
+        fc.array(fc.constantFrom("node22", "node24"), {
+          maxLength: 20,
+        }),
+        (profiles) => {
+          const config = parseRuntimeConfig({
+            REPROFORGE_DISABLED_EXECUTION_PROFILES: profiles.join(","),
+          });
+          expect(config.disabledExecutionProfiles).toEqual(
+            [...new Set(profiles)].sort(),
+          );
+        },
+      ),
+      { numRuns: 500 },
+    );
+  });
 });

@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 import { DurableQueueConsumer } from "@/application/durable-queue-consumer";
 import { transitionCase } from "@/domain/case";
 import { transitionJob } from "@/domain/job";
+import { RepositoryExecutionError } from "@/execution/isolated-repository-runner";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
 import { PostgresDurableReproductionRepository } from "@/infrastructure/postgres/repositories";
 
@@ -118,7 +119,51 @@ describe("durable queue delivery properties", () => {
           });
         },
       ),
-      { numRuns: 250 },
+      { numRuns: 250, seed: 8_406_002 },
     );
+  });
+
+  it("fails a budget-exhausted job once without retrying", async () => {
+    sequence += 1;
+    const suffix = `budget_${sequence}`;
+    const record = durableRecord(`tenant_${suffix}`, suffix);
+    await database.query("INSERT INTO tenants (id) VALUES ($1)", [
+      record.tenantId,
+    ]);
+    await repository.reserve(record);
+    const consumer = new DurableQueueConsumer({
+      clock: { now: () => new Date(DURABLE_AT) },
+      leaseSeconds: 60,
+      repository,
+      worker: {
+        execute: async () => {
+          throw new RepositoryExecutionError(
+            "BUDGET_EXHAUSTED",
+            "experiments",
+          );
+        },
+      },
+    });
+
+    await expect(
+      consumer.consume(queueMessage(record), `worker_${suffix}`),
+    ).resolves.toMatchObject({ attempt: 1, outcome: "exhausted" });
+    const stored = await repository.findByCaseId(
+      {
+        callerId: record.callerId,
+        principalId: record.callerId,
+        tenantId: record.tenantId,
+      },
+      record.caseId,
+    );
+    expect(stored).toMatchObject({
+      snapshot: {
+        job: {
+          attempt: 1,
+          failure: { code: "BUDGET_EXHAUSTED", retryable: false },
+          state: "FAILED",
+        },
+      },
+    });
   });
 });

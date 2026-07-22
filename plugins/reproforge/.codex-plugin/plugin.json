@@ -1,0 +1,39 @@
+{
+  "name": "reproforge",
+  "version": "0.2.0",
+  "description": "Turn bug reports into machine-verified, portable reproductions.",
+  "author": {
+    "name": "GhostlyGawd",
+    "url": "https://github.com/GhostlyGawd"
+  },
+  "homepage": "https://reproforge.vercel.app",
+  "repository": "https://github.com/GhostlyGawd/reproforge",
+  "keywords": [
+    "debugging",
+    "reproduction",
+    "developer-tools",
+    "evidence"
+  ],
+  "interface": {
+    "displayName": "ReproForge",
+    "shortDescription": "Machine-verified bug reproductions.",
+    "longDescription": "Run a keyless synthetic demonstration or use ReproForge's protected workflow to turn an authorized bug report into repeatable machine evidence and a portable Repro Bundle.",
+    "developerName": "GhostlyGawd",
+    "category": "Developer Tools",
+    "capabilities": [
+      "Interactive",
+      "Read",
+      "Write"
+    ],
+    "websiteURL": "https://reproforge.vercel.app",
+    "privacyPolicyURL": "https://reproforge.vercel.app/privacy",
+    "termsOfServiceURL": "https://reproforge.vercel.app/terms",
+    "defaultPrompt": [
+      "Run the trusted ReproForge demonstration.",
+      "Show the machine evidence for my ReproForge case.",
+      "Export my verified portable Repro Bundle."
+    ],
+    "brandColor": "#22C55E"
+  },
+  "apps": "./.app.json"
+}

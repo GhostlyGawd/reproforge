@@ -6,7 +6,12 @@ const vitest = fileURLToPath(
 );
 const child = spawn(
   process.execPath,
-  [vitest, "run", "tests/providers/durable-providers.live.test.ts"],
+  [
+    vitest,
+    "run",
+    "tests/providers/durable-providers.live.test.ts",
+    "tests/providers/isolated-execution.live.test.ts",
+  ],
   {
     env: {
       ...process.env,

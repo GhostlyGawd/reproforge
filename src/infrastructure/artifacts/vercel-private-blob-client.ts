@@ -34,6 +34,26 @@ export class PrivateBlobConfigurationError extends Error {
   }
 }
 
+const MAX_PRIVATE_BLOB_BYTES = 1_073_741_824;
+
+function validateTrustedSize(trustedSize: number): number {
+  if (
+    !Number.isSafeInteger(trustedSize) ||
+    trustedSize < 0 ||
+    trustedSize > MAX_PRIVATE_BLOB_BYTES
+  ) {
+    throw new Error("Private Blob trusted size is invalid");
+  }
+  return trustedSize;
+}
+
+function canonicalEtag(etag: string): string {
+  const trimmed = etag.trim();
+  return trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')
+    ? trimmed.slice(1, -1)
+    : trimmed;
+}
+
 function validateAuthentication(
   authentication: VercelBlobAuthentication,
 ): VercelBlobAuthentication {
@@ -47,7 +67,7 @@ function validateAuthentication(
 
 async function collectStream(
   stream: ReadableStream<Uint8Array>,
-  expectedSize: number,
+  trustedSize: number,
 ): Promise<Uint8Array> {
   const reader = stream.getReader();
   const chunks: Uint8Array[] = [];
@@ -56,14 +76,14 @@ async function collectStream(
     const result = await reader.read();
     if (result.done) break;
     byteCount += result.value.byteLength;
-    if (byteCount > expectedSize) {
+    if (byteCount > trustedSize) {
       await reader.cancel();
-      throw new Error("Private Blob stream exceeded its declared size");
+      throw new Error("Private Blob stream exceeded its trusted size");
     }
     chunks.push(result.value);
   }
-  if (byteCount !== expectedSize) {
-    throw new Error("Private Blob stream did not match its declared size");
+  if (byteCount !== trustedSize) {
+    throw new Error("Private Blob stream did not match its trusted size");
   }
   const bytes = new Uint8Array(byteCount);
   let offset = 0;
@@ -104,7 +124,7 @@ export class VercelPrivateBlobClient implements PrivateBlobClient {
     try {
       const metadata = await this.operations.head(pathname, this.credentials());
       return {
-        etag: metadata.etag,
+        etag: canonicalEtag(metadata.etag),
         pathname: metadata.pathname,
         size: metadata.size,
       };
@@ -116,7 +136,9 @@ export class VercelPrivateBlobClient implements PrivateBlobClient {
 
   async get(
     pathname: string,
+    rawTrustedSize: number,
   ): Promise<{ bytes: Uint8Array; metadata: PrivateBlobMetadata } | null> {
+    const trustedSize = validateTrustedSize(rawTrustedSize);
     const result = await this.operations.get(pathname, {
       access: "private",
       useCache: false,
@@ -130,13 +152,17 @@ export class VercelPrivateBlobClient implements PrivateBlobClient {
     ) {
       throw new Error("Private Blob returned an invalid body");
     }
-    const metadata = {
-      etag: result.blob.etag,
-      pathname: result.blob.pathname,
-      size: result.blob.size,
-    };
+    const bytes = await collectStream(result.stream, trustedSize);
+    const metadata = await this.head(pathname);
+    if (
+      !metadata ||
+      metadata.pathname !== result.blob.pathname ||
+      metadata.size !== trustedSize
+    ) {
+      throw new Error("Private Blob metadata did not match the trusted object");
+    }
     return {
-      bytes: await collectStream(result.stream, metadata.size),
+      bytes,
       metadata,
     };
   }

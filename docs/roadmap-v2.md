@@ -42,9 +42,9 @@ Tracking: [#12](https://github.com/GhostlyGawd/reproforge/issues/12)
 - [x] `RF-7006` Add initialize/discovery/resource/call/retry protocol tests.
 - [x] `RF-7007` Add widget BDD/browser/accessibility coverage and sanitized visual evidence.
 - [x] `RF-7008` Document local MCP inspection, reachable-HTTPS developer mode, and plugin packaging.
-- [ ] `RF-7009` After the user creates a developer-mode app, scaffold and validate the local plugin using its real `plugin_asdk_app...` ID.
+- [x] `RF-7009` Scaffold and validate a repository-local Codex plugin wrapper using the real evidenced `asdk_app_...` developer-mode app ID.
 
-**Exit evidence:** the [Milestone 7 record](evidence/milestone-7/README.md) contains the protocol transcript, no-key contract proof, independent Inspector discovery, browser screenshots/manifest, accessibility checks, and test results. CI must pass on the pull request. `RF-7009` and a real ChatGPT-host smoke remain explicitly account-gated until a reachable HTTPS URL and real app ID exist.
+**Exit evidence:** the [Milestone 7 record](evidence/milestone-7/README.md) contains the protocol transcript, no-key contract proof, independent Inspector discovery, browser screenshots/manifest, accessibility checks, and test results. The later [ChatGPT-host record](evidence/chatgpt-host/README.md) supplies the reachable production URL, real app/version IDs, anonymous connection, hosted trusted run, widget, and export proof. The repository-local wrapper under `plugins/reproforge` passes the canonical plugin validator and a drift test against the evidenced app ID.
 
 ## Milestone 8 — Persistence, authentication, and isolated execution
 
@@ -74,5 +74,12 @@ Tracking: [#14](https://github.com/GhostlyGawd/reproforge/issues/14)
 
 ## Completion policy
 
-A checked task means working behavior and evidence, not file presence. Milestones 5–7 can be completed locally except for the account-side ChatGPT smoke and plugin app ID, which are recorded separately if unavailable. Milestones 8–9 are not complete until their external infrastructure, security, account, legal, and publication gates have been exercised; mocks cannot satisfy those exits.
+Current execution evidence now covers the production origin, Auth0 browser
+login, selected GitHub App catalog, isolated public canary, connected ChatGPT
+developer-mode app, and anonymous trusted-host journey. Milestone 9 remains
+partial because protected hosted review cases, private/intermittent signed-in
+canaries, publisher and availability fields, portal submission, and
+publication are not claimed.
+
+A checked task means working behavior and evidence, not file presence. Milestones 5–7 can be completed locally; the account-side ChatGPT smoke and real app ID are recorded separately in the later host gate. Milestones 8–9 are not complete until their external infrastructure, security, account, legal, and publication gates have been exercised; mocks cannot satisfy those exits.
 

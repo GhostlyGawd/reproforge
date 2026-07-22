@@ -1,0 +1,115 @@
+{
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-07-21T20:12:11.728Z",
+  "initialCompatibilityCapturedAt": "2026-07-21T19:10:19.729Z",
+  "sourceCommit": "0449ddbee8ce406a18fec9926b29bd7a33ac0c2c",
+  "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
+  "origin": "https://reproforge.vercel.app",
+  "authorizationServer": "https://dev-zrjckn7bm7og6sdc.us.auth0.com/",
+  "hostedChecks": {
+    "liveness": {
+      "httpStatus": 200,
+      "status": "ready"
+    },
+    "readiness": {
+      "httpStatus": 200,
+      "status": "ready",
+      "checks": [
+        "DATABASE_READY",
+        "ARTIFACT_STORE_READY",
+        "QUEUE_CONFIGURATION_READY"
+      ]
+    },
+    "runner": {
+      "httpStatus": 200,
+      "status": "ready",
+      "checks": ["RUNNER_READY"]
+    }
+  },
+  "oauthCompatibility": {
+    "ok": true,
+    "registrationMethod": "dcr",
+    "checks": {
+      "protected-resource": "pass",
+      "issuer": "pass",
+      "authorization-endpoints": "pass",
+      "response-flow": "pass",
+      "pkce": "pass",
+      "token-authentication": "pass",
+      "client-registration": "pass"
+    }
+  },
+  "auth0Tenant": {
+    "resourceParameterProfile": "compatibility",
+    "authorizationResponseIssuerParameter": true,
+    "dynamicClientRegistration": true,
+    "registrationEndpoint": "https://dev-zrjckn7bm7og6sdc.us.auth0.com/oidc/register",
+    "applicationLoginUri": "https://reproforge.vercel.app/auth/login?returnTo=%2Frepositories",
+    "tenantDefaultRedirectionUri": "https://reproforge.vercel.app/auth/login?returnTo=%2Frepositories",
+    "domainLevelDatabaseConnection": true,
+    "firstPartyGoogleDevelopmentKeysEnabled": false,
+    "postLoginTenantClaimAction": "deployed-and-bound",
+    "thirdPartyDefaultGrantTemplates": [
+      {
+        "audience": "https://reproforge.vercel.app/mcp",
+        "subjectType": "user",
+        "scopeCount": 5
+      },
+      {
+        "audience": "https://reproforge-git-agent-private-beta-ghostlygawds-projects.vercel.app/mcp",
+        "subjectType": "user",
+        "scopeCount": 5
+      }
+    ]
+  },
+  "defaultLoginRecoveryCanary": {
+    "observedFailureAt": "2026-07-21T20:02:06.952Z",
+    "observedFailure": "direct Universal Login visit had no application or tenant login URI",
+    "redirectTrace": [
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/u/login",
+        "httpStatus": 302
+      },
+      {
+        "host": "reproforge.vercel.app",
+        "path": "/auth/login",
+        "httpStatus": 307
+      },
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/authorize",
+        "httpStatus": 302
+      },
+      {
+        "host": "dev-zrjckn7bm7og6sdc.us.auth0.com",
+        "path": "/u/login",
+        "httpStatus": 200
+      }
+    ],
+    "applicationContext": "ReproForge Web",
+    "genericErrorPresent": false,
+    "emailPasswordLoginPresent": true,
+    "signUpPresent": true,
+    "googleDevelopmentKeysPresented": false,
+    "visualEvidence": "production-auth0-login-mobile.png"
+  },
+  "dynamicRegistrationCanary": {
+    "clientClass": "strict-third-party-public-client",
+    "clientIdPrefix": "tpc_",
+    "tokenEndpointAuthenticationMethod": "none",
+    "grantTypes": ["authorization_code", "refresh_token"],
+    "pkceMethod": "S256",
+    "resource": "https://reproforge.vercel.app/mcp",
+    "authorizationBoundaryResult": "login_required",
+    "resourceAndScopesRecordedByAuthorizationServer": true,
+    "allDisposableClientsDeleted": true
+  },
+  "secretsCaptured": false,
+  "openInteractiveGates": [
+    "real browser login and principal provisioning",
+    "GitHub App installation, repository selection, and revocation",
+    "MCP Inspector authenticated read",
+    "ChatGPT developer-mode authenticated tool and widget smoke"
+  ]
+}

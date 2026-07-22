@@ -241,7 +241,10 @@ export class ContentAddressedArtifactStore implements ArtifactStore {
           input.bytes,
         );
       } catch {
-        const orphan = await this.blobs.get(storedDescriptor.objectKey);
+        const orphan = await this.blobs.get(
+          storedDescriptor.objectKey,
+          storedDescriptor.byteCount,
+        );
         if (
           !orphan ||
           orphan.bytes.byteLength !== storedDescriptor.byteCount ||
@@ -303,7 +306,10 @@ export class ContentAddressedArtifactStore implements ArtifactStore {
     const row = await this.findAuthorized(scope, artifactId, "AVAILABLE");
     if (!row) return null;
     const descriptor = rowDescriptor(row);
-    const stored = await this.blobs.get(descriptor.objectKey);
+    const stored = await this.blobs.get(
+      descriptor.objectKey,
+      descriptor.byteCount,
+    );
     if (
       !stored ||
       !metadataMatches(descriptor, row.provider_etag, stored.metadata) ||

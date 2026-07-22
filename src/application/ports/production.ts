@@ -1,6 +1,7 @@
 import { z } from "zod";
 
 import type { ReproductionSnapshot } from "@/application/reproduction-contracts";
+import type { ResolvedRepositoryExecutionRequest } from "@/execution/contracts";
 
 const opaqueIdSchema = z
   .string()
@@ -174,6 +175,7 @@ export type DurableReproductionRecord = {
     maxToolCalls: number;
     requiredRuns: number;
   };
+  repositoryRequest?: ResolvedRepositoryExecutionRequest;
   snapshot: ReproductionSnapshot;
   tenantId: string;
   updatedAt: string;

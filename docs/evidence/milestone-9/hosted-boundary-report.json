@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-07-21T00:56:22.2750328Z",
+  "sourceCommit": "891749b4fcce7faabf6424b565cdc45a6eb3cd3a",
+  "production": {
+    "origin": "https://reproforge.vercel.app",
+    "deploymentId": "dpl_2KwXZ88yZE1fPTa9wXomJKwPiBdm",
+    "immutableDeploymentUrl": "https://reproforge-54jb7onbr-ghostlygawds-projects.vercel.app"
+  },
+  "ci": {
+    "url": "https://github.com/GhostlyGawd/reproforge/actions/runs/29791329332",
+    "conclusion": "success"
+  },
+  "routes": {
+    "/": 200,
+    "/privacy": 200,
+    "/terms": 200,
+    "/support": 200,
+    "/security": 200,
+    "/health/live": 200,
+    "/.well-known/openai-apps-challenge": 404,
+    "/mcp initialize": 200
+  },
+  "challenge": {
+    "bodyBytes": 0,
+    "cacheControl": "no-store",
+    "configuredDuringCapture": false
+  },
+  "securityHeaders": {
+    "contentSecurityPolicyPresent": true,
+    "contentSecurityPolicySameOriginOnly": true,
+    "contentSecurityPolicyUnsafeEvalAbsent": true,
+    "strictTransportSecurity": "max-age=63072000; includeSubDomains",
+    "xFrameOptions": "DENY",
+    "crossOriginOpenerPolicy": "same-origin",
+    "permissionsPolicyPresent": true
+  },
+  "mcpInitialize": {
+    "serverName": "reproforge",
+    "protocolVersion": "2025-06-18",
+    "openAiApiKeyRequired": false
+  },
+  "sanitization": "No credential values, tenant identifiers, private repository identifiers, provider resource identifiers, cookies, or user data are included."
+}

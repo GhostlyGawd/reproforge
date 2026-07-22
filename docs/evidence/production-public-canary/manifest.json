@@ -1,0 +1,34 @@
+{
+  "schemaVersion": 1,
+  "milestone": "production-public-canary",
+  "capturedAt": "2026-07-22T00:37:35.4321613Z",
+  "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+  "origin": "https://reproforge.vercel.app",
+  "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+  "captureMethod": {
+    "tool": "first-party signed-in Chrome session",
+    "browser": "Chrome",
+    "mode": "public Vercel production origin",
+    "fullPage": true
+  },
+  "captures": [
+    {
+      "file": "production-verified-case.jpg",
+      "capturedAt": "2026-07-22T00:37:35.4321613Z",
+      "route": "/cases/case_7fef12e5-e231-4880-a0f4-fc273f3b1df5",
+      "image": {
+        "format": "jpeg",
+        "width": 1834,
+        "height": 1003,
+        "bytes": 82092,
+        "sha256": "1f2d9f83175a0848a0b623371086fd1dc231df1353eb8f1c20af8aae35ea19c3"
+      },
+      "theme": "dark",
+      "alt": "Live ReproForge production case showing a succeeded verified job, the immutable public canary commit, and a machine result stating that all three candidate runs matched while the control did not.",
+      "caption": "First-party production result for the authorized public ReproForge canary at its immutable failing commit."
+    }
+  ],
+  "sanitization": "Public synthetic repository metadata, immutable hashes, and server-issued case/job identifiers only; no identity, credential, provider repository ID, private source, or customer data.",
+  "provenance": "The capture is a real first-party page from the exact ReproForge production deployment; it is not concept art, generated imagery, or a ChatGPT-host screenshot.",
+  "openGate": "The production path passed. The anonymous trusted ChatGPT case passed separately, while the authorized public-canary review case remains pending until its own list/start/read/export sequence is exercised through ChatGPT."
+}

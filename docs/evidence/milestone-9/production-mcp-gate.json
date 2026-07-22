@@ -1,0 +1,44 @@
+{
+  "schemaVersion": "1.0",
+  "checkedAt": "2026-07-21T01:45:08.696Z",
+  "sourceCommit": "eee99411be91c05225ac0d5d95a9997ab01af068",
+  "production": {
+    "origin": "https://reproforge.vercel.app",
+    "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
+    "immutableDeploymentUrl": "https://reproforge-1aqqv8a09-ghostlygawds-projects.vercel.app"
+  },
+  "ci": {
+    "url": "https://github.com/GhostlyGawd/reproforge/actions/runs/29793562803",
+    "conclusion": "success"
+  },
+  "inventory": {
+    "toolCount": 5,
+    "expectedToolsPresent": true,
+    "openAiApiKeyRequired": false
+  },
+  "positiveTrustedDemo": {
+    "startVerified": true,
+    "proofComplete": true,
+    "bundleReady": true,
+    "idempotentRetry": true,
+    "durableRead": true,
+    "exportVerified": true,
+    "exportHashMatches": true,
+    "portableReproPresent": true
+  },
+  "negativeBoundaries": {
+    "arbitrarySchemaRejected": true,
+    "destructiveSchemaRejected": true,
+    "unknownCaseRejectedOrChallenged": true
+  },
+  "providerGate": {
+    "liveTests": 9,
+    "privateBlobAccessDenied": true,
+    "decodedArtifactReadVerified": true,
+    "tenantBackupRestoreVerified": true,
+    "isolatedRunnerLifecycleVerified": true
+  },
+  "allPassed": true,
+  "sanitization": "No case, job, tenant, principal, repository, provider resource, credential, cookie, or user identifier is included.",
+  "scopeLimitations": "This proves the production MCP protocol and provider path from an official MCP SDK client. It does not claim a ChatGPT-host run, Auth0 account linking, GitHub App installation, or authenticated public/private canary completion."
+}

@@ -1,0 +1,20 @@
+{
+  "callback_urls": [
+    "https://reproforge.example/api/github/callback"
+  ],
+  "default_permissions": {
+    "contents": "read",
+    "issues": "read",
+    "metadata": "read"
+  },
+  "description": "Read-only source acquisition for machine-verified bug reproductions.",
+  "hook_attributes": {
+    "active": true,
+    "url": "https://reproforge.example/api/github/webhook"
+  },
+  "name": "ReproForge Development",
+  "public": false,
+  "request_oauth_on_install": true,
+  "setup_on_update": false,
+  "url": "https://reproforge.example/"
+}

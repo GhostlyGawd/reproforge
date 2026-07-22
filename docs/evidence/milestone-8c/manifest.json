@@ -1,0 +1,156 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8c",
+  "capturedAt": "2026-07-21T00:15:07.685Z",
+  "implementationCommit": "068df00a8f1bd688bd9e54c9c0d73edbe29de1f2",
+  "evidenceSourceCommit": "f1ae39416c6ee167176051da17a4a1eb1f8e7276",
+  "scope": "isolated repository execution implementation and development-provider evidence through RF-8312",
+  "status": "implementation-complete",
+  "tasks": {
+    "RF-8301": "passed",
+    "RF-8302": "passed",
+    "RF-8303": "passed",
+    "RF-8304": "passed",
+    "RF-8305": "passed",
+    "RF-8306": "passed",
+    "RF-8307": "passed",
+    "RF-8308": "passed",
+    "RF-8309": "passed",
+    "RF-8310": "passed",
+    "RF-8311": "passed",
+    "RF-8312": "passed"
+  },
+  "providerVerification": {
+    "command": "npm run test:providers",
+    "testsPassed": 9,
+    "testsFailed": 0,
+    "testsSkipped": 0,
+    "acquisitionBoundaryCanary": {
+      "repository": "GhostlyGawd/reproforge",
+      "commitSha": "fd4c4be62d37fd76167c3b9a71d64c979f33e28e",
+      "hostArchiveBounded": true,
+      "sandboxHashMatched": true,
+      "sandboxNetworkPolicy": "deny-all"
+    },
+    "isolatedExecution": {
+      "testsPassed": 3,
+      "outputOriginalBytes": 3145728,
+      "outputRetainedBytes": 1048576,
+      "outputHashPreserved": true,
+      "cancellation": "passed",
+      "freshRestores": 2,
+      "crossRunMutationObserved": false,
+      "cleanup": "passed",
+      "publicRepositoryCanary": {
+        "repository": "GhostlyGawd/reproforge-canary",
+        "commitSha": "d3d69d4c5222bb7f4e6cded27a965258247942b2",
+        "fixedCommitSha": "8217e07601bfce879fe8f6f5121fee19a23ade51",
+        "credentialMinted": false,
+        "networkPolicy": "deny-all",
+        "runs": 4,
+        "controlMatched": false,
+        "candidateMatches": 3,
+        "status": "VERIFIED",
+        "cleanup": "clean",
+        "bundlePath": "public-canary-bundle.json",
+        "bundleBytes": 11201,
+        "bundleSha256": "e859ee6079f26a69b539750f3cf7c09489ca9fa3e0fdebe41331bda48aa101dd"
+      }
+    },
+    "durableProviders": {
+      "testsPassed": 6,
+      "cleanup": "passed"
+    }
+  },
+  "redGreenFindings": [
+    {
+      "red": "Vercel network header transformation was unavailable on the Hobby plan.",
+      "green": "Trusted-host bounded download now injects bytes into an always-deny-all sandbox without forwarding authorization to the temporary archive URL."
+    },
+    {
+      "red": "A repeated trusted supervisor mkdir failed when the directory already existed.",
+      "green": "Each experiment now receives a unique supervisor directory and the repeated live gate passes."
+    },
+    {
+      "red": "Five nominal 1 ms reduced-motion React effects exceeded a one-second browser assertion under concurrent load.",
+      "green": "Reduced-motion activation now skips staged animation in one state transition; five focused repetitions and the complete 18-test browser suite pass."
+    },
+    {
+      "red": "The heaviest 500-case adversarial property exceeded Vitest's generic 5-second per-test timeout under aggregate load without an assertion failure.",
+      "green": "The unchanged 500-case property declares a bounded 30-second harness timeout and the complete four-property file passes three consecutive focused runs."
+    },
+    {
+      "red": "Four unrelated Playwright journeys reached the shared test timeout while competing for on-demand Next development compilation after the production build.",
+      "green": "The release browser gate starts the already-built production server on dedicated port 3129; all 18 journeys pass in 15.5 seconds without weakening assertions or timeouts."
+    },
+    {
+      "red": "The linked Hobby preview rejected the Queue Function's 900-second maxDuration as outside the plan limit.",
+      "green": "A deployment-contract test pins both the Next route and vercel.json to the universally Hobby-compatible 60-second ceiling; longer hosted orchestration remains an explicit 8D gate."
+    },
+    {
+      "red": "GitHub CI crossed the 24-hour boundary embedded in fixed PGlite integration and BDD clocks, so quota expiry and outbox claim predicates evaluated against a later real CURRENT_TIMESTAMP.",
+      "green": "Database-sensitive fixtures now share a runtime-relative epoch with exact scenario offsets; the previously failing 15-test set, adjacent generated properties, all 39 BDD scenarios, and the complete release gate pass."
+    }
+  ],
+  "propertyVerification": {
+    "generatedCases": 2000,
+    "properties": 4,
+    "runsPerProperty": 500
+  },
+  "behaviorVerification": {
+    "bddCommand": "npm run test:bdd",
+    "scenariosPassed": 39,
+    "stepsPassed": 283,
+    "repositoryScenarios": 13,
+    "focusedTestFilesPassed": 4,
+    "focusedTestsPassed": 16
+  },
+  "regressionVerification": {
+    "command": "npm run verify",
+    "sourceCommit": "288187c99659790fb1d51e3fb384343b265849e7",
+    "vitestFilesPassed": 81,
+    "vitestTestsPassed": 342,
+    "offlineProviderTestsSkipped": 9,
+    "bddScenariosPassed": 39,
+    "bddStepsPassed": 283,
+    "documentationLinksVerified": 110,
+    "productionBuild": "passed",
+    "mcpToolsDiscovered": 5,
+    "evaluationFixturesPassed": 4,
+    "browserTestsPassed": 18,
+    "accessibility": "passed"
+  },
+  "deploymentVerification": {
+    "sourceCommit": "2aaebed6d5f658892f47cb2c119bfa64df329463",
+    "plan": "Hobby",
+    "queueFunctionMaxDurationSeconds": 60,
+    "contractTest": "passed",
+    "vercelBuild": "passed"
+  },
+  "visualEvidence": {
+    "productScreenshotApplicable": false,
+    "reason": "This backend boundary is materially verified by provider behavior, source hash identity, network denial, bounded output, cancellation, fresh restores, cleanup, and the portable machine-readable bundle. Hosted browser and ChatGPT visual requirements remain in 8D/9.",
+    "architectureDiagram": {
+      "file": "architecture.png",
+      "source": "../../architecture.svg",
+      "sourceCommit": "107105ce0981963171e87ff0e22814f9dabb1186",
+      "capturedAt": "2026-07-20",
+      "viewport": {
+        "width": 1440,
+        "height": 900
+      },
+      "bytes": 327565,
+      "sha256": "fdd3271480fad66f5305e91d2b4f44c113e38f6e279719098d8714fb6494ff62",
+      "alt": "ReproForge trust architecture showing the trusted sample and authorized immutable GitHub source entering deterministic proof through a disposable deny-all sandbox.",
+      "caption": "Current trust boundary: proposals remain non-executing, while a provider-verified sandbox path supplies evidence to deterministic verification and portable export.",
+      "provenance": "First-party ReproForge SVG rendered locally with Playwright Chromium and visually inspected; no external product capture, private data, or generated imagery."
+    }
+  },
+  "deferred": [
+    "Milestone 8B live account authorization evidence",
+    "live private-repository authorization canary",
+    "hosted browser and ChatGPT journey",
+    "plugin submission or publication"
+  ],
+  "sanitization": "No credentials, provider resource IDs, session IDs, database identifiers, object keys, provider URLs, response headers, private source content, customer data, or personal data are committed."
+}

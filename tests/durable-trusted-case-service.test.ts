@@ -22,6 +22,7 @@ import {
 import { createReproForgeMcpServer } from "@/mcp/server";
 
 import { MemoryPrivateBlobClient } from "./helpers/memory-private-blob-client";
+import { databaseClockAt } from "./helpers/database-clock";
 import { pgliteMigrationClient } from "./helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "./helpers/pglite-postgres-database";
 
@@ -31,7 +32,7 @@ const TENANT_ID = "tenant_trusted_provider_fixture";
 const REST_CALLER = "rest:anonymous-trusted-sample";
 
 class MonotonicClock {
-  private value = Date.parse("2026-07-20T20:00:00.000Z");
+  private value = Date.parse(databaseClockAt());
 
   now(): Date {
     this.value += 1_000;
@@ -52,8 +53,8 @@ describe("durable trusted fixture orchestration", () => {
     await applyPostgresMigrations(pgliteMigrationClient(database));
     await database.query(
       `INSERT INTO tenants (id, created_at, updated_at)
-       VALUES ($1, '2026-07-19T19:00:00.000Z', '2026-07-19T19:00:00.000Z')`,
-      [TENANT_ID],
+       VALUES ($1, $2, $2)`,
+      [TENANT_ID, databaseClockAt(-60 * 60 * 1_000)],
     );
     const postgres = pglitePostgresDatabase(database);
     const clock = new MonotonicClock();
@@ -193,7 +194,7 @@ describe("durable trusted fixture orchestration", () => {
     const readBody = await readResponse.json();
     const exportBody = await exportResponse.json();
 
-    const server = createReproForgeMcpServer({ callerId: REST_CALLER, service });
+    const server = createReproForgeMcpServer({ service });
     const client = new Client(
       { name: "durable-surface-test", version: "1.0.0" },
       { capabilities: {} },
@@ -252,12 +253,12 @@ describe("durable trusted fixture orchestration", () => {
           expect(retried.reused).toBe(true);
           expect(retried.snapshot.case.id).toBe(first.snapshot.case.id);
           expect(retried.snapshot.job.id).toBe(first.snapshot.job.id);
-          expect(retried.snapshot.result?.bundle.bundleHash).toBe(
-            first.snapshot.result?.bundle.bundleHash,
+          expect(retried.snapshot.result?.bundle?.bundleHash).toBe(
+            first.snapshot.result?.bundle?.bundleHash,
           );
         }
       }),
-      { numRuns: 250 },
+      { numRuns: 250, seed: 8_406_003 },
     );
 
     expect(fixture.executeTrustedSample).toHaveBeenCalledTimes(1);

@@ -5,7 +5,10 @@ import { afterAll, beforeAll, describe, expect, it, vi } from "vitest";
 
 import { ContentAddressedArtifactStore } from "@/infrastructure/artifacts/content-addressed-store";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
-import { PostgresUnitOfWork } from "@/infrastructure/postgres/repositories";
+import {
+  PostgresDurableReproductionRepository,
+  PostgresUnitOfWork,
+} from "@/infrastructure/postgres/repositories";
 import { PostgresTenantDataRetention } from "@/infrastructure/retention/postgres-tenant-data-retention";
 import {
   DURABLE_AT,
@@ -166,6 +169,11 @@ describe("tenant retention deletion", () => {
       failure_code: "RETENTION_PROVIDER_FAILURE",
       state: "FAILED",
     });
+    const tenant = await database.query<{ status: string }>(
+      "SELECT status FROM tenants WHERE id = $1",
+      [tenantId],
+    );
+    expect(tenant.rows[0]?.status).toBe("SUSPENDED");
   });
 
   it("supports an idempotent caller-requested deletion schedule", async () => {
@@ -189,6 +197,66 @@ describe("tenant retention deletion", () => {
       [tenantId],
     );
     expect(rows.rows[0]?.count).toBe("1");
+    const lifecycle = await database.query<{
+      cancellation_requested_at: Date | null;
+      job_state: string;
+      tenant_status: string;
+    }>(
+      `SELECT t.status AS tenant_status, j.state AS job_state,
+              j.cancellation_requested_at
+         FROM tenants t
+         JOIN jobs j ON j.tenant_id = t.id
+        WHERE t.id = $1`,
+      [tenantId],
+    );
+    expect(lifecycle.rows[0]).toMatchObject({
+      job_state: "CANCELLED",
+      tenant_status: "SUSPENDED",
+    });
+    expect(lifecycle.rows[0]?.cancellation_requested_at?.toISOString()).toBe(
+      DURABLE_AT,
+    );
+  });
+
+  it("waits for active work to observe cancellation before user-requested purge", async () => {
+    const tenantId = "tenant_manual_running_deletion";
+    const record = await seedDurableTenant(database, unitOfWork, tenantId);
+    const repository = new PostgresDurableReproductionRepository(postgres);
+    const lease = await repository.claimLease({
+      at: DURABLE_AT,
+      jobId: record.jobId,
+      leaseSeconds: 90,
+      ownerId: "worker_manual_deletion",
+      tenantId,
+    });
+    expect(lease).not.toBeNull();
+    const retention = new PostgresTenantDataRetention(
+      postgres,
+      new MemoryPrivateBlobClient(),
+    );
+    const requestedAt = "2026-07-19T20:00:10.000Z";
+    await retention.request({
+      at: requestedAt,
+      requestId: "delete_manual_running",
+      scheduledAt: requestedAt,
+      scope: durableScope(tenantId),
+    });
+
+    await expect(retention.executeNext({ at: requestedAt })).resolves.toBeNull();
+    await expect(repository.isCancellationRequested(lease!)).resolves.toBe(true);
+    await repository.cancelLease(lease!, {
+      at: "2026-07-19T20:00:20.000Z",
+    });
+    await expect(
+      retention.executeNext({ at: "2026-07-19T20:00:30.000Z" }),
+    ).resolves.toMatchObject({ tenantId });
+    const tombstones = await database.query<{ metadata: unknown }>(
+      "SELECT metadata FROM audit_events WHERE tenant_id = $1",
+      [tenantId],
+    );
+    expect(tombstones.rows).toEqual([
+      { metadata: { reason: "user-request" } },
+    ]);
   });
 
   it("reclaims an expired deletion lease after a worker crash", async () => {

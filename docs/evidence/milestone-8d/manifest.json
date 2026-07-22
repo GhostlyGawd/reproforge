@@ -1,0 +1,254 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-8d",
+  "capturedAt": "2026-07-21T00:04:03.703Z",
+  "implementationCommit": "47f893078eac9265c0c6dc4e636ee429135f128a",
+  "scope": "private-beta runtime health, durable progress, authenticated web/REST repository starts, resilience, account data lifecycle, operations-control, and deterministic fault-campaign implementation evidence",
+  "status": "in-progress",
+  "tasks": {
+    "RF-8401": "implementation-passed-live-configuration-pending",
+    "RF-8402": "implementation-passed-hosted-journey-pending",
+    "RF-8403": "implementation-passed-hosted-operations-pending",
+    "RF-8404": "implementation-passed-hosted-lifecycle-pending",
+    "RF-8405": "implementation-passed-hosted-rehearsal-pending",
+    "RF-8406": "implementation-passed-hosted-fault-campaign-pending",
+    "RF-8407": "pending",
+    "RF-8408": "pending",
+    "RF-8409": "pending",
+    "RF-8410": "pending",
+    "RF-8411": "pending"
+  },
+  "runtimeHealth": {
+    "isolatedRunnerCapabilityProbe": "passed",
+    "networkPolicy": "deny-all",
+    "sandboxCleanup": "passed",
+    "cacheAndRequestCoalescing": "passed",
+    "hostedConfigIncludes": [
+      "runtime",
+      "web-authentication",
+      "oauth-resource",
+      "github-app"
+    ],
+    "canonicalOriginRequired": true,
+    "missingConfigurationFailsBeforeProviderAccess": true
+  },
+  "progressParity": {
+    "sharedSchemaVersion": "1.0",
+    "surfaces": ["REST", "MCP", "ChatGPT widget", "web"],
+    "generatedSchedules": 500,
+    "propertyTestsPassed": 2,
+    "focusedTestsPassed": 13,
+    "bddScenariosPassed": 48,
+    "bddStepsPassed": 345,
+    "productionBuild": "passed"
+  },
+  "resilience": {
+    "runnerDegradationAdmission": "passed",
+    "workerLossLeaseRecovery": "passed",
+    "monotonicCancellation": "passed",
+    "boundedRetry": "passed",
+    "exactResourceQuarantineCleanup": "passed",
+    "operatorArgumentFuzzCases": 500,
+    "focusedTestsPassed": 29,
+    "hostedExercise": "pending"
+  },
+  "accountDataLifecycle": {
+    "portableArchiveSchemaVersion": "1.0",
+    "generatedPortableArchiveBodies": 500,
+    "generatedRetentionSequences": 250,
+    "focusedTestsPassed": 17,
+    "governanceTestsPassed": 25,
+    "backupTestsPassed": 14,
+    "browserTestsPassed": 3,
+    "accountExport": "passed-local",
+    "explicitDeletionConfirmation": "passed-local",
+    "providerFirstDeletion": "passed-local",
+    "hostedExercise": "pending"
+  },
+  "operationsControls": {
+    "dashboardSchemaVersion": "1.0",
+    "aggregateIdentifiersExposed": 0,
+    "ownedAlerts": 8,
+    "featureKillSwitches": 3,
+    "generatedAdmissionCombinations": 500,
+    "generatedDashboardMetricSets": 500,
+    "focusedTestsPassed": 51,
+    "operationsTestsPassed": 44,
+    "deploymentPolicyVerifier": "passed",
+    "productionBuild": "passed",
+    "hostedAlertAndRollbackRehearsal": "pending"
+  },
+  "resilienceHarness": {
+    "schemaVersion": "1.0",
+    "campaigns": 8,
+    "testFilesPassed": 13,
+    "testsPassed": 44,
+    "durationSeconds": 48.9,
+    "simultaneousStarts": 128,
+    "concurrentReads": 128,
+    "durableExecutions": 1,
+    "generatedDuplicateDeliverySchedules": 250,
+    "generatedRestartRetrySequences": 250,
+    "generatedRegistryMutations": 500,
+    "fixedSeeds": [8406001, 8406002, 8406003, 8406004, 8406005, 8406006, 8406007, 8406008],
+    "hostedEvidence": false
+  },
+  "repositoryRestApi": {
+    "schemaVersion": "2.0",
+    "oauthProtectedRoutes": 5,
+    "maximumStartBodyBytes": 16384,
+    "focusedTestFilesPassed": 2,
+    "focusedTestsPassed": 10,
+    "leastPrivilegeScopes": "passed-local",
+    "bearerChallenges": "passed-local",
+    "productionBuild": "passed",
+    "hostedOAuthCanary": "pending"
+  },
+  "liveProviderValidation": {
+    "testFilesPassed": 2,
+    "testsPassed": 9,
+    "durationSeconds": 76.26,
+    "neon": "passed",
+    "privateBlob": "passed",
+    "vercelQueue": "passed",
+    "vercelSandbox": "passed",
+    "durableRestartIdentity": "passed",
+    "concurrentIdempotency": "passed",
+    "expiredLeaseRecovery": "passed",
+    "backupRestoreHashVerification": "passed",
+    "recoveredQueuedCancellationRegression": "passed"
+  },
+  "browserVerification": {
+    "tool": "agent-browser",
+    "pageContent": "passed",
+    "frameworkOverlay": "absent",
+    "pageErrors": 0,
+    "horizontalOverflowAt390px": false,
+    "interactiveWidgetSnapshot": "passed",
+    "console": "no output on the final production-built account data page"
+  },
+  "visualEvidence": [
+    {
+      "file": "local-case-auth-boundary-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 187938,
+      "sha256": "31093601f370d7ed7cb442c1378015b387726c806879209539f28fff546fe4f7",
+      "alt": "Desktop ReproForge case page showing the tenant-scoped identity boundary while Auth0 is not configured."
+    },
+    {
+      "file": "local-case-auth-boundary-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 138026,
+      "sha256": "b062685fe3de4f7eaf784352daa0cfe2bfae32b1fa5d269acf7442f756e05388",
+      "alt": "Mobile ReproForge case page showing the tenant-scoped identity boundary without horizontal overflow."
+    },
+    {
+      "file": "local-widget-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 70362,
+      "sha256": "d67dfee51ce30b99d0b34449325e579b66dfec41fdff3a1478676ab92fe8e1f6",
+      "alt": "Desktop ReproForge ChatGPT widget preview showing verified proof, evidence, runs, and bundle state."
+    },
+    {
+      "file": "local-widget-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 63710,
+      "sha256": "41c7a12a9ed2c1e1ca483033388738e335f4d20669eb2d4690ed09bfd3089b3d",
+      "alt": "Mobile ReproForge ChatGPT widget preview showing verified proof without horizontal overflow."
+    },
+    {
+      "file": "local-account-data-controls-desktop.png",
+      "viewport": { "width": 1440, "height": 1000 },
+      "bytes": 275135,
+      "sha256": "cc3e9a46c4f98491e165155fdfbdf00e26465519ed8a0cd154aaa52745443ab1",
+      "alt": "Desktop ReproForge account data page showing export, explicit deletion confirmation, and retention disclosures in the fail-closed identity setup state."
+    },
+    {
+      "file": "local-account-data-controls-mobile.png",
+      "viewport": { "width": 390, "height": 844 },
+      "bytes": 215672,
+      "sha256": "7a8da3a46f7ce964b834b1b4c51dce2e81601b51187a1f9d183ef254f542a642",
+      "alt": "Mobile ReproForge account data page showing responsive export, deletion, and retention controls without horizontal overflow."
+    }
+  ],
+  "contractEvidence": [
+    {
+      "file": "local-operations-dashboard.json",
+      "bytes": 3385,
+      "sha256": "8b5e5210879a2d8dbdffe155e8dfd70ce67848d6d45ce51b7dd78bf3f78665d6",
+      "provenance": "schema-validated synthetic local aggregate; not a hosted operations snapshot",
+      "sanitized": true
+    },
+    {
+      "file": "local-resilience-report.json",
+      "bytes": 1858,
+      "sha256": "08057f96275bb445f06214f105acdc57a11e65319a4516eff0ef13b5d289833d",
+      "provenance": "fixed-seed synthetic local resilience campaign summary; not a hosted load or fault-injection result",
+      "sanitized": true
+    },
+    {
+      "file": "repository-rest-contract.json",
+      "bytes": 2743,
+      "sha256": "970ef6a35bb0427adacba1984d82a5a71769adab361e81f3d21a758910e68229",
+      "provenance": "exact-commit local OAuth repository REST contract and verification summary; not a hosted OAuth or repository canary",
+      "sanitized": true
+    },
+    {
+      "file": "local-live-provider-report.json",
+      "bytes": 1643,
+      "sha256": "511ce3f0ed27a72db184189198b4313dd94def6951f5205b249cd7a257db48ae",
+      "provenance": "exact-commit live Neon, private Blob, Vercel Queue, and Vercel Sandbox verification summary; no provider identifiers",
+      "sanitized": true
+    }
+  ],
+  "redGreenFindings": [
+    {
+      "red": "Hosted runner health always returned RUNNER_NOT_CONFIGURED even though isolated execution was composed.",
+      "green": "A bounded real Node 24 sandbox probe now proves deny-all execution, validates a marker, stops the sandbox, and exposes only stable health codes."
+    },
+    {
+      "red": "A hosted preview could report durable providers ready while Auth0, OAuth resource, or GitHub App configuration was absent.",
+      "green": "Hosted readiness now validates all product configuration and canonical origins before any provider probe runs."
+    },
+    {
+      "red": "REST, MCP, widget, and web surfaces had independent or implicit progress representations.",
+      "green": "All four surfaces now consume one strict durable progress projection, covered by 500 generated schedules and an executable BDD journey."
+    },
+    {
+      "red": "Runner degradation, expired work, and cleanup failure lacked one fail-closed admission and operator recovery path.",
+      "green": "New starts are denied while reads remain available; worker loss and cancellation follow legal durable transitions; exact quarantined sandbox or snapshot cleanup is provider-deleted before a sanitized resolution audit is appended."
+    },
+    {
+      "red": "Tenant archives were internal structures and users had no authenticated export or deletion controls.",
+      "green": "A strict portable archive verifies its manifest and object digests, authenticated account routes enforce quota/idempotency/origin/confirmation boundaries, and provider-first deletion suspends and cancels work before purging tenant data."
+    },
+    {
+      "red": "Private-beta operations had health primitives but no aggregate dashboard, owned alert thresholds, feature kill switches, or executable rollback compatibility contract.",
+      "green": "A schema-closed identifier-free dashboard evaluates eight owned alerts, three fail-closed switches deny only new repository work, and an executable policy pins the additive schema window and application-only rollback procedure."
+    },
+    {
+      "red": "Failure tests were individually useful but lacked one exact, repeatable campaign registry covering every required RF-8406 boundary.",
+      "green": "A schema-closed eight-category registry now drives an exact gate across real durable adapters, fixed-seed property schedules, 128-way start/read load, restart reconstruction, duplicate delivery, provider degradation, worker loss, queue lag, storage failure, and sandbox failure."
+    },
+    {
+      "red": "Authorized repository work was available through MCP and internal services but had no complete OAuth-protected REST adapter, and the web repository page could not submit a job.",
+      "green": "The signed-in web journey now submits one same-origin strict failure contract, while five no-store repository REST routes map OAuth subjects to tenant principals, enforce least-privilege scopes and bounded inputs, and share the durable repository operations."
+    },
+    {
+      "red": "The live provider gate exposed an obsolete Queue message-ID prefix assertion and a real cancellation conflict after an expired running lease requeued a job with attempt greater than zero.",
+      "green": "Queue IDs now follow the provider's opaque string-or-null contract, and a TDD regression proves recovered queued work can be cancelled without relaxing version, state, caller, or tenant checks; all nine live provider tests pass."
+    }
+  ],
+  "deferred": [
+    "live Auth0 tenant and OAuth linking",
+    "live GitHub App installation and repository selection",
+    "hosted signed-in case-page capture",
+    "public and private deployed canaries",
+    "hosted RF-8403 recovery and quarantine exercise",
+    "hosted RF-8404 retention, deletion, and backup/restore exercise",
+    "hosted RF-8405 alert delivery, deployment, and rollback rehearsal",
+    "hosted RF-8406 load and failure-injection campaign",
+    "RF-8407 through RF-8411"
+  ],
+  "sanitization": "Evidence contains only the trusted synthetic fixture, a synthetic inaccessible case identifier, the signed-out/unconfigured account-data state, an identifier-free synthetic operations aggregate, and fixed-seed synthetic resilience counts; no credentials, sessions, private repository names, customer data, export bytes, deletion identifiers, or provider resource identifiers are committed."
+}

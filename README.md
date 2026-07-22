@@ -18,7 +18,9 @@ The implemented v2 slice is API-first internally and plugin-first for distributi
 - **Honest terminal states:** unstable, blocked, and not-reproduced cases are product outcomes rather than hidden failures.
 - **Auditable investigation:** evidence sources, hypothesis priority and history, commands, outputs, oracle version, and minimization decisions remain inspectable.
 - **Portable handoff:** the final reproduction runs without an OpenAI API key or a ReproForge server.
-- **Fail-closed execution:** arbitrary repositories are rejected until a real isolated runner is configured.
+- **Fail-closed execution:** only an authorized immutable GitHub revision with
+  the supported Node/npm profile can reach the isolated runner; arbitrary
+  repositories, URLs, branches, and commands are rejected.
 
 ## Five-minute trusted demo
 
@@ -44,10 +46,13 @@ Run the deterministic protocol journey with:
 npm run mcp:smoke
 ```
 
-It discovers exactly `start_reproduction`, `get_reproduction`, and
-`export_repro_bundle`, then starts, retries, reads, and exports the trusted
-fixture with `OPENAI_API_KEY` absent. The MCP tools do not accept a repository
-URL, arbitrary command, customer code, ChatGPT credential, or OpenAI key.
+It discovers exactly `start_reproduction`, `list_authorized_repositories`,
+`get_reproduction`, `cancel_reproduction`, and `export_repro_bundle`, then
+starts, retries, reads, and exports the trusted fixture with `OPENAI_API_KEY`
+absent. The trusted sample remains no-auth; repository list/start/cancel use
+declared OAuth scopes and server-owned identity. No tool accepts a repository
+URL, arbitrary command, source body, ChatGPT credential, provider token, or
+OpenAI key.
 
 ChatGPT developer mode requires a reachable HTTPS endpoint and a real
 account-created app ID; neither is faked in this repository. See the
@@ -73,12 +78,48 @@ GET /api/v2/jobs/{jobId}
 GET /api/v2/reproductions/{caseId}/bundle
 ```
 
+Hosted clients use a separate OAuth-protected repository surface; users link
+their ReproForge account and GitHub App installation instead of supplying an
+OpenAI or GitHub API token:
+
+```text
+GET  /api/v2/repositories
+POST /api/v2/repository-reproductions
+GET  /api/v2/repository-reproductions/{caseId}
+GET  /api/v2/repository-reproductions/{caseId}/bundle
+POST /api/v2/repository-jobs/{jobId}/cancel
+```
+
+These routes verify an OAuth bearer token against the advertised resource,
+map it to one active tenant principal, enforce route-specific least-privilege
+scopes, and return `WWW-Authenticate` linking challenges. Repository starts
+require `application/json`, a caller-generated `Idempotency-Key`, a body no
+larger than 16 KiB, one authorized repository ID, and an exact lowercase
+40-character commit SHA. URLs, branches, source bodies, host commands, and raw
+provider credentials are not accepted.
+
 No OpenAI API key is used. Local `offline` and `test` modes intentionally use
 process-local memory. A fully configured `preview` or `production` runtime
 selects the verified Neon Postgres, private Vercel Blob, and Vercel Queue
 adapters; partial hosted configuration fails closed instead of falling back to
 memory. See the [operations guide](docs/operations.md) before enabling a hosted
 mode.
+
+## Account data lifecycle
+
+In a fully configured hosted runtime, signed-in users can open `/account` to
+download one integrity-checked tenant archive or explicitly request permanent
+deletion. The export contains the canonical manifest plus its private
+content-addressed objects, is quota-bounded, and requires work to be quiescent.
+Deletion immediately suspends new starts, requests cancellation of active work,
+deletes provider objects before database state, and retains only the documented
+sanitized tombstone. These controls use the web session and never ask the user
+for an OpenAI or GitHub API token.
+
+The local page deliberately renders the real controls disabled when identity is
+not configured. Live export/deletion and backup/restore drills remain required
+before private-beta completion; see the [operations guide](docs/operations.md)
+and [Milestone 8D evidence](docs/evidence/milestone-8d/README.md).
 
 ## Run the exported reproduction directly
 
@@ -118,10 +159,20 @@ The committed four-case suite covers a verified positive, a negative no-match, a
 1. ChatGPT/MCP, browser, and REST adapters translate requests into the same transport-neutral case-operation commands.
 2. Offline modes use an in-memory repository. Hosted modes atomically reserve tenant-keyed Postgres case/job/idempotency/quota/audit/outbox state, publish an identifier-only Queue intent, execute the trusted worker under a lease, and commit a private content-addressed bundle before success.
 3. An offline or optional GPT-5.6 investigator proposes evidence-linked hypotheses and bounded typed tool calls.
-4. The runner boundary accepts only the bundled fixture and allowlisted actions; external execution is unavailable.
-5. A pure oracle engine evaluates captured results. Verification requires three matching candidate runs and a non-matching control.
-6. The minimizer accepts only a proposed reduction that preserves the same verification result on fresh runs.
-7. The bundle builder redacts, hashes, serializes, and validates the artifact contract; the MCP App renders but never decides the outcome.
+4. The trusted sample uses its allowlisted runner. The protected repository path
+   verifies OAuth principal/tenant scopes, GitHub App installation membership,
+   and an immutable commit before reserving work.
+5. The trusted host streams a bounded GitHub archive and injects bytes—not a
+   token—into Vercel Sandbox. Dependencies are prepared with lifecycle scripts
+   disabled; repository code runs only under deny-all network policy.
+6. A prepared snapshot produces one clean control and three fresh candidate
+   microVMs under stable time/workspace/output/cancellation/cleanup policy.
+7. A pure oracle engine evaluates captured results. Verification requires every
+   candidate to match and the control not to match.
+8. The minimizer accepts only a proposed reduction that preserves the same
+   verification result on fresh runs.
+9. The bundle builder redacts, hashes, serializes, and validates the artifact
+   contract; the MCP App renders but never decides the outcome.
 
 ![ReproForge trust architecture: the investigator proposes work while deterministic code owns execution, verification, minimization, and packaging](docs/architecture.svg)
 
@@ -162,8 +213,12 @@ This key is required only for the current optional standalone Responses route. I
 - [Managed production-stack decision](docs/adr/0002-managed-production-stack.md)
 - [Ordered remaining delivery specifications](docs/specs/README.md)
 - [ChatGPT app, MCP inspection, and plugin guide](docs/chatgpt-plugin.md)
+- [Validated repository-local Codex plugin wrapper](plugins/reproforge/.codex-plugin/plugin.json)
+- [Auth0 setup and hosted OAuth compatibility gate](docs/auth0-setup.md)
 - [Test and evidence strategy](docs/test-strategy.md)
 - [Hosted operations and recovery runbook](docs/operations.md)
+- [Deployment and rollback policy](docs/deployment-rollback.md)
+- [Deterministic resilience harness](docs/resilience-testing.md)
 - [Architecture and trust boundaries](docs/architecture.md)
 - [Security model](docs/security.md) and [security reporting policy](SECURITY.md)
 - [Privacy behavior](docs/privacy.md)
@@ -174,6 +229,8 @@ This key is required only for the current optional standalone Responses route. I
 - [Headless case/job service evidence](docs/evidence/milestone-6/README.md)
 - [ChatGPT MCP app evidence](docs/evidence/milestone-7/README.md)
 - [Durable provider evidence](docs/evidence/milestone-8a/README.md)
+- [Isolated runner and public-canary evidence](docs/evidence/milestone-8c/README.md)
+- [Private-beta implementation evidence](docs/evidence/milestone-8d/README.md)
 - [Contributing](CONTRIBUTING.md) and [support](SUPPORT.md)
 
 ## Project status
@@ -182,13 +239,28 @@ ReproForge is a pre-alpha Build Week prototype. The complete bundled
 JavaScript/TypeScript fixture journey works through the browser, REST v2,
 Streamable HTTP MCP, and the embedded proof widget. Offline use remains
 in-memory and credential-free. The hosted durable foundation is implemented
-and provider-verified against Neon Postgres, private Vercel Blob, and Vercel
-Queue, but no stable hosted service is claimed. External repository execution,
-private-repository access, tenant authentication, production hosting, and
-plugin publication remain intentionally unavailable. The synthetic four-case
-eval is a contract check, not a claim of real-world benchmark performance.
+and provider-verified against Neon Postgres, private Vercel Blob, Vercel Queue,
+and Vercel Sandbox. A tiny immutable public repository canary has completed the
+full isolated path—bounded acquisition, dependency preparation, one control,
+three fresh candidates, deterministic proof, portable bundle, and cleanup.
+Resilience, account export/deletion, feature kill-switch, aggregate dashboard,
+alert, and rollback-policy controls are implemented and locally verified. An
+exact eight-campaign resilience gate covers fixed-seed load, duplicate, restart,
+dependency, worker, queue, storage, and sandbox failures; hosted load and fault
+injection plus the recovery, lifecycle, alert-delivery, and rollback drills
+remain open. Production Auth0 login, least-privilege GitHub App installation,
+the selected public catalog, and one full public-canary reproduction are
+proven. A developer-mode ReproForge app is also connected inside ChatGPT: its
+anonymous trusted demonstration renders the real widget and exports a portable
+bundle without a ReproForge account or user OpenAI API key. General/private
+repository use, protected ChatGPT OAuth review cases, portal submission, and
+plugin publication remain unavailable. The synthetic four-case eval and public
+canary are contract checks, not claims of real-world benchmark performance.
 
-No package, release, deployment, or stable API is promised. Consult the [release status](docs/release-status.md) and [limitations](docs/limitations.md) before relying on the project.
+No package, release, stable API, or service-level promise exists. The public
+production origin is a review environment, not a compatibility or availability
+guarantee. Consult the [release status](docs/release-status.md) and
+[limitations](docs/limitations.md) before relying on the project.
 
 ## License
 

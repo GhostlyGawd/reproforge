@@ -23,7 +23,7 @@ const service = new CaseService({
   },
   repository: new InMemoryReproductionRepository(),
 });
-const server = createReproForgeMcpServer({ callerId: "mcp:smoke", service });
+const server = createReproForgeMcpServer({ service });
 const client = new Client({ name: "reproforge-smoke", version: "1.0.0" });
 const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
 const priorOpenAIKey = process.env.OPENAI_API_KEY;
@@ -36,7 +36,10 @@ try {
   const resources = await client.listResources();
   const widget = await client.readResource({ uri: REPROFORGE_WIDGET_URI });
   const command = {
-    arguments: { idempotencyKey: "smoke-retry", sampleId: "cli-spaces" },
+    arguments: {
+      idempotencyKey: "smoke-retry",
+      source: { kind: "trusted_sample", sampleId: "cli-spaces" },
+    },
     name: "start_reproduction",
   };
   const first = await client.callTool(command);

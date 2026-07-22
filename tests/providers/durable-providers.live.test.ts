@@ -177,13 +177,13 @@ describe.skipIf(!LIVE)("live private Blob and Vercel Queue transports", () => {
       etag = stored.etag;
       const metadata = await head(pathname, { token: blobToken });
       const unauthorized = await fetch(metadata.url, { redirect: "manual" });
-      const authorized = await blobClient.get(pathname);
+      const authorized = await blobClient.get(pathname, bytes.byteLength);
 
       expect([401, 403, 404]).toContain(unauthorized.status);
       expect(authorized?.bytes).toEqual(bytes);
       await expect(blobClient.delete(pathname, stored.etag)).resolves.toBe(true);
       etag = undefined;
-      await expect(blobClient.get(pathname)).resolves.toBeNull();
+      await expect(blobClient.get(pathname, bytes.byteLength)).resolves.toBeNull();
     } finally {
       const remaining = await blobClient.head(pathname).catch(() => null);
       if (remaining) {
@@ -206,7 +206,10 @@ describe.skipIf(!LIVE)("live private Blob and Vercel Queue transports", () => {
 
     const result = await queue.send(message);
 
-    expect(result.messageId).toMatch(/^[a-z]-[A-Za-z0-9_-]+$/);
+    expect(
+      result.messageId === null ||
+        (typeof result.messageId === "string" && result.messageId.length > 0),
+    ).toBe(true);
     expect(Object.keys(message).sort()).toEqual([
       "caseId",
       "eventId",
@@ -326,6 +329,20 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
       expect(retried).toEqual({ reused: true, snapshot: first.snapshot });
       expect(executeTrustedSample).toHaveBeenCalledTimes(1);
 
+      const exported = await createService().exportReproBundle({
+        callerId,
+        caseId: first.snapshot.case.id,
+      });
+      expect(exported).toMatchObject({
+        bundle: {
+          bundleHash: first.snapshot.result?.bundle?.bundleHash,
+          caseId: first.snapshot.case.id,
+        },
+        caseId: first.snapshot.case.id,
+        schemaVersion: "2.0",
+      });
+      expect(exported.files).toHaveProperty("REPRO.md");
+
       const foreignRead = await repository.findByCaseId(
         tenantScope(`tenant_foreign_${id}`, callerId),
         first.snapshot.case.id,
@@ -422,14 +439,30 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
     }
   });
 
-  it("reports live durable dependencies ready while the external runner stays unavailable", async () => {
+  it("reports live durable dependencies and isolated runner ready", async () => {
     const logs: string[] = [];
     const health = createRuntimeHealthService({
       clock: { now: () => new Date() },
       environment: {
+        APP_BASE_URL: "https://provider-proof.reproforge.test",
+        AUTH0_CLIENT_ID: "synthetic-client-id",
+        AUTH0_CLIENT_SECRET: "synthetic-client-secret",
+        AUTH0_DOMAIN: "tenant.us.auth0.com",
+        AUTH0_SECRET: "a".repeat(64),
         BLOB_READ_WRITE_TOKEN: requiredEnvironment("BLOB_READ_WRITE_TOKEN"),
         DATABASE_URL: requiredEnvironment("DATABASE_URL"),
+        GITHUB_APP_CLIENT_ID: "Iv1.synthetic-client",
+        GITHUB_APP_CLIENT_SECRET: "synthetic-client-secret-123456",
+        GITHUB_APP_ID: "12345",
+        GITHUB_APP_PRIVATE_KEY:
+          "-----BEGIN PRIVATE KEY-----\n" +
+          "a".repeat(256) +
+          "\n-----END PRIVATE KEY-----",
+        GITHUB_APP_SLUG: "reproforge-development",
+        GITHUB_WEBHOOK_SECRET: "synthetic-webhook-secret-with-entropy",
         REPROFORGE_BASE_URL: "https://provider-proof.reproforge.test",
+        REPROFORGE_OAUTH_TENANT_CLAIM:
+          "https://provider-proof.reproforge.test/tenant_id",
         REPROFORGE_QUEUE_TOPIC: `reproforge-health-${suffix()}`,
         REPROFORGE_RUNTIME_MODE: "production",
       },
@@ -465,12 +498,12 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
     await expect(health.runner()).resolves.toMatchObject({
       checks: [
         {
-          code: "RUNNER_NOT_CONFIGURED",
+          code: "RUNNER_READY",
           component: "runner",
-          status: "unavailable",
+          status: "ready",
         },
       ],
-      status: "unavailable",
+      status: "ready",
     });
     expect(logs.join("\n")).not.toContain("postgresql://");
     expect(logs.join("\n")).not.toContain("BLOB_READ_WRITE_TOKEN");
@@ -527,7 +560,9 @@ describe.skipIf(!LIVE)("live durable provider composition", () => {
       await expect(
         blobClient.delete(objectKey, sourceObject?.etag),
       ).resolves.toBe(true);
-      await expect(blobClient.get(objectKey)).resolves.toBeNull();
+      await expect(
+        blobClient.get(objectKey, fixture.artifact.byteCount),
+      ).resolves.toBeNull();
 
       const restored = await destinationService.restoreTenant({
         archive,

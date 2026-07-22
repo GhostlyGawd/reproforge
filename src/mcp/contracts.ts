@@ -4,7 +4,21 @@ import type {
   ExportResult,
   ReproductionSnapshot,
 } from "@/application/reproduction-contracts";
+import {
+  progressViewSchema,
+  toReproductionProgress,
+} from "@/application/progress";
+import { repositoryStartSourceSchema } from "@/application/repository-operations";
 import { evidenceClassificationSchema, hypothesisStatusSchema } from "@/domain/evidence";
+
+const trustedSourceSchema = z
+  .object({
+    kind: z.literal("trusted_sample"),
+    sampleId: z.literal("cli-spaces"),
+  })
+  .strict();
+
+export const repositorySourceSchema = repositoryStartSourceSchema;
 
 export const startReproductionInputSchema = z
   .object({
@@ -16,7 +30,7 @@ export const startReproductionInputSchema = z
           .min(1)
           .max(20)
           .default(6)
-          .describe("Maximum investigation tool calls for the trusted sample."),
+          .describe("Maximum bounded investigation tool calls."),
         requiredRuns: z
           .number()
           .int()
@@ -31,17 +45,84 @@ export const startReproductionInputSchema = z
       .string()
       .min(1)
       .max(128)
-      .describe("Stable retry key for this same trusted-sample request."),
-    sampleId: z
-      .literal("cli-spaces")
-      .default("cli-spaces")
-      .describe("The only enabled input is ReproForge's trusted synthetic CLI fixture."),
+      .describe("Stable retry key for this same reproduction request."),
+    source: z.discriminatedUnion("kind", [
+      trustedSourceSchema,
+      repositorySourceSchema,
+    ]),
   })
-  .strict();
+  .strict()
+  .superRefine((input, context) => {
+    if (
+      input.source.kind === "github" &&
+      input.budget !== undefined &&
+      input.budget.requiredRuns < 3
+    ) {
+      context.addIssue({
+        code: "custom",
+        message: "repository proof requires at least three clean candidate runs",
+        path: ["budget", "requiredRuns"],
+      });
+    }
+  });
 
 export const caseInputSchema = z
   .object({
     caseId: z.string().min(1).max(128).describe("Case ID returned by start_reproduction."),
+  })
+  .strict();
+
+export const cancelReproductionInputSchema = z
+  .object({
+    jobId: z.string().min(1).max(128),
+  })
+  .strict();
+
+export const listAuthorizedRepositoriesInputSchema = z
+  .object({
+    cursor: z
+      .string()
+      .min(1)
+      .max(256)
+      .regex(/^[A-Za-z0-9_-]+$/)
+      .optional(),
+    limit: z.number().int().min(1).max(100).default(50).optional(),
+  })
+  .strict();
+
+export const repositoryViewSchema = z
+  .object({
+    defaultBranch: z.string().min(1).max(255),
+    fullName: z
+      .string()
+      .min(3)
+      .max(255)
+      .regex(/^[^/\s]+\/[^/\s]+$/),
+    private: z.boolean(),
+    repositoryId: z
+      .string()
+      .min(1)
+      .max(128)
+      .regex(/^[A-Za-z0-9][A-Za-z0-9._:-]*$/),
+  })
+  .strict();
+
+export const repositoryListViewSchema = z
+  .object({
+    kind: z.literal("repository_list"),
+    nextCursor: z.string().min(1).max(256).nullable(),
+    repositories: z.array(repositoryViewSchema).max(100),
+    schemaVersion: z.literal("1.0"),
+  })
+  .strict();
+
+export const cancellationViewSchema = z
+  .object({
+    caseId: z.string().min(1).max(128),
+    changed: z.boolean(),
+    disposition: z.enum(["cancelled", "requested"]),
+    kind: z.literal("cancellation"),
+    schemaVersion: z.literal("1.0"),
   })
   .strict();
 
@@ -96,10 +177,21 @@ export const reproductionViewSchema = z
     jobId: z.string().min(1),
     jobState: z.string().min(1),
     kind: z.literal("reproduction"),
+    progress: progressViewSchema,
     proof: proofViewSchema,
     runs: z.array(runViewSchema),
-    sampleId: z.literal("cli-spaces"),
+    repository: z
+      .object({
+        commitSha: z.string().regex(/^[a-f0-9]{40}$/),
+        fullName: z.string().min(3).max(255),
+        private: z.boolean(),
+        repositoryId: z.string().min(1).max(128),
+      })
+      .strict()
+      .optional(),
+    sampleId: z.literal("cli-spaces").optional(),
     schemaVersion: z.literal("1.0"),
+    webPath: z.string().regex(/^\/cases\/[A-Za-z0-9._~%-]+$/),
   })
   .strict();
 
@@ -137,6 +229,7 @@ export const reproductionWidgetMetaSchema = z
 export type ReproductionView = z.infer<typeof reproductionViewSchema>;
 export type BundleView = z.infer<typeof bundleViewSchema>;
 export type ReproductionWidgetMeta = z.infer<typeof reproductionWidgetMetaSchema>;
+export type RepositoryListView = z.infer<typeof repositoryListViewSchema>;
 
 function countEvidence(snapshot: ReproductionSnapshot) {
   const counts = { inferred: 0, observed: 0, reported: 0, unknown: 0 };
@@ -163,9 +256,11 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
     jobId: snapshot.job.id,
     jobState: snapshot.job.state,
     kind: "reproduction",
+    progress: toReproductionProgress(snapshot.job),
     proof: {
-      bundleHash: result?.bundle.bundleHash ?? null,
-      bundleReady: result?.summary.status === "VERIFIED",
+      bundleHash: result?.bundle?.bundleHash ?? null,
+      bundleReady:
+        result?.summary.status === "VERIFIED" && result.bundle !== null,
       candidateMatches: summary?.candidateMatches ?? 0,
       controlMatched: summary?.controlMatched ?? false,
       oracleId: summary?.oracleId ?? null,
@@ -180,8 +275,12 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
         id: run.id,
         role: run.id.includes("control") ? "control" : "candidate",
       })) ?? [],
-    sampleId: snapshot.sampleId,
+    ...(snapshot.repositorySource
+      ? { repository: snapshot.repositorySource }
+      : {}),
+    ...(snapshot.sampleId ? { sampleId: snapshot.sampleId } : {}),
     schemaVersion: "1.0",
+    webPath: `/cases/${encodeURIComponent(snapshot.case.id)}`,
   });
 }
 
@@ -191,7 +290,7 @@ export function toReproductionWidgetMeta(
 ): ReproductionWidgetMeta {
   return reproductionWidgetMetaSchema.parse({
     bundleFileNames: Object.keys(snapshot.result?.files ?? {}).sort(),
-    command: snapshot.result?.bundle.lock.command ?? null,
+    command: snapshot.result?.bundle?.lock.command ?? null,
     evidence: snapshot.result?.evidence ?? [],
     reason: snapshot.result?.summary.reason ?? snapshot.job.failure?.message ?? null,
     reused,

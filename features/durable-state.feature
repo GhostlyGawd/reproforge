@@ -61,6 +61,7 @@ Feature: Durable reproduction state
     When the caller reserves a durable reproduction
     And a worker lease expires and recovery runs twice
     Then exactly one recovery intent requeues the durable job
+    And exactly one sanitized lease recovery audit is durable
 
   Scenario: A cancelled queued job never starts
     Given an empty durable Postgres store for a tenant

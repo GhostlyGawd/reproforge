@@ -149,7 +149,7 @@ describe("default case-service runtime composition", () => {
     expect(snapshot.case.id).toBe(started.snapshot.case.id);
     expect(job.job.id).toBe(started.snapshot.job.id);
     expect(bundle.bundle.bundleHash).toBe(
-      started.snapshot.result?.bundle.bundleHash,
+      started.snapshot.result?.bundle?.bundleHash,
     );
   });
 

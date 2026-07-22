@@ -17,6 +17,7 @@ import {
   Sparkles,
   TestTube2,
 } from "lucide-react";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 import type { SampleCaseResult } from "@/application/sample-case";
@@ -49,23 +50,30 @@ export function ReproForgeApp({
       return;
     }
 
-    const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     const timer = window.setTimeout(
       () => setActiveStep((step) => step + 1),
-      reducedMotion ? 1 : 310,
+      310,
     );
 
     return () => window.clearTimeout(timer);
   }, [activeStep, cancelled, isComplete, started]);
 
   function runSample() {
-    setActiveStep(0);
+    setActiveStep(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? stages.length
+        : 0,
+    );
     setCancelled(false);
     setStarted(true);
   }
 
   function replaySample() {
-    setActiveStep(0);
+    setActiveStep(
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? stages.length
+        : 0,
+    );
     setCancelled(false);
     setStarted(true);
   }
@@ -82,6 +90,11 @@ export function ReproForgeApp({
         <div className="header-inner">
           <BrandMark />
           <div className="header-meta">
+            <Link className="header-repository-link" href="/repositories">
+              <GitBranch size={14} aria-hidden="true" />
+              Repositories
+            </Link>
+            <span className="header-divider" aria-hidden="true" />
             <span>Evidence-first debugging</span>
             <span className="header-divider" aria-hidden="true" />
             <span className="mode-indicator">
@@ -316,8 +329,15 @@ export function ReproForgeApp({
 
         <p className="truth-note footer-truth">
           <ShieldCheck size={14} aria-hidden="true" />
-          External repositories remain disabled until an isolated runner is configured.
+          Repository work requires a linked account, authorized immutable source, and
+          configured isolated hosted runner.
         </p>
+        <nav className="footer-policy-links" aria-label="Product policies">
+          <Link href="/privacy">Privacy</Link>
+          <Link href="/terms">Terms</Link>
+          <Link href="/support">Support</Link>
+          <Link href="/security">Security</Link>
+        </nav>
       </main>
     </div>
   );

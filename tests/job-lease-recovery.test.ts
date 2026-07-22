@@ -146,6 +146,21 @@ describe("Postgres job leases and recovery", () => {
     expect(events.rows).toEqual([
       { kind: "reproduction.recovery-requested", status: "PENDING" },
     ]);
+    const audits = await database.query<{
+      action: string;
+      outcome: string;
+      target_id: string;
+    }>(
+      "SELECT action, outcome, target_id FROM audit_events WHERE tenant_id = $1",
+      [record.tenantId],
+    );
+    expect(audits.rows).toEqual([
+      {
+        action: "job.lease-recovered",
+        outcome: "success",
+        target_id: record.jobId,
+      },
+    ]);
   });
 
   it("renews and gracefully releases only the exact active lease", async () => {

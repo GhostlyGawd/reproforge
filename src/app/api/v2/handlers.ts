@@ -6,9 +6,10 @@ import {
   CaseServiceError,
   type CaseOperations,
 } from "@/application/case-service";
+import { toReproductionProgress } from "@/application/progress";
+import { TRUSTED_SAMPLE_CALLER_ID } from "@/application/trusted-sample-identity";
 
 const API_SCHEMA_VERSION = "2.0" as const;
-const TRUSTED_CALLER = "rest:anonymous-trusted-sample";
 
 const startBodySchema = z
   .object({
@@ -33,6 +34,11 @@ function errorStatus(error: CaseServiceError): number {
     case "IDEMPOTENCY_CONFLICT":
     case "BUNDLE_NOT_READY":
       return 409;
+    case "EXECUTION_PROFILE_DISABLED":
+    case "PRIVATE_REPOSITORIES_DISABLED":
+    case "REPOSITORY_STARTS_DISABLED":
+    case "RUNNER_UNAVAILABLE":
+      return 503;
     case "INTERNAL_ERROR":
       return 500;
   }
@@ -98,11 +104,18 @@ export function createStartReproductionHandler(
       const body = startBodySchema.parse(await request.json());
       const result = await service.startTrustedReproduction({
         budget: body.budget,
-        callerId: TRUSTED_CALLER,
+        callerId: TRUSTED_SAMPLE_CALLER_ID,
         idempotencyKey,
         sampleId: body.sampleId,
       });
-      return success(result, requestId, result.reused ? 200 : 201);
+      return success(
+        {
+          ...result,
+          progress: toReproductionProgress(result.snapshot.job),
+        },
+        requestId,
+        result.reused ? 200 : 201,
+      );
     } catch (error) {
       return mapError(error, requestId);
     }
@@ -120,8 +133,15 @@ export function createGetReproductionHandler(
     const requestId = nextRequestId();
     try {
       const { caseId } = await context.params;
+      const snapshot = await service.getReproduction({
+        callerId: TRUSTED_SAMPLE_CALLER_ID,
+        caseId,
+      });
       return success(
-        await service.getReproduction({ callerId: TRUSTED_CALLER, caseId }),
+        {
+          ...snapshot,
+          progress: toReproductionProgress(snapshot.job),
+        },
         requestId,
       );
     } catch (error) {
@@ -141,8 +161,15 @@ export function createGetJobHandler(
     const requestId = nextRequestId();
     try {
       const { jobId } = await context.params;
+      const snapshot = await service.getJob({
+        callerId: TRUSTED_SAMPLE_CALLER_ID,
+        jobId,
+      });
       return success(
-        await service.getJob({ callerId: TRUSTED_CALLER, jobId }),
+        {
+          ...snapshot,
+          progress: toReproductionProgress(snapshot.job),
+        },
         requestId,
       );
     } catch (error) {
@@ -163,7 +190,10 @@ export function createExportBundleHandler(
     try {
       const { caseId } = await context.params;
       return success(
-        await service.exportReproBundle({ callerId: TRUSTED_CALLER, caseId }),
+        await service.exportReproBundle({
+          callerId: TRUSTED_SAMPLE_CALLER_ID,
+          caseId,
+        }),
         requestId,
       );
     } catch (error) {

@@ -20,7 +20,6 @@ function createService(): CaseService {
 describe("ReproForge Streamable HTTP transport", () => {
   it("completes MCP initialization, discovery, and a tool call over HTTP", async () => {
     const handler = createReproForgeMcpHttpHandler({
-      callerId: "mcp:http-test",
       service: createService(),
     });
     const transport = new StreamableHTTPClientTransport(
@@ -39,7 +38,9 @@ describe("ReproForge Streamable HTTP transport", () => {
       await expect(client.listTools()).resolves.toMatchObject({
         tools: [
           { name: "start_reproduction" },
+          { name: "list_authorized_repositories" },
           { name: "get_reproduction" },
+          { name: "cancel_reproduction" },
           { name: "export_repro_bundle" },
         ],
       });
@@ -47,7 +48,7 @@ describe("ReproForge Streamable HTTP transport", () => {
         client.callTool({
           arguments: {
             idempotencyKey: "http-start",
-            sampleId: "cli-spaces",
+            source: { kind: "trusted_sample", sampleId: "cli-spaces" },
           },
           name: "start_reproduction",
         }),
@@ -84,7 +85,6 @@ describe("ReproForge Streamable HTTP transport", () => {
 
 function createReProForgeHandlerForTest() {
   return createReproForgeMcpHttpHandler({
-    callerId: "mcp:http-cors-test",
     service: createService(),
   });
 }

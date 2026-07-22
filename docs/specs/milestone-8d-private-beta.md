@@ -1,6 +1,7 @@
 # Milestone 8D specification: private-beta completion
 
-- **Status:** blocked on 8C completion, otherwise ready
+- **Status:** in progress; local RF-8401–RF-8406 implementation passed, hosted
+  exercises and RF-8407–RF-8411 remain open
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable foundation, identity/GitHub authorization, and isolated execution
 - **Unblocks:** stable hosted ChatGPT/plugin testing
@@ -114,6 +115,21 @@ the deployed canary evidence.
 - [ ] `RF-8409` Run tenant-isolation, authorization, retention, backup/restore, abuse, and secret-leak audits against deployed staging.
 - [ ] `RF-8410` Capture accessible desktop/mobile web and widget evidence, protocol transcripts, operational metrics, canary manifests, and checksums.
 - [ ] `RF-8411` Update every product/security/privacy/operations/release document and complete the Milestone 8 requirement audit.
+
+The checkboxes remain open until their deployed acceptance evidence passes.
+Commit `47f893078eac9265c0c6dc4e636ee429135f128a` is the current local
+implementation boundary. It adds the signed-in web repository start and a
+five-route OAuth-protected repository REST surface on top of the durable
+runtime, and its nine-test live provider gate passes across Neon, private Blob,
+Queue, and isolated Sandbox. RF-8401/RF-8402 still require the live
+authenticated hosted journey,
+RF-8403 still requires the deployed recovery/quarantine drill,
+RF-8404 still requires the deployed retention/deletion/restore drill, and
+RF-8405 still requires hosted alert delivery plus a deployment/rollback
+rehearsal. RF-8406 has a deterministic local eight-campaign gate but still
+requires the deployed load and provider failure-injection campaign. The
+sanitized local record is in
+[`docs/evidence/milestone-8d`](../evidence/milestone-8d/README.md).
 
 ## TDD, property, and BDD requirements
 

@@ -297,7 +297,6 @@ Given(
     this.mcpTools = [];
     this.mcpWidget = undefined;
     this.mcpServer = createReproForgeMcpServer({
-      callerId: "mcp:bdd",
       service: this.caseService,
     });
     this.mcpClient = new Client({ name: "reproforge-bdd", version: "1.0.0" });
@@ -319,7 +318,13 @@ Then(
     assert.equal(this.mcpTools.length, count);
     assert.deepEqual(
       this.mcpTools.map((tool) => tool.name),
-      ["start_reproduction", "get_reproduction", "export_repro_bundle"],
+      [
+        "start_reproduction",
+        "list_authorized_repositories",
+        "get_reproduction",
+        "cancel_reproduction",
+        "export_repro_bundle",
+      ],
     );
   },
 );
@@ -330,7 +335,7 @@ Then(
     const inputs = JSON.stringify(
       this.mcpTools.map((tool) => tool.inputSchema),
     ).toLowerCase();
-    assert.equal(inputs.includes("repository"), false);
+    assert.equal(inputs.includes("repositoryurl"), false);
     assert.equal(inputs.includes("command"), false);
     assert.equal(inputs.includes("api_key"), false);
     assert.equal(inputs.includes("openai"), false);
@@ -342,7 +347,10 @@ When(
   async function (this: ReproForgeWorld, idempotencyKey: string) {
     assert(this.mcpClient, "MCP client is required");
     const command = {
-      arguments: { idempotencyKey, sampleId: "cli-spaces" },
+      arguments: {
+        idempotencyKey,
+        source: { kind: "trusted_sample", sampleId: "cli-spaces" },
+      },
       name: "start_reproduction",
     };
     const first = await this.mcpClient.callTool(command);
@@ -392,6 +400,24 @@ Then(
       | undefined;
     assert.deepEqual(meta?.ui?.csp?.connectDomains, []);
     assert.deepEqual(meta?.ui?.csp?.resourceDomains, []);
+  },
+);
+
+Then(
+  "the widget declares its unique production origin",
+  function (this: ReproForgeWorld) {
+    const meta = this.mcpWidget?._meta as
+      | {
+          "openai/widgetDomain"?: string;
+          ui?: { domain?: string };
+        }
+      | undefined;
+    const expectedDomain = "https://reproforge.vercel.app";
+    assert.equal(meta?.ui?.domain, expectedDomain);
+    assert.equal(
+      meta?.["openai/widgetDomain"],
+      expectedDomain,
+    );
   },
 );
 

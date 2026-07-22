@@ -1,6 +1,6 @@
 # Milestone 8C specification: isolated repository execution
 
-- **Status:** blocked on 8B completion, otherwise ready
+- **Status:** implementation and development-provider evidence complete on `agent/isolated-execution`; merge remains gated by the full PR checks and Milestone 8B live account evidence
 - **Parent:** [Milestone 8 issue #13](https://github.com/GhostlyGawd/reproforge/issues/13)
 - **Depends on:** durable jobs, private artifacts, authenticated tenant, and live repository authorization
 - **Unblocks:** real public/private repository reproductions
@@ -41,12 +41,15 @@ Repositories without an exact supported lockfile/profile return
 1. Recheck tenant, installation, repository, and exact 40-character commit SHA.
 2. Reserve quota and create an attempt/lease before provisioning compute.
 3. Create a fresh sandbox with no inherited environment credentials.
-4. Set network policy to GitHub-only acquisition endpoints.
-5. Mint a short-lived, repository-scoped installation token in the application
-   service and use it only for the clone/archive fetch process.
-6. Verify the checked-out `HEAD`, archive digest, path root, file/byte limits,
-   and absence of unsafe archive traversal.
-7. Destroy the token reference and verify it is absent from environment,
+4. Keep the sandbox deny-all from creation. In the trusted application service,
+   mint a short-lived, repository-scoped installation token and use it only for
+   GitHub's exact immutable archive endpoint.
+5. Accept only GitHub's HTTPS `codeload.github.com` temporary redirect, never
+   forward authorization to it, stream at most 100 MiB, discard the token, and
+   inject only the compressed archive bytes into the sandbox.
+6. Verify the archive digest, exact revision, path root, file/byte limits, and
+   absence of unsafe archive traversal before extraction.
+7. Verify the token is absent from environment,
    process arguments visible to later commands, Git config, remotes, files,
    logs, and collected output.
 
@@ -76,8 +79,9 @@ destination is reachable.
   a clean worktree or snapshot derived from the immutable source.
 - Capture stdout/stderr separately, truncate deterministically, redact before
   persistence, and retain the original byte counts/hashes.
-- Cancellation stops active commands and the sandbox; timeout and provider
-  loss produce truthful retryable/blocked operational states.
+- Cancellation stops active commands and the sandbox; a resource or total-time
+  breach becomes non-retryable `BUDGET_EXHAUSTED`, while provider interruption
+  remains a distinct bounded-retry operational state.
 - Model output may propose typed experiments but cannot execute directly or set
   domain status.
 
@@ -106,7 +110,7 @@ Private-beta defaults are versioned policy, not user-editable raw values:
 | processes | 128 |
 | each command | 120 seconds |
 | complete attempt | 15 minutes |
-| stdout + stderr per run | 2 MiB retained after deterministic truncation |
+| stdout + stderr per run | 2 MiB aggregate, capped at 1 MiB per stream, after deterministic truncation |
 | artifact set | 100 MiB |
 | candidate runs | 3 required, 5 maximum |
 | tool/experiment calls | 12 maximum |
@@ -138,18 +142,18 @@ Required defenses cover:
 
 ## Ordered task list
 
-- [ ] `RF-8301` Write failing source/profile/execution-plan schemas and provider-neutral acquisition/sandbox contracts.
-- [ ] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
-- [ ] `RF-8303` Implement the Vercel Sandbox adapter using the current SDK with explicit creation, command, file, network, usage, and stop behavior.
-- [ ] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
-- [ ] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
-- [ ] `RF-8306` Implement typed command planning, clean control/candidate workspaces, separated executable/args invocation, and immutable environment provenance.
-- [ ] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
-- [ ] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
-- [ ] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
-- [ ] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
-- [ ] `RF-8311` Add sandbox-provider integration tests for acquisition-only egress, execution deny-all, credential absence, limits, cancellation, and cleanup.
-- [ ] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
+- [x] `RF-8301` Write failing source/profile/execution-plan schemas and provider-neutral acquisition/sandbox contracts.
+- [x] `RF-8302` Implement canonical GitHub source descriptors, immutable revision resolution, safe archive/path validation, and source provenance records.
+- [x] `RF-8303` Implement the Vercel Sandbox adapter using the current SDK with explicit creation, command, file, network, usage, and stop behavior.
+- [x] `RF-8304` Implement just-in-time private/public source acquisition and prove GitHub credentials are absent before any repository code executes.
+- [x] `RF-8305` Implement lockfile validation and the two-stage dependency acquisition/offline installation protocol.
+- [x] `RF-8306` Implement typed command planning, clean control/candidate workspaces, separated executable/args invocation, and immutable environment provenance.
+- [x] `RF-8307` Enforce CPU/memory/disk/process/network/time/output/artifact/run/tool limits with stable sanitized failure mappings.
+- [x] `RF-8308` Implement streaming cancellation, timeout, provider-interruption recovery, sandbox quarantine, and unconditional cleanup.
+- [x] `RF-8309` Integrate run evidence with the existing oracle, verifier, minimizer, bundle builder, durable artifact store, and terminal job transaction.
+- [x] `RF-8310` Add adversarial unit/property/security tests for archives, paths, symlinks, commands, outputs, secrets, limits, state races, and forged proof.
+- [x] `RF-8311` Add sandbox-provider integration tests for trusted-host bounded acquisition, byte-only sandbox injection, execution deny-all, credential absence, limits, cancellation, and cleanup.
+- [x] `RF-8312` Add BDD and a sanitized public-repository canary bundle; update threat model, runbook, architecture, limitations, and evidence.
 
 ## TDD and property requirements
 
@@ -200,8 +204,10 @@ Feature: Isolated repository reproduction
 
 - Official current Sandbox SDK calls are verified against a development Vercel
   project; guessed or mock-only API behavior cannot close provider tasks.
-- Network observations prove GitHub-only acquisition, registry-only cache
-  population with scripts disabled, and deny-all repository execution.
+- Network observations prove source acquisition occurs only in the trusted host,
+  the sandbox never receives a GitHub credential or GitHub egress, registry-only
+  cache population runs with scripts disabled, and repository execution is
+  deny-all.
 - A synthetic secret planted in acquisition is absent from every later
   observable surface.
 - Resource, output, timeout, cancellation, and cleanup tests pass in real
@@ -213,5 +219,68 @@ Feature: Isolated repository reproduction
 - Existing trusted-fixture verification remains unchanged.
 - Full offline and authorized provider gates pass; evidence is sanitized and
   provenance-recorded.
+- The backend boundary has no meaningful screenshot state. The committed
+  machine-readable bundle, provider transcript summary, and updated trust
+  architecture are the applicable evidence; hosted UI/ChatGPT captures remain
+  8D/9 work.
 - The milestone PR is green and merged before 8D begins.
+
+RF-8308 additionally has direct development-provider proof: one prepared
+Node 24 sandbox was snapshotted with the provider-required 24-hour minimum
+retention, two deny-all microVMs were restored, a mutation in the first restore
+was absent from the second, both isolated commands completed, and both
+sandboxes plus the source snapshot were cleaned. Provider and resource
+identifiers are deliberately omitted from this sanitized record.
+
+RF-8309 has direct database-backed integration proof: an authorized immutable
+repository request is persisted with its versioned oracle and execution
+profile, dispatched without running in the request process, consumed under an
+exclusive durable lease, derived into proof by the verifier, and transitioned
+to `SUCCEEDED` only after the content-addressed bundle is readable from the
+private artifact store. Idempotent replay does not rerun the sandbox, and a
+durable cancellation request aborts active runner work before committing one
+`CANCELLED` terminal state. The production build composes the same worker with
+Neon, private Vercel Blob, Vercel Queues, the GitHub App credential broker, and
+Vercel Sandbox; no OpenAI API credential is present in this execution path.
+
+RF-8310 has 2,000 generated adversarial executions across four 500-run
+properties. They cover normalized and escaping archive paths, symlinks,
+hardlinks and special files, arbitrary package metadata and command separation,
+network phase ordering, exact secret removal, deterministic output truncation
+and original hashes, forged provider verification fields, stable bundle
+identity, and duplicate/cancellation/failure sequences that converge on one
+terminal and cleanup decision.
+
+RF-8311 has direct development-provider proof. A public repository's exact
+commit archive was resolved and downloaded through GitHub's documented
+temporary redirect on the trusted host, bounded before upload, injected into a
+deny-all Vercel Sandbox, hash-matched across the boundary, and parsed by `tar`
+inside the microVM. GitHub egress remained denied, no GitHub or Vercel identity
+variable appeared in observable sandbox surfaces, a 3 MiB output retained its
+original byte count and SHA-256 while truncating to the per-stream budget, and
+an active infinite process was cancelled. Two fresh restores preserved the
+immutable marker, excluded the first restore's mutation from the second, and
+cleaned both microVMs and the snapshot. The combined live provider gate passed
+all nine tests: three isolated-execution tests and six durable-provider tests.
+
+RF-8312 has executable proof across 13 repository-specific BDD scenarios. The
+complete suite passes 39 scenarios and 283 steps. A real public canary acquired
+the exact `GhostlyGawd/reproforge` revision
+`804d2da174060b40981e6a0437e6b212fc64d36d`, prepared its locked npm
+dependencies with lifecycle scripts disabled, snapshotted the prepared source,
+then ran one negative control and three candidates in four fresh deny-all
+microVMs. The oracle produced `VERIFIED`, cleanup was clean, and the portable
+11,187-byte bundle at
+[`docs/evidence/milestone-8c/public-canary-bundle.json`](../evidence/milestone-8c/public-canary-bundle.json)
+has outer SHA-256
+`7d6908cfe7a2f34916b739fbde0c46ec71d5dab7872bbcfbc37b7d6ea10eb52f`.
+The bundle contains no synthetic canary secret, GitHub/Vercel credential name,
+provider resource identifier, local path, or provider URL.
+
+The provider gate also drove two red-to-green corrections. Vercel's network
+header transformation requires a paid plan, so acquisition was strengthened to
+keep the sandbox deny-all and inject bytes after trusted-host download. Vercel
+also rejects creating an existing directory, so every experiment now receives
+a unique trusted-supervisor directory. Neither correction requires an OpenAI
+API key or a Vercel plan upgrade.
 

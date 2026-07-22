@@ -153,6 +153,8 @@ test("starts the investigation using only the keyboard with visible focus", asyn
   const start = page.getByRole("button", { name: "Run trusted sample" });
 
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("link", { name: "Repositories" })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(issue).toBeFocused();
   await page.keyboard.press("Tab");
   await expect(start).toBeFocused();

@@ -35,6 +35,9 @@ import type { HealthReport, HealthService } from "@/application/health";
 import type { TenantBackupArchive } from "@/application/tenant-backup";
 import type { PostgresTenantBackupService } from "@/infrastructure/backup/postgres-tenant-backup";
 import type { VerifiedBackupFixture } from "../../tests/helpers/tenant-backup-fixture";
+import { databaseClockAt } from "../../tests/helpers/database-clock";
+import type { ProgressView } from "@/application/progress";
+import type { ReproductionSnapshot } from "@/application/reproduction-contracts";
 
 export class ReproForgeWorld extends World {
   candidates: RunResult[] = [];
@@ -72,7 +75,7 @@ export class ReproForgeWorld extends World {
   durableQueueOutcomes: string[] = [];
   durableRecoverySummaries: LeaseRecoverySummary[] = [];
   durableTrustedCaseService?: CaseOperations;
-  durableTrustedClockMs = Date.parse("2026-07-20T20:00:00.000Z");
+  durableTrustedClockMs = Date.parse(databaseClockAt());
   durableTrustedMessages: QueueMessage[] = [];
   durableTrustedStarts: StartResult[] = [];
   durableRetention?: PostgresTenantDataRetention;
@@ -85,6 +88,8 @@ export class ReproForgeWorld extends World {
   backupDestinationService?: PostgresTenantBackupService;
   backupArchive?: TenantBackupArchive;
   backupFixture?: VerifiedBackupFixture;
+  privateBetaProgressViews: ProgressView[] = [];
+  privateBetaSnapshot?: ReproductionSnapshot;
 }
 
 setWorldConstructor(ReproForgeWorld);

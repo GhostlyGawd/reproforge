@@ -1,0 +1,16 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/app/api/queues/reproductions/route.ts": {
+      "experimentalTriggers": [
+        {
+          "type": "queue/v2beta",
+          "topic": "reproforge-*",
+          "retryAfterSeconds": 60,
+          "initialDelaySeconds": 0
+        }
+      ],
+      "maxDuration": 60
+    }
+  }
+}
