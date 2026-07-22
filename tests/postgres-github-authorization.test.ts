@@ -266,6 +266,71 @@ describe("Postgres GitHub authorization store", () => {
     ).resolves.toMatchObject({ status: "ACTIVE" });
   });
 
+  it("reconciles a real repository-added webhook from the authoritative installation snapshot", async () => {
+    await store.bind(actor, installation);
+    const refreshedInstallation: VerifiedGitHubInstallation = {
+      ...installation,
+      providerUpdatedAt: "2026-07-20T00:03:00.000Z",
+      repositories: [
+        ...(installation.repositories ?? []),
+        {
+          defaultBranch: "main",
+          fullName: "synthetic-owner/repository-canary",
+          private: false,
+          repositoryId: 8003,
+        },
+      ],
+    };
+
+    const realDelivery = {
+      deliveryId: "delivery-repositories-real-shape-1",
+      event: "installation_repositories" as const,
+      payload: {
+        action: "added",
+        installation: {
+          id: installation.installationId,
+          updated_at: "2026-07-20T00:03:00.000Z",
+        },
+        repositories_added: [
+          {
+            full_name: "synthetic-owner/repository-canary",
+            id: 8003,
+            name: "repository-canary",
+            node_id: "R_synthetic",
+            private: false,
+          },
+        ],
+        repositories_removed: [],
+        repository_selection: "selected",
+      },
+    };
+
+    await expect(store.processWebhook(realDelivery)).resolves.toBe("accepted");
+    await expect(
+      store.listRepositories({ limit: 10, tenantId: actor.tenantId }),
+    ).resolves.not.toMatchObject({
+      repositories: expect.arrayContaining([
+        expect.objectContaining({ providerRepositoryId: 8003 }),
+      ]),
+    });
+    await expect(
+      store.processWebhook(realDelivery, { installation: refreshedInstallation }),
+    ).resolves.toBe("duplicate");
+
+    await expect(
+      store.listRepositories({ limit: 10, tenantId: actor.tenantId }),
+    ).resolves.toMatchObject({
+      repositories: expect.arrayContaining([
+        expect.objectContaining({
+          defaultBranch: "main",
+          fullName: "synthetic-owner/repository-canary",
+          providerRepositoryId: 8003,
+          status: "ACTIVE",
+        }),
+      ]),
+    });
+  });
+
   it("ignores stale status events and keeps installation removal terminal", async () => {
     await store.bind(actor, installation);
     const event = (

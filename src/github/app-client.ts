@@ -148,30 +148,35 @@ export class GitHubAppClient
       if (!(await this.userCanAccessInstallation(userToken, parsed.installationId))) {
         throw new GitHubProviderError("SETUP_ACTOR_UNAUTHORIZED");
       }
-      const installation = await this.getLiveInstallation(parsed.installationId);
-      let installationToken = await this.mintInstallationToken(
-        parsed.installationId,
-      );
-      try {
-        const repositories = await this.listInstallationRepositories(
-          installationToken.token,
-        );
-        return {
-          accountId: installation.account.id,
-          accountLogin: installation.account.login,
-          installationId: installation.id,
-          permissions: installation.permissions,
-          ...(installation.updated_at
-            ? { providerUpdatedAt: installation.updated_at }
-            : {}),
-          repositories,
-          repositorySelection: installation.repository_selection,
-        };
-      } finally {
-        installationToken = { expiresAt: "", token: "" };
-      }
+      return await this.readInstallation(parsed.installationId);
     } finally {
       userToken = "";
+    }
+  }
+
+  async readInstallation(
+    rawInstallationId: number,
+  ): Promise<VerifiedGitHubInstallation> {
+    const installationId = z.number().int().positive().safe().parse(rawInstallationId);
+    const installation = await this.getLiveInstallation(installationId);
+    let installationToken = await this.mintInstallationToken(installationId);
+    try {
+      const repositories = await this.listInstallationRepositories(
+        installationToken.token,
+      );
+      return {
+        accountId: installation.account.id,
+        accountLogin: installation.account.login,
+        installationId: installation.id,
+        permissions: installation.permissions,
+        ...(installation.updated_at
+          ? { providerUpdatedAt: installation.updated_at }
+          : {}),
+        repositories,
+        repositorySelection: installation.repository_selection,
+      };
+    } finally {
+      installationToken = { expiresAt: "", token: "" };
     }
   }
 

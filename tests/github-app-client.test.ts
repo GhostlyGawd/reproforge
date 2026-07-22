@@ -106,6 +106,72 @@ describe("GitHub App API client", () => {
     );
   });
 
+  it("reads an authoritative installation snapshot without a setup actor token", async () => {
+    const urls: string[] = [];
+    const request = vi.fn(async (input: string | URL | Request) => {
+      const url = String(input);
+      urls.push(url);
+      if (url.endsWith("/app/installations/7001")) {
+        return json({
+          account: { id: 9001, login: "synthetic-owner" },
+          id: 7001,
+          permissions: { contents: "read", issues: "read", metadata: "read" },
+          repository_selection: "selected",
+          suspended_at: null,
+          updated_at: "2026-07-20T00:03:00.000Z",
+        });
+      }
+      if (url.endsWith("/app/installations/7001/access_tokens")) {
+        return json(
+          {
+            expires_at: "2026-07-20T00:59:00.000Z",
+            permissions: { contents: "read", issues: "read", metadata: "read" },
+            repository_selection: "selected",
+            token: "ghs_12345_refresh-token",
+          },
+          201,
+        );
+      }
+      if (url.endsWith("/installation/repositories?per_page=100&page=1")) {
+        return json({
+          repositories: [
+            {
+              default_branch: "main",
+              full_name: "synthetic-owner/repository-canary",
+              id: 8003,
+              private: false,
+            },
+          ],
+          total_count: 1,
+        });
+      }
+      return json({}, 500);
+    });
+    const client = new GitHubAppClient(config, {
+      clock: { now: () => now },
+      fetch: request as typeof fetch,
+    });
+
+    await expect(client.readInstallation(7001)).resolves.toEqual({
+      accountId: 9001,
+      accountLogin: "synthetic-owner",
+      installationId: 7001,
+      permissions: { contents: "read", issues: "read", metadata: "read" },
+      providerUpdatedAt: "2026-07-20T00:03:00.000Z",
+      repositories: [
+        {
+          defaultBranch: "main",
+          fullName: "synthetic-owner/repository-canary",
+          private: false,
+          repositoryId: 8003,
+        },
+      ],
+      repositorySelection: "selected",
+    });
+    expect(urls.some((url) => url.includes("/user/installations"))).toBe(false);
+    expect(urls).not.toContain("https://github.com/login/oauth/access_token");
+  });
+
   it("rechecks live authorization and scopes each revision token to one repository", async () => {
     const sha = "a".repeat(40);
     const requests: Array<{ body: string; url: string }> = [];

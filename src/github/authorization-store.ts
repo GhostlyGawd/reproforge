@@ -45,5 +45,6 @@ export interface GitHubAuthorizationStore
   }): Promise<GitHubRepositoryPage>;
   processWebhook(
     envelope: GitHubWebhookEnvelope,
+    options?: { installation?: VerifiedGitHubInstallation },
   ): Promise<"accepted" | "duplicate">;
 }
