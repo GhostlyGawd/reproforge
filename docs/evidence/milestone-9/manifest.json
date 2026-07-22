@@ -1,0 +1,125 @@
+{
+  "schemaVersion": 1,
+  "milestone": "milestone-9-hosted-public-boundary",
+  "capturedAt": "2026-07-21T00:56:22.2750328Z",
+  "sourceCommit": "891749b4fcce7faabf6424b565cdc45a6eb3cd3a",
+  "origin": "https://reproforge.vercel.app",
+  "deploymentId": "dpl_2KwXZ88yZE1fPTa9wXomJKwPiBdm",
+  "captureMethod": {
+    "tool": "Playwright 1.61.1 screenshot CLI",
+    "browser": "headless Chromium",
+    "mode": "public Vercel production origin",
+    "fullPage": true
+  },
+  "verification": {
+    "componentContractTests": 7,
+    "focusedBoundaryTests": 14,
+    "browserTests": 26,
+    "browserPolicyTests": 5,
+    "axeViolations": 0,
+    "desktopHorizontalOverflow": false,
+    "mobileHorizontalOverflow": false,
+    "productionBuild": "passed",
+    "githubCi": "passed",
+    "hostedBoundaryReport": "hosted-boundary-report.json"
+  },
+  "captures": [
+    {
+      "file": "hosted-privacy-desktop.png",
+      "capturedAt": "2026-07-21T00:54:56.2049172Z",
+      "route": "/privacy",
+      "viewport": { "width": 1440, "height": 1200 },
+      "image": {
+        "width": 1440,
+        "height": 1826,
+        "bytes": 381427,
+        "sha256": "5344694563bb1c6434b1e560314d679b678f38717e01895e87726c3c3a80b490"
+      },
+      "theme": "dark",
+      "alt": "Desktop production ReproForge privacy notice showing bounded inputs, provider purposes, 30-day and 365-day retention, account export and deletion, and the no-analytics disclosure.",
+      "caption": "Real public production privacy page at the stable ReproForge origin."
+    },
+    {
+      "file": "hosted-security-mobile.png",
+      "capturedAt": "2026-07-21T00:55:12.0224978Z",
+      "route": "/security",
+      "viewport": { "width": 390, "height": 844 },
+      "image": {
+        "width": 390,
+        "height": 2042,
+        "bytes": 295799,
+        "sha256": "6f10ab8c4c3c66ce265cb8f4a7b6a759cc6a1b334a2158f786e181f0055b6d2d"
+      },
+      "theme": "dark",
+      "alt": "Mobile production ReproForge security page showing private vulnerability reporting, immutable repository authorization, deny-all sandbox execution, OAuth checks, and private-beta limits without horizontal overflow.",
+      "caption": "Real public production security page at a 390-pixel mobile viewport."
+    },
+    {
+      "file": "production-auth0-login-mobile.png",
+      "capturedAt": "2026-07-21T20:11:41.0326316Z",
+      "route": "/auth/login?returnTo=%2Frepositories",
+      "viewport": { "width": 390, "height": 844 },
+      "image": {
+        "width": 390,
+        "height": 844,
+        "bytes": 21334,
+        "sha256": "a3054cf08dfb9f566e6438bb81ab8f8c53a16d4512d85644a0fb2b4fffcbe66a"
+      },
+      "theme": "light",
+      "alt": "Mobile Auth0 login reached from ReproForge production after the routing repair, showing email and password fields plus sign-up without a generic error, Google option, or development-key warning.",
+      "caption": "Live unauthenticated Auth0 Universal Login reached through the repaired ReproForge production entry path."
+    }
+  ],
+  "subsequentProductionGates": [
+    {
+      "report": "production-mcp-gate.json",
+      "checkedAt": "2026-07-21T01:45:08.696Z",
+      "sourceCommit": "eee99411be91c05225ac0d5d95a9997ab01af068",
+      "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
+      "result": "passed",
+      "scope": "production MCP protocol and live provider regression gate"
+    },
+    {
+      "report": "intermittent-canary-gate.json",
+      "checkedAt": "2026-07-21T01:52:41.798Z",
+      "sourceCommit": "61a9fbfe6bf2e2f8c00f2f55b142dafd810b99be",
+      "result": "passed",
+      "scope": "public intermittent fixture and isolated provider outcome"
+    },
+    {
+      "report": "hosted-load-gate.json",
+      "checkedAt": "2026-07-21T01:56:18.751Z",
+      "sourceCommit": "eee99411be91c05225ac0d5d95a9997ab01af068",
+      "deploymentId": "dpl_HvTttjPzKFuYR68z45eLyeTF2Xir",
+      "result": "configured-capacity-passed; 16-way burst latency target missed",
+      "scope": "production MCP discovery, idempotent start, and read latency"
+    },
+    {
+      "report": "production-auth0-gate.json",
+      "checkedAt": "2026-07-21T20:12:11.728Z",
+      "sourceCommit": "0449ddbee8ce406a18fec9926b29bd7a33ac0c2c",
+      "deploymentId": "dpl_FNTrvWvSUZESiwGokaV478nNViDL",
+      "result": "passed",
+      "scope": "production readiness, runner capability, Auth0 OAuth compatibility, disposable DCR canary, and direct-login recovery"
+    },
+    {
+      "report": "../production-public-canary/production-public-canary-gate.json",
+      "checkedAt": "2026-07-22T00:37:35.4321613Z",
+      "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+      "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+      "result": "passed",
+      "scope": "signed-in GitHub App catalog and production isolated public-canary reproduction"
+    },
+    {
+      "report": "../chatgpt-host/chatgpt-host-gate.json",
+      "checkedAt": "2026-07-22T01:22:53.610Z",
+      "sourceCommit": "303e88e69ede66cc4a8c6c57c4d8988c25883b40",
+      "deploymentId": "dpl_YsGFHb4q5o1dAnZAwTnFHnAcenc6",
+      "result": "passed",
+      "scope": "anonymous trusted demonstration, proof widget, bundle export, connection authorization, and widget-domain refresh inside ChatGPT"
+    }
+  ],
+  "sanitization": "Public static policy content and an unauthenticated hosted login form only; no account, credential, private repository, provider resource, cookie, or user data.",
+  "provenance": "Policy captures are first-party pages from the exact ReproForge production deployment; the Auth0 capture is the live hosted login reached from that deployment. None are concept art, generated imagery, or ChatGPT-host screenshots.",
+  "openGates": "Protected ChatGPT OAuth/repository cases, private and intermittent signed-in canaries, seven hosted review cases, publisher/availability fields, portal submission, and publication remain open. Browser login, GitHub App installation, the public catalog/canary, and the anonymous ChatGPT trusted demonstration are claimed by linked subsequent records."
+}

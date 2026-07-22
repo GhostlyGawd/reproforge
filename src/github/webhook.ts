@@ -31,6 +31,25 @@ export type GitHubWebhookEnvelope = {
   payload: unknown;
 };
 
+export function gitHubWebhookInstallationId(
+  envelope: GitHubWebhookEnvelope,
+): number | null {
+  if (envelope.event !== "installation_repositories") return null;
+  if (typeof envelope.payload !== "object" || envelope.payload === null) {
+    return null;
+  }
+  const installation = (envelope.payload as Record<string, unknown>)[
+    "installation"
+  ];
+  if (typeof installation !== "object" || installation === null) return null;
+  const installationId = (installation as Record<string, unknown>)["id"];
+  return typeof installationId === "number" &&
+    Number.isSafeInteger(installationId) &&
+    installationId > 0
+    ? installationId
+    : null;
+}
+
 type GitHubWebhookProcessor = {
   process(
     envelope: GitHubWebhookEnvelope,

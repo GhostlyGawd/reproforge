@@ -18,9 +18,10 @@ public repository canary. Its boundaries are intentional and user-visible.
   lifecycle scripts disabled, deny-all snapshot restores, one control, three
   candidate runs, output/cancellation limits, proof, and cleanup. That is not a
   claim that general public repositories are enabled or safe.
-- Public acquisition mints no GitHub credential. Private source support and
-  GitHub App authorization exist in code, but live Auth0/GitHub account,
-  installation, repository-selection, and revocation evidence is still missing.
+- Public acquisition mints no GitHub credential. Production Auth0 login,
+  least-privilege GitHub App installation, selected public repositories, and
+  one immutable public-canary run have evidence. Private source execution,
+  protected ChatGPT OAuth, and a live revocation drill remain unproven.
 - The extracted workspace is capped at 500 MiB, archive input at 100 MiB,
   supported lock metadata is deliberately restrictive, and provider/plan
   limits may be lower. Unsupported sources fail closed.
@@ -42,13 +43,30 @@ public repository canary. Its boundaries are intentional and user-visible.
   concurrency, restart/retry identity, private object access/deletion,
   identifier-only Queue publication, dependency readiness, and tenant
   backup/restore. This is not a hosted availability or production-load claim.
+- Account export/deletion routes, portable archives, retryable provider-first
+  deletion, and responsive controls are implemented and locally verified. They
+  have not completed a signed-in deployed lifecycle drill, so they are not a
+  customer-data readiness claim.
+- The aggregate operations dashboard, owned alert thresholds, kill switches,
+  and rollback policy are locally verified. Alert delivery, an early hosted log
+  scan, and an actual deployment/rollback rehearsal remain unproven.
+- The deterministic RF-8406 harness passes eight fixed-seed campaigns locally,
+  including 128-way concurrent starts and reads plus generated duplicate/restart
+  schedules. It proves correctness and a repeatable load shape, not hosted
+  latency, availability, capacity, or real provider failure recovery.
 - The no-auth trusted sample still uses an anonymous public synthetic tenant.
   OAuth/principal and GitHub authorization contracts are implemented for the
   protected path, but they are not safe for private/customer data until the
   live account and composed hosted gates pass.
-- The ChatGPT/MCP adapter implements the trusted journey and widget, but it has not been connected to a real ChatGPT developer-mode app because no reachable HTTPS endpoint or account-created `plugin_asdk_app…` ID was available.
+- The ChatGPT/MCP adapter is connected to a real developer-mode app at the
+  production HTTPS origin. The anonymous trusted prompt, widget, verification,
+  and bundle export passed inside ChatGPT with authorization `None`. Protected
+  OAuth/repository flows and seven remaining hosted review cases are not yet
+  proven there.
 - The no-auth MCP endpoint uses one anonymous synthetic-demo caller scope. It is not user identity, tenant isolation, quota enforcement, or authorization.
-- The standalone `/widget-preview` route renders the exact MCP resource with real service data for browser evidence; it is not a screenshot of the widget inside ChatGPT.
+- The standalone `/widget-preview` route remains a first-party preview harness.
+  It is not substituted for the separate real ChatGPT-host screenshots under
+  `docs/evidence/chatgpt-host`.
 
 ## Verification and minimization
 
@@ -66,9 +84,9 @@ public repository canary. Its boundaries are intentional and user-visible.
 ## Product readiness
 
 - REST v2 and MCP are implemented draft contracts, not stability guarantees.
-  Managed development storage, Queue, and Sandbox resources plus automatic
-  branch previews exist for provider validation, but there is no stable public
-  application deployment, packaged developer-mode app, published plugin,
+  A stable public review origin, managed production providers, a connected
+  developer-mode ChatGPT app, and a validated repository-local Codex wrapper
+  exist. There is no marketplace-installed wrapper, published ChatGPT listing,
   published package, signed artifact, release tag, service-level agreement, or
   compatibility guarantee.
 - Security controls required for an internet-facing multi-user service are outside the MVP.

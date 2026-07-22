@@ -12,10 +12,16 @@ test("presents the server-side account and GitHub authorization boundary", async
   await expect(page.getByText("Server-side session")).toBeVisible();
   await expect(page.getByText("Read-only GitHub App")).toBeVisible();
   await expect(page.getByText("Immutable source")).toBeVisible();
-  await expect(page.locator("[data-session-state]")).toHaveAttribute(
+  const sessionCard = page.locator("[data-session-state]");
+  await expect(sessionCard).toHaveAttribute(
     "data-session-state",
     /^(signed-out|unconfigured)$/,
   );
+  if ((await sessionCard.getAttribute("data-session-state")) === "signed-out") {
+    await expect(
+      page.getByRole("link", { name: "Continue with GitHub" }),
+    ).toBeVisible();
+  }
 
   const browserStorage = await page.evaluate(() => ({
     cookie: document.cookie,

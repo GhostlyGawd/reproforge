@@ -25,8 +25,13 @@ quota, deletion, and principal records use a separate 365-day default. The
 internal deletion workflow removes eligible customer-class records and private
 objects and retains one sanitized audit tombstone. Backup/restore archives keep
 object bodies separate from the canonical manifest and verify every digest.
-These controls are implemented, but no public account deletion endpoint or
-retention-administration UI exists yet.
+The authenticated `/account` page and account API expose a quota-bounded
+portable export and an explicit-confirmation deletion request. Export requires
+a quiescent tenant and returns private object bytes inside the integrity-checked
+download; it is never cached. Deletion suspends new activity, requests
+cancellation of active work, deletes private objects before database rows, and
+remains retryable after a provider failure. There is no public
+retention-administration or operator UI.
 
 Current live provider evidence uses only generated synthetic identifiers and
 the bundled fixture. Active provider-test tenants, cases, artifacts, objects,
@@ -61,8 +66,10 @@ customer code until those gates pass.
 Live mode is separate and explicit. When a caller selects `live` and configures `OPENAI_API_KEY`, the submitted repository metadata, issue text, and supplied evidence are sent to the OpenAI Responses API. ReproForge sets `store: false`, but use of that service remains subject to the applicable OpenAI terms and data controls.
 
 Do not submit secrets, credentials, customer data, regulated data, or private
-source content. The current product does not include a data-classification UI,
-consent workflow, public deletion endpoint, or organization policy enforcement.
+source content. The current product does not include a data-classification UI
+or organization policy enforcement. Account export/deletion controls do not
+change the separate live-investigator disclosure or make sensitive submissions
+appropriate.
 
 ## Logs and bundles
 
@@ -70,6 +77,17 @@ The bundle builder can redact exact registered secret values from serialized art
 
 The application defines no first-party analytics or advertising integration. Hosting providers, browsers, proxies, and operators may produce their own infrastructure logs outside this repository's control.
 
+The private operations dashboard is deliberately aggregate-only: it reports
+bounded counts, ages, health states, feature states, and alert status without
+tenant, principal, repository, case, job, provider-resource, source, or object
+identifiers. Structured health logs use an allowlist and credential-shape
+redaction. No Vercel log drain or analytics integration is currently claimed.
+
 ## Evidence assets
 
-Committed screenshots contain only the synthetic trusted sample and local application chrome, including the actual MCP App proof resource rendered by its preview harness. Evidence manifests document capture time, source commit, viewport, sanitization, and provenance. No screenshot is represented as a real ChatGPT-host session unless it was captured in that host.
+Committed screenshots contain only synthetic/public canary data and sanitized
+product or host chrome. Evidence manifests document capture time, source
+commit, viewport, sanitization, and provenance. Preview-harness images are not
+represented as ChatGPT sessions; the separately labeled `chatgpt-host` images
+were captured in that host and exclude account identity, sidebar, history,
+credentials, private repositories, and customer data.

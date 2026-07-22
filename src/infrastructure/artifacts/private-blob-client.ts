@@ -9,6 +9,7 @@ export interface PrivateBlobClient {
   head(pathname: string): Promise<PrivateBlobMetadata | null>;
   get(
     pathname: string,
+    trustedSize: number,
   ): Promise<{ bytes: Uint8Array; metadata: PrivateBlobMetadata } | null>;
   delete(pathname: string, etag?: string): Promise<boolean>;
 }

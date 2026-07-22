@@ -1,6 +1,7 @@
 import { getWebSessionState } from "@/auth/auth0-client";
-import { getDefaultGitHubServices } from "@/github/default-services";
+import { getDefaultGitHubAuthorizationServices } from "@/github/default-services";
 import { createGitHubInstallHandler } from "@/github/install-route";
+import { reportGitHubRuntimeFailure } from "@/github/runtime-observability";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -19,14 +20,16 @@ export async function GET(request: Request): Promise<Response> {
         },
       })();
     }
-    const services = await getDefaultGitHubServices();
+    const services = await getDefaultGitHubAuthorizationServices();
     return createGitHubInstallHandler({
       actor: () => services.webPrincipals.resolve(session.identity),
       appSlug: services.config.appSlug,
       baseUrl: services.config.baseUrl,
+      onError: (error) => reportGitHubRuntimeFailure("install", error),
       states: services.store,
     })();
-  } catch {
+  } catch (error) {
+    reportGitHubRuntimeFailure("install", error);
     return Response.json(
       { error: "github_installation_unavailable" },
       { headers: { "Cache-Control": "no-store" }, status: 503 },

@@ -7,6 +7,7 @@ import {
   type PostgresDatabase,
   type PostgresExecutor,
 } from "@/infrastructure/postgres/database";
+import { PostgresDurableReproductionRepository } from "@/infrastructure/postgres/repositories";
 
 type ArtifactRow = Readonly<{
   object_key: string;
@@ -18,6 +19,7 @@ type DeletionClaim = Readonly<{
   artifacts: ArtifactRow[];
   claimExpiresAt: string;
   claimOwner: string;
+  requestedBy: string;
   requestId: string;
   tenantId: string;
   version: number;
@@ -116,6 +118,42 @@ async function appendRequestAudit(
   );
 }
 
+async function suspendAndCancelTenant(
+  executor: PostgresExecutor,
+  input: { actorId: string; at: string; tenantId: string },
+): Promise<void> {
+  const activeJobs = await executor.query<{
+    caller_id: string;
+    id: string;
+  }>(
+    `SELECT DISTINCT i.caller_id, j.id
+       FROM jobs j
+       JOIN idempotency_keys i
+         ON i.tenant_id = j.tenant_id AND i.job_id = j.id
+      WHERE j.tenant_id = $1 AND j.state IN ('QUEUED', 'RUNNING')
+      ORDER BY j.id, i.caller_id`,
+    [input.tenantId],
+  );
+  const repository = new PostgresDurableReproductionRepository(executor);
+  for (const job of activeJobs.rows) {
+    await repository.requestCancellation(
+      {
+        callerId: job.caller_id,
+        principalId: input.actorId,
+        tenantId: input.tenantId,
+      },
+      job.id,
+      input.at,
+    );
+  }
+  await executor.query(
+    `UPDATE tenants
+        SET status = 'SUSPENDED', updated_at = $2
+      WHERE id = $1 AND status = 'ACTIVE'`,
+    [input.tenantId, input.at],
+  );
+}
+
 export class PostgresTenantDataRetention {
   constructor(
     private readonly database: PostgresDatabase,
@@ -181,6 +219,11 @@ export class PostgresTenantDataRetention {
         requestId: input.requestId,
         tenantId: scope.tenantId,
       });
+      await suspendAndCancelTenant(executor, {
+        actorId: scope.principalId,
+        at,
+        tenantId: scope.tenantId,
+      });
       return { created: true, requestId: input.requestId };
     });
   }
@@ -231,6 +274,11 @@ export class PostgresTenantDataRetention {
           at,
           reason: "retention",
           requestId,
+          tenantId: tenant.id,
+        });
+        await suspendAndCancelTenant(executor, {
+          actorId: "system_retention",
+          at,
           tenantId: tenant.id,
         });
         scheduled.push(requestId);
@@ -287,19 +335,26 @@ export class PostgresTenantDataRetention {
     return runSerializableTransaction(this.database, async (executor) => {
       const selected = await executor.query<{
         id: string;
+        requested_by: string;
         tenant_id: string;
         version: number | string;
       }>(
-        `SELECT d.tenant_id, d.id, d.version
+        `SELECT d.tenant_id, d.id, d.requested_by, d.version
            FROM deletion_requests d
            JOIN tenants t ON t.id = d.tenant_id
           WHERE (
-              d.state IN ('REQUESTED', 'SCHEDULED')
-              AND coalesce(d.scheduled_at, d.created_at) <= $1
-              AND t.status IN ('ACTIVE', 'SUSPENDED')
-            ) OR (
-              d.state = 'RUNNING' AND d.claim_expires_at <= $1
-              AND t.status = 'DELETING'
+              (
+                d.state IN ('REQUESTED', 'SCHEDULED')
+                AND coalesce(d.scheduled_at, d.created_at) <= $1
+                AND t.status IN ('ACTIVE', 'SUSPENDED')
+              ) OR (
+                d.state = 'RUNNING' AND d.claim_expires_at <= $1
+                AND t.status = 'DELETING'
+              )
+            )
+            AND NOT EXISTS (
+              SELECT 1 FROM jobs j
+               WHERE j.tenant_id = d.tenant_id AND j.state = 'RUNNING'
             )
           ORDER BY coalesce(d.scheduled_at, d.created_at), d.created_at,
                    d.tenant_id, d.id
@@ -341,6 +396,7 @@ export class PostgresTenantDataRetention {
         artifacts: artifacts.rows,
         claimExpiresAt,
         claimOwner: ownerId,
+        requestedBy: row.requested_by,
         requestId: row.id,
         tenantId: row.tenant_id,
         version,
@@ -375,9 +431,9 @@ export class PostgresTenantDataRetention {
       );
       if (!failed.rows[0]) throw new Error("Lost retention deletion claim");
       await executor.query(
-        `UPDATE tenants SET status = 'ACTIVE', updated_at = $2
+        `UPDATE tenants SET status = $3, updated_at = $2
           WHERE id = $1 AND status = 'DELETING'`,
-        [claim.tenantId, at],
+        [claim.tenantId, at, "SUSPENDED"],
       );
     });
   }
@@ -438,8 +494,19 @@ export class PostgresTenantDataRetention {
            tenant_id, id, actor_id, action, target_type, target_id,
            outcome, metadata, occurred_at, retention_until
          ) VALUES ($1, $2, 'system_retention', 'account.deleted', 'account', $1,
-                   'success', '{"reason":"retention"}'::jsonb, $3, $4)`,
-        [claim.tenantId, tombstoneId, at, retentionUntil(at)],
+                   'success', $3::jsonb, $4, $5)`,
+        [
+          claim.tenantId,
+          tombstoneId,
+          JSON.stringify({
+            reason:
+              claim.requestedBy === "system_retention"
+                ? "retention"
+                : "user-request",
+          }),
+          at,
+          retentionUntil(at),
+        ],
       );
       const completed = await executor.query<{ id: string }>(
         `UPDATE deletion_requests

@@ -48,12 +48,15 @@ describe("GitHub App install route", () => {
   });
 
   it("returns a sanitized non-cacheable failure when composition is unavailable", async () => {
+    const failure = new Error("synthetic-database-secret");
+    const onError = vi.fn();
     const handler = createGitHubInstallHandler({
       actor: async () => {
-        throw new Error("synthetic-database-secret");
+        throw failure;
       },
       appSlug: "reproforge-development",
       baseUrl: "https://reproforge.example/",
+      onError,
       states: new InMemoryGitHubInstallationStateStore(),
     });
 
@@ -63,5 +66,6 @@ describe("GitHub App install route", () => {
     const body = await response.text();
     expect(body).toBe('{"error":"github_installation_unavailable"}');
     expect(body).not.toContain("synthetic-database-secret");
+    expect(onError).toHaveBeenCalledExactlyOnceWith(failure);
   });
 });

@@ -10,9 +10,17 @@ canonical example origin and development name.
 - Repository metadata: read.
 - Repository contents: read.
 - Issues: read, because issue-number intake is enabled.
-- Events: `installation` and `installation_repositories` only.
+- No `default_events` are requested. GitHub automatically delivers the
+  `installation` and `installation_repositories` lifecycle events to every
+  GitHub App, and does not allow apps to subscribe to them explicitly.
 - No repository write, Actions, secret, organization administration, or user
   account permission is requested.
+
+The downloaded GitHub App private key is stored only as an encrypted hosted
+variable. ReproForge cryptographically parses RSA PEM keys in the GitHub-style
+PKCS#1 form (`BEGIN RSA PRIVATE KEY`) and the interoperable PKCS#8 form
+(`BEGIN PRIVATE KEY`); malformed and non-RSA keys fail readiness before any
+provider request.
 
 The install flow requests GitHub App user authorization only during setup. The
 returned user token is used transiently to prove that the signed-in installer

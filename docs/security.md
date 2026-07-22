@@ -35,18 +35,42 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
 - GitHub App state and callback inputs are signed, single-use, time-bounded, and
   installation/repository scoped. Webhook ordering and revocation are durable.
 - The MCP App resource has an empty external connect/resource/frame allowlist and loads no third-party assets.
+- Hosted responses apply a closed same-origin content security policy, deny
+  framing and browser capabilities, suppress referrers and MIME sniffing, and
+  enable HSTS on HTTPS. Development alone permits `unsafe-eval` for hot reload;
+  production does not.
+- The OpenAI Apps domain-challenge route is a non-cached 404 unless one exact
+  printable token is explicitly configured. When enabled it returns only that
+  token as plain text and is removed again after verification.
 - `/mcp` uses no auth and wildcard CORS only for the public synthetic fixture. It must not be expanded to customer data or arbitrary execution under that policy.
 - Investigator tools are strict data contracts, not shell or filesystem tools.
 - The OpenAI client is initialized only for an explicit live request with a configured key.
 - Live Responses requests use `store: false`.
 - API errors return generic messages and do not echo credentials or raw exceptions.
-- Preview/production configuration fails closed unless Neon and private Blob authentication are complete; offline/test builds do not initialize provider clients.
+- Preview/production configuration fails closed unless the canonical origin,
+  web/OAuth identity, GitHub App, Neon, private Blob, Queue, and isolated-runner
+  configuration are complete; offline/test builds do not initialize provider
+  clients.
 - Every durable case, job, artifact, evidence, quota, outbox, audit, and deletion record is tenant-keyed, and database constraints reject cross-tenant references.
 - Serializable idempotency reservation, optimistic versions, compare-and-swap leases, bounded attempts, and terminal-state constraints make duplicate or stale Queue delivery harmless.
 - Queue payloads contain only opaque tenant/case/job/event identifiers and a schema/kind; source, commands, tokens, evidence, and object bodies are rejected.
 - Artifact bytes are hashed before a private immutable upload, reverified on read, and required before a job can commit success. Direct unauthenticated provider access was denied in the live provider gate.
 - Forward-only migrations record canonical SHA-256 checksums, use an advisory lock, roll back failed DDL, and reject applied-file drift.
-- Retention/deletion code removes customer-class rows and private objects while preserving only the documented sanitized audit tombstone. Backup/restore verifies manifest and object hashes before accepting restored state.
+- Account export requires a server-owned tenant session, an idempotency key, a
+  daily quota, and a quiescent tenant; responses are integrity-tagged and never
+  cached. Account deletion additionally requires same-origin submission and an
+  exact destructive confirmation phrase.
+- Retention/deletion suspends new starts, requests cancellation, removes private
+  objects before customer-class rows, and preserves only the documented
+  sanitized audit tombstone. Backup/restore verifies the portable manifest and
+  every object hash before accepting restored state.
+- Three schema-closed feature switches can disable all new repository starts,
+  private starts, or a Node execution profile without hiding existing evidence,
+  blocking cancellation, or changing terminal truth. Denials are tenant-audited
+  without repository names.
+- The private operations dashboard returns global counts/status only and never
+  serializes a tenant, principal, repository, case, job, provider resource,
+  source, or object identifier.
 - Operational logs use allowlisted fields and secret/credential-shape redaction; provider bodies and connection strings are not logged.
 - Bundle materialization redacts registered secrets before serialization.
 - Canonical hashes cover contract-relevant bundle content and provenance fields.
@@ -64,6 +88,10 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
   ambient credential or host mount, and is bounded by command/attempt time,
   workspace, output, run, and tool budgets. Cancellation stops active work;
   cleanup is unconditional and failures enter quarantine.
+- The exact local resilience gate covers eight fixed-seed load and failure
+  categories against real application/durable adapter boundaries; its report is
+  synthetic and is not represented as hosted penetration, load, or availability
+  evidence.
 - `VERIFIED` still requires the deterministic oracle, a negative control, and
   all clean candidates. Provider or model output cannot construct proof truth.
 - CI rejects high-severity dependency audit findings and runs the full verification gate.
@@ -76,7 +104,8 @@ The standalone `fixtures/cli-spaces/repro.mjs` command reads only the path suppl
   public repositories.
 - Private-repository/customer use before live Auth0, GitHub installation,
   revocation, and composed hosted end-to-end evidence passes.
-- Attaching to a production environment.
+- Treating the current fail-closed production deployment as ready before its
+  Auth0, GitHub App, readiness, and end-to-end canaries pass.
 - Supplying production credentials, customer datasets, or private source code.
 - Multi-user or customer-data operation without OAuth principal/tenant resolution, repository authorization, abuse controls, and a deployment review.
 - Treating the anonymous trusted-sample caller scope as tenant isolation.
@@ -102,9 +131,10 @@ with explicit CPU/memory/time configuration, bounded filesystem/output policy,
 deny-all repository execution, no ambient host secrets, and no host checkout or
 container-socket mount. Source acquisition and dependency preparation are
 trusted-supervisor phases; repository-controlled code cannot run while GitHub
-or registry access is available. The default hosted runner health probe remains
-unavailable until 8D wires and verifies the composed service, so a web deploy
-alone does not advertise repository readiness.
+or registry access is available. The hosted runner health route now performs a
+real bounded deny-all sandbox create/execute/cleanup probe and admits new starts
+only while it reports ready. This local implementation does not replace the
+pending authenticated deployed-journey and degradation drills.
 
 ## Dependency and model risk
 

@@ -1,9 +1,9 @@
 {
   "schemaVersion": 1,
   "milestone": "milestone-8c",
-  "capturedAt": "2026-07-20T20:36:51.507Z",
+  "capturedAt": "2026-07-21T00:15:07.685Z",
   "implementationCommit": "068df00a8f1bd688bd9e54c9c0d73edbe29de1f2",
-  "evidenceSourceCommit": "288187c99659790fb1d51e3fb384343b265849e7",
+  "evidenceSourceCommit": "f1ae39416c6ee167176051da17a4a1eb1f8e7276",
   "scope": "isolated repository execution implementation and development-provider evidence through RF-8312",
   "status": "implementation-complete",
   "tasks": {
@@ -42,8 +42,9 @@
       "crossRunMutationObserved": false,
       "cleanup": "passed",
       "publicRepositoryCanary": {
-        "repository": "GhostlyGawd/reproforge",
-        "commitSha": "804d2da174060b40981e6a0437e6b212fc64d36d",
+        "repository": "GhostlyGawd/reproforge-canary",
+        "commitSha": "d3d69d4c5222bb7f4e6cded27a965258247942b2",
+        "fixedCommitSha": "8217e07601bfce879fe8f6f5121fee19a23ade51",
         "credentialMinted": false,
         "networkPolicy": "deny-all",
         "runs": 4,
@@ -52,8 +53,8 @@
         "status": "VERIFIED",
         "cleanup": "clean",
         "bundlePath": "public-canary-bundle.json",
-        "bundleBytes": 11187,
-        "bundleSha256": "7d6908cfe7a2f34916b739fbde0c46ec71d5dab7872bbcfbc37b7d6ea10eb52f"
+        "bundleBytes": 11201,
+        "bundleSha256": "e859ee6079f26a69b539750f3cf7c09489ca9fa3e0fdebe41331bda48aa101dd"
       }
     },
     "durableProviders": {

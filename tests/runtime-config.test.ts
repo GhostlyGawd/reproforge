@@ -18,6 +18,9 @@ const productionEnvironment = {
 describe("runtime configuration", () => {
   it("defaults an unconfigured local process to the offline adapters", () => {
     expect(parseRuntimeConfig({})).toMatchObject({
+      disablePrivateRepositories: false,
+      disableRepositoryStarts: false,
+      disabledExecutionProfiles: [],
       mode: "offline",
       providers: {
         artifactStore: "memory",
@@ -100,10 +103,16 @@ describe("runtime configuration", () => {
       REPROFORGE_QUEUE_RETENTION_SECONDS: "86400",
       REPROFORGE_QUEUE_TOPIC: "reproforge-preview-v1",
       REPROFORGE_RETENTION_DAYS: "14",
+      REPROFORGE_DISABLE_PRIVATE_REPOSITORIES: "true",
+      REPROFORGE_DISABLE_REPOSITORY_STARTS: "false",
+      REPROFORGE_DISABLED_EXECUTION_PROFILES: "node24,node22,node24",
     });
 
     expect(parsed).toMatchObject({
       baseUrl: "https://reproforge.example/",
+      disablePrivateRepositories: true,
+      disableRepositoryStarts: false,
+      disabledExecutionProfiles: ["node22", "node24"],
       jobLeaseSeconds: 120,
       maxActiveJobsPerTenant: 3,
       maxDeliveryAttempts: 7,
@@ -123,6 +132,21 @@ describe("runtime configuration", () => {
     expect(summary).not.toContain(productionEnvironment.DATABASE_URL);
     expect(summary).not.toContain(productionEnvironment.BLOB_READ_WRITE_TOKEN);
     expect(summary).toContain('"database":"neon"');
+    expect(summary).toContain('"disablePrivateRepositories":true');
+  });
+
+  it.each([
+    ["REPROFORGE_DISABLE_REPOSITORY_STARTS", "yes"],
+    ["REPROFORGE_DISABLE_PRIVATE_REPOSITORIES", "1"],
+    ["REPROFORGE_DISABLED_EXECUTION_PROFILES", "node20"],
+    ["REPROFORGE_DISABLED_EXECUTION_PROFILES", "node22,private"],
+  ])("fails closed for invalid feature policy %s", (name, value) => {
+    expect(() =>
+      parseRuntimeConfig({
+        ...productionEnvironment,
+        [name]: value,
+      }),
+    ).toThrowError(new RegExp(name));
   });
 
   it("prefers short-lived Vercel OIDC credentials for private Blob", () => {

@@ -1,0 +1,59 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-07-22T01:22:53.610Z",
+  "reviewCaseId": "positive-trusted-demo",
+  "host": {
+    "surface": "ChatGPT Work",
+    "appId": "asdk_app_6a60145796108191a8ab9b93493e5491",
+    "versionId": "asdk_app_v_6a60145d59388191872b0db38c2beb62",
+    "reviewStatus": "development"
+  },
+  "connection": {
+    "mcpUrl": "https://reproforge.vercel.app/mcp",
+    "authorizationSupported": ["none", "oauth2"],
+    "authorizationUsed": "none",
+    "accountLinkRequired": false,
+    "userOpenAiApiKeyRequired": false
+  },
+  "prompt": "Run the ReproForge trusted demonstration, show me the machine-verified evidence, and export the portable Repro Bundle.",
+  "observedToolSequence": [
+    "start_reproduction",
+    "export_repro_bundle"
+  ],
+  "hostPackaging": {
+    "additionalIdempotentExportRead": true,
+    "reason": "ChatGPT materialized a durable downloadable ZIP from the already verified bundle."
+  },
+  "case": {
+    "caseId": "case_1ec39985-3f5a-4dd8-a3ff-32c3358d0aca",
+    "state": "VERIFIED",
+    "candidateMatches": 3,
+    "totalCandidateRuns": 3,
+    "controlMatched": false,
+    "repeatability": 1,
+    "supportedCause": "A path containing spaces was not preserved as one argument.",
+    "inconclusiveHypothesis": "Node 22 is required for the failure."
+  },
+  "bundle": {
+    "canonicalBundleHash": "8f0e387c9031c1829dac57a36c03e6791e493e6fe7179c4ac0ed2f57bb9b0090",
+    "declaredFileCount": 8,
+    "chatgptZip": "ReproForge-case_1ec39985-portable-repro-bundle.zip",
+    "chatgptZipSha256": "fd43e1049087147320a93e08149d0d64cbdc0ce52a9d63221b5e4f2d1813017a"
+  },
+  "widgetOrigin": {
+    "sourceCommit": "303e88e69ede66cc4a8c6c57c4d8988c25883b40",
+    "deploymentId": "dpl_YsGFHb4q5o1dAnZAwTnFHnAcenc6",
+    "domain": "https://reproforge.vercel.app",
+    "uiDomain": "passed",
+    "openaiWidgetDomain": "passed",
+    "submissionWarningPresentAfterRefresh": false
+  },
+  "localPluginWrapper": {
+    "path": "plugins/reproforge",
+    "appIdMatchesHostEvidence": true,
+    "canonicalValidator": "passed",
+    "contractTest": "tests/plugin-wrapper.test.ts"
+  },
+  "result": "passed",
+  "scope": "anonymous trusted demonstration inside ChatGPT; protected repository and negative hosted review cases remain separate"
+}

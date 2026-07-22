@@ -220,13 +220,20 @@ export function createReproForgeWidgetHtml(
         currentResult = result;
         const meta = resultMeta(result);
         const proof = view.proof || {};
-        const status = proof.status || view.caseState || "Waiting";
+        const progress = view.progress || {};
+        const status = proof.status || progress.phase || view.caseState || "Waiting";
         setText("proof-title", status === "VERIFIED" ? "Verified reproduction" : "Reproduction case");
         setText("status", status);
         setText("case-id", "case / " + view.caseId);
         setText("repeatability", Math.round((proof.repeatability || 0) * 100) + "% repeatable");
         setText("candidate-runs", (proof.candidateMatches || 0) + " / " + (proof.requiredRuns || 0) + " matched");
         setText("control", proof.controlMatched ? "Control matched" : "Control clear");
+        setText(
+          "action-status",
+          progress.terminal
+            ? "Durable job " + (progress.state || view.jobState || "complete").toLowerCase() + "."
+            : (progress.phase || "Queued") + " phase · attempt " + (progress.attempt || 0) + "."
+        );
 
         const counts = view.evidenceCounts || {};
         const lanes = byId("evidence-lanes");

@@ -4,6 +4,10 @@ import type {
   ExportResult,
   ReproductionSnapshot,
 } from "@/application/reproduction-contracts";
+import {
+  progressViewSchema,
+  toReproductionProgress,
+} from "@/application/progress";
 import { repositoryStartSourceSchema } from "@/application/repository-operations";
 import { evidenceClassificationSchema, hypothesisStatusSchema } from "@/domain/evidence";
 
@@ -173,6 +177,7 @@ export const reproductionViewSchema = z
     jobId: z.string().min(1),
     jobState: z.string().min(1),
     kind: z.literal("reproduction"),
+    progress: progressViewSchema,
     proof: proofViewSchema,
     runs: z.array(runViewSchema),
     repository: z
@@ -186,6 +191,7 @@ export const reproductionViewSchema = z
       .optional(),
     sampleId: z.literal("cli-spaces").optional(),
     schemaVersion: z.literal("1.0"),
+    webPath: z.string().regex(/^\/cases\/[A-Za-z0-9._~%-]+$/),
   })
   .strict();
 
@@ -250,6 +256,7 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
     jobId: snapshot.job.id,
     jobState: snapshot.job.state,
     kind: "reproduction",
+    progress: toReproductionProgress(snapshot.job),
     proof: {
       bundleHash: result?.bundle?.bundleHash ?? null,
       bundleReady:
@@ -273,6 +280,7 @@ export function toReproductionView(snapshot: ReproductionSnapshot): Reproduction
       : {}),
     ...(snapshot.sampleId ? { sampleId: snapshot.sampleId } : {}),
     schemaVersion: "1.0",
+    webPath: `/cases/${encodeURIComponent(snapshot.case.id)}`,
   });
 }
 

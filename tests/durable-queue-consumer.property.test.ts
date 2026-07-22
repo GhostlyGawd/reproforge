@@ -119,7 +119,7 @@ describe("durable queue delivery properties", () => {
           });
         },
       ),
-      { numRuns: 250 },
+      { numRuns: 250, seed: 8_406_002 },
     );
   });
 

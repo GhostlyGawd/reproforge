@@ -1,18 +1,36 @@
-import { GitBranch, Link2, LockKeyhole, LogIn, ShieldCheck } from "lucide-react";
+import { randomUUID } from "node:crypto";
+
+import { GitBranch, Link2, LockKeyhole, LogIn, Play, ShieldCheck } from "lucide-react";
 import Link from "next/link";
 import { connection } from "next/server";
 
 import { getWebSessionState } from "@/auth/auth0-client";
+import type { WebIdentity } from "@/auth/web-session";
 import { listWebRepositories } from "@/github/default-services";
+import { reportGitHubRuntimeFailure } from "@/github/runtime-observability";
 
 export const dynamic = "force-dynamic";
 
-export default async function RepositoriesPage() {
+async function loadRepositoryPage(identity: WebIdentity) {
+  try {
+    return await listWebRepositories(identity);
+  } catch (error) {
+    reportGitHubRuntimeFailure("list-repositories", error);
+    return null;
+  }
+}
+
+export default async function RepositoriesPage({
+  searchParams,
+}: {
+  searchParams?: Promise<{ github?: string; start?: string }>;
+}) {
   await connection();
+  const query = (await searchParams) ?? {};
   const session = await getWebSessionState();
   const repositoryPage =
     session.status === "signed_in"
-      ? await listWebRepositories(session.identity).catch(() => null)
+      ? await loadRepositoryPage(session.identity)
       : null;
 
   return (
@@ -22,7 +40,10 @@ export default async function RepositoriesPage() {
           <span className="brand-mark" aria-hidden="true">RF</span>
           ReproForge
         </Link>
-        <Link className="account-back" href="/">Trusted sample</Link>
+        <div className="account-nav-links">
+          <Link className="account-back" href="/account">Data controls</Link>
+          <Link className="account-back" href="/">Trusted sample</Link>
+        </div>
       </nav>
 
       <section className="account-panel" aria-labelledby="repository-heading">
@@ -76,19 +97,129 @@ export default async function RepositoriesPage() {
                 Connect the GitHub App, then select the repositories ReproForge may read.
               </p>
             ) : (
-              <ul className="repository-list">
-                {repositoryPage.repositories.map((repository) => (
-                  <li key={repository.repositoryId}>
+              <>
+                <ul className="repository-list">
+                  {repositoryPage.repositories.map((repository) => (
+                    <li key={repository.repositoryId}>
+                      <div>
+                        <strong>{repository.fullName}</strong>
+                        <span>Default branch: {repository.defaultBranch}</span>
+                      </div>
+                      <span className="repository-visibility">
+                        {repository.private ? "Private" : "Public"}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                <form
+                  action="/api/repositories/reproductions"
+                  className="repository-start-form"
+                  method="post"
+                >
+                  <input
+                    name="idempotencyKey"
+                    type="hidden"
+                    value={`web-${randomUUID()}`}
+                  />
+                  <div className="repository-form-heading">
                     <div>
-                      <strong>{repository.fullName}</strong>
-                      <span>Default branch: {repository.defaultBranch}</span>
+                      <p className="account-label">New deterministic run</p>
+                      <h2>Define the exact failure contract</h2>
                     </div>
-                    <span className="repository-visibility">
-                      {repository.private ? "Private" : "Public"}
-                    </span>
-                  </li>
-                ))}
-              </ul>
+                    <span>Node + npm</span>
+                  </div>
+                  {query.start === "invalid" ? (
+                    <p className="repository-form-error" role="alert">
+                      Check the revision, scripts, and failure signature, then try again.
+                    </p>
+                  ) : query.start === "unavailable" ? (
+                    <p className="repository-form-error" role="alert">
+                      Repository execution is temporarily unavailable. No work was started.
+                    </p>
+                  ) : null}
+                  <div className="repository-form-grid">
+                    <label>
+                      Authorized repository
+                      <select name="repositoryId" required>
+                        {repositoryPage.repositories.map((repository) => (
+                          <option
+                            key={repository.repositoryId}
+                            value={repository.repositoryId}
+                          >
+                            {repository.fullName} · {repository.private ? "private" : "public"}
+                          </option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Immutable commit SHA
+                      <input
+                        autoComplete="off"
+                        inputMode="text"
+                        maxLength={40}
+                        minLength={40}
+                        name="commitSha"
+                        pattern="[a-f0-9]{40}"
+                        placeholder="40 lowercase hexadecimal characters"
+                        required
+                      />
+                    </label>
+                    <label>
+                      Issue number
+                      <input min={1} name="issueNumber" type="number" />
+                    </label>
+                    <label>
+                      Issue title
+                      <input maxLength={256} name="issueTitle" />
+                    </label>
+                    <label>
+                      Reproduction npm script
+                      <input defaultValue="test:reproduce" maxLength={128} name="reproductionScript" required />
+                    </label>
+                    <label>
+                      Negative-control npm script
+                      <input defaultValue="test:control" maxLength={128} name="controlScript" required />
+                    </label>
+                    <label>
+                      Node profile
+                      <select defaultValue="24" name="nodeVersion">
+                        <option value="24">Node 24</option>
+                        <option value="22">Node 22</option>
+                      </select>
+                    </label>
+                    <label>
+                      Expected failure exit code
+                      <input defaultValue="1" max={255} min={-255} name="expectedExitCode" required type="number" />
+                    </label>
+                    <label>
+                      Failure output stream
+                      <select defaultValue="stderr" name="failureStream">
+                        <option value="stderr">stderr</option>
+                        <option value="stdout">stdout</option>
+                      </select>
+                    </label>
+                    <label className="repository-signature-field">
+                      Exact failure signature
+                      <input
+                        maxLength={256}
+                        name="failureOutput"
+                        placeholder="A stable string that only the failing run emits"
+                        required
+                      />
+                    </label>
+                  </div>
+                  <div className="repository-form-footer">
+                    <p>
+                      Script fields are allowlisted <code>package.json</code> names—not shell commands.
+                      ReproForge runs one control and three clean candidates in fresh deny-all sandboxes.
+                    </p>
+                    <button className="primary-button" type="submit">
+                      <Play size={17} aria-hidden="true" />
+                      Start reproduction
+                    </button>
+                  </div>
+                </form>
+              </>
             )}
           </section>
           </>
@@ -112,7 +243,7 @@ export default async function RepositoriesPage() {
             {session.status === "signed_out" ? (
               <a className="primary-button" href="/auth/login?returnTo=/repositories">
                 <LogIn size={17} aria-hidden="true" />
-                Sign in with Auth0
+                Continue with GitHub
               </a>
             ) : (
               <Link className="secondary-button" href="/">

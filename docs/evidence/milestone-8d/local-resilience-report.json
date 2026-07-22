@@ -1,0 +1,73 @@
+{
+  "schemaVersion": "1.0",
+  "capturedAt": "2026-07-20T23:06:02.549Z",
+  "implementationCommit": "c4cbdede4a7c0bf12b73d8bc4fda9b8bbaa3fd18",
+  "command": "npm run test:resilience",
+  "status": "passed-local",
+  "hostedEvidence": false,
+  "summary": {
+    "campaigns": 8,
+    "testFilesPassed": 13,
+    "testsPassed": 44,
+    "durationSeconds": 48.9,
+    "bddScenariosPassed": 47,
+    "bddStepsPassed": 339,
+    "productionBuild": "passed"
+  },
+  "campaigns": [
+    {
+      "category": "load",
+      "seed": 8406001,
+      "starts": 128,
+      "reads": 128,
+      "executions": 1,
+      "durableIdentities": 1,
+      "status": "passed"
+    },
+    {
+      "category": "duplicate-delivery",
+      "seed": 8406002,
+      "generatedSchedules": 250,
+      "terminalAttemptsPerSchedule": 1,
+      "status": "passed"
+    },
+    {
+      "category": "restart",
+      "seed": 8406003,
+      "generatedRetrySequences": 250,
+      "caseJobBundleIdentitiesPerSequence": 1,
+      "status": "passed"
+    },
+    {
+      "category": "dependency-outage",
+      "seed": 8406004,
+      "fallbacksObserved": 0,
+      "status": "passed"
+    },
+    {
+      "category": "worker-loss",
+      "seed": 8406005,
+      "duplicateRecoveriesObserved": 0,
+      "status": "passed"
+    },
+    {
+      "category": "queue-lag",
+      "seed": 8406006,
+      "scopedIdentifiersExposed": 0,
+      "status": "passed"
+    },
+    {
+      "category": "storage-failure",
+      "seed": 8406007,
+      "falseVerifiedOutcomes": 0,
+      "status": "passed"
+    },
+    {
+      "category": "sandbox-failure",
+      "seed": 8406008,
+      "unboundedOrUntrackedResources": 0,
+      "status": "passed"
+    }
+  ],
+  "sanitization": "Synthetic fixed inputs only; no credentials, sessions, private source, repository names, tenant identifiers, provider identifiers, object bytes, or customer data are present."
+}

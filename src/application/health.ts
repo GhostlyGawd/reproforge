@@ -95,6 +95,7 @@ type HealthServiceDependencies = Readonly<{
   metrics: OperationalMetrics;
   readinessProbes: readonly HealthProbe[];
   runnerProbe: HealthProbe;
+  runnerTimeoutMs?: number;
   timeoutMs: number;
 }>;
 
@@ -108,7 +109,11 @@ export class HealthService {
       new Set(components).size !== components.length ||
       components.includes("process") ||
       components.includes("runner") ||
-      dependencies.runnerProbe.component !== "runner"
+      dependencies.runnerProbe.component !== "runner" ||
+      (dependencies.runnerTimeoutMs !== undefined &&
+        (!Number.isInteger(dependencies.runnerTimeoutMs) ||
+          dependencies.runnerTimeoutMs < 10 ||
+          dependencies.runnerTimeoutMs > 30_000))
     ) {
       throw new Error("Invalid health service configuration");
     }
@@ -145,6 +150,7 @@ export class HealthService {
       this.dependencies.runnerProbe,
       checkedAt,
       context.requestId,
+      this.dependencies.runnerTimeoutMs ?? this.dependencies.timeoutMs,
     );
     return this.report("runner", checkedAt, [check]);
   }
@@ -153,12 +159,13 @@ export class HealthService {
     probe: HealthProbe,
     checkedAt: string,
     requestId?: string,
+    timeoutMs = this.dependencies.timeoutMs,
   ): Promise<HealthCheck> {
     const startedAt = Date.now();
     let result: HealthProbeResult;
     try {
       result = healthProbeResultSchema.parse(
-        await timeout(probe.check(), this.dependencies.timeoutMs),
+        await timeout(probe.check(), timeoutMs),
       );
     } catch (error) {
       result = {

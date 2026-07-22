@@ -2,7 +2,6 @@ import { createHash } from "node:crypto";
 
 import { z } from "zod";
 
-import type { AuthorizedPrincipal } from "@/application/authorization";
 import {
   BundleNotReadyError,
   CaseServiceError,
@@ -25,7 +24,10 @@ import type {
   TenantScope,
   UnitOfWork,
 } from "@/application/ports/production";
-import type { RepositorySourceProvider } from "@/application/ports/repository-source";
+import type {
+  RepositoryPrincipal,
+  RepositorySourceProvider,
+} from "@/application/ports/repository-source";
 import {
   repositoryBundleBytes,
   repositoryBundleDescriptor,
@@ -35,6 +37,7 @@ import {
   startRepositoryReproductionInputSchema,
   type ListAuthorizedRepositoriesInput,
   type RepositoryOperations,
+  type RepositoryStartAdmission,
   type StartRepositoryReproductionInput,
 } from "@/application/repository-operations";
 import {
@@ -77,10 +80,11 @@ type Dependencies = Readonly<{
   retentionDays: number;
   runner: Pick<IsolatedRepositoryRunner, "execute">;
   source: RepositorySourceProvider;
+  startAdmission?: RepositoryStartAdmission;
   unitOfWork: UnitOfWork;
 }>;
 
-function scope(principal: AuthorizedPrincipal): TenantScope {
+function scope(principal: RepositoryPrincipal): TenantScope {
   return {
     callerId: principal.callerId,
     principalId: principal.principalId,
@@ -231,7 +235,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async listAuthorizedRepositories(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ) {
     const listed = await this.dependencies.source.listAuthorizedRepositories(
@@ -243,7 +247,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async startRepositoryReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     rawInput: StartRepositoryReproductionInput,
   ) {
     const input = startRepositoryReproductionInputSchema.parse(rawInput);
@@ -277,6 +281,12 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
         : await this.publishAndMaybeConsume(existing, false);
       return startResultSchema.parse({ reused: true, snapshot: record.snapshot });
     }
+
+    await this.dependencies.startAdmission?.assertAllowed(
+      principal,
+      input.source,
+      immutableSource,
+    );
 
     const createdAt = this.dependencies.clock.now();
     const caseId = this.dependencies.identifiers.nextCaseId();
@@ -355,7 +365,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async getReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ) {
     const record = await this.dependencies.repository.findByCaseId(
@@ -369,7 +379,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async cancelReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { jobId: string },
   ) {
     const cancelled = await this.dependencies.repository.requestCancellation(
@@ -382,7 +392,7 @@ export class DurableRepositoryCaseService implements RepositoryOperations {
   }
 
   async exportReproBundle(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ) {
     const snapshot = await this.getReproduction(principal, input);

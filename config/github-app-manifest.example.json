@@ -2,10 +2,6 @@
   "callback_urls": [
     "https://reproforge.example/api/github/callback"
   ],
-  "default_events": [
-    "installation",
-    "installation_repositories"
-  ],
   "default_permissions": {
     "contents": "read",
     "issues": "read",

@@ -474,7 +474,7 @@ export class PostgresTenantBackupService {
       }
       let stored;
       try {
-        stored = await this.blobs.get(artifact.objectKey);
+        stored = await this.blobs.get(artifact.objectKey, artifact.byteCount);
       } catch {
         throw backupError(
           "TENANT_BACKUP_PROVIDER_UNAVAILABLE",
@@ -643,7 +643,9 @@ export class PostgresTenantBackupService {
           metadata = await this.blobs.put(artifact.objectKey, bytes);
           created = true;
         } catch {
-          const existing = await this.blobs.get(artifact.objectKey).catch(() => null);
+          const existing = await this.blobs
+            .get(artifact.objectKey, artifact.byteCount)
+            .catch(() => null);
           if (!existing) {
             throw backupError(
               "TENANT_BACKUP_PROVIDER_UNAVAILABLE",

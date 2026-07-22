@@ -1,6 +1,7 @@
 import {
   HealthService,
   type HealthProbe,
+  type HealthProbeResult,
   type OperationalLogger,
   type OperationalMetrics,
 } from "@/application/health";
@@ -8,6 +9,11 @@ import {
   parseRuntimeConfig,
   type RuntimeEnvironment,
 } from "@/config/runtime";
+import { parseGitHubConfig } from "@/config/github";
+import { parseOAuthResourceConfig } from "@/config/oauth";
+import { parseWebAuthenticationConfig } from "@/config/web-auth";
+import type { IsolatedSandboxProvider } from "@/execution/contracts";
+import { VercelSandboxProvider } from "@/execution/vercel-sandbox";
 import { VercelPrivateBlobClient } from "@/infrastructure/artifacts/vercel-private-blob-client";
 import { createNeonPostgresDatabase } from "@/infrastructure/postgres/neon-database";
 import { VercelJobQueue } from "@/infrastructure/queue/vercel-job-queue";
@@ -35,6 +41,111 @@ function fixedProbe(
   return { check: async () => ({ code, status }), component };
 }
 
+function configurationFailure(
+  options: Pick<RuntimeHealthOptions, "clock" | "logger" | "metrics">,
+  code: string,
+): HealthService {
+  return new HealthService({
+    clock: options.clock,
+    logger: options.logger,
+    metrics: options.metrics,
+    readinessProbes: [
+      fixedProbe("configuration", code, "unavailable"),
+    ],
+    runnerProbe: fixedProbe(
+      "runner",
+      "RUNNER_NOT_CONFIGURED",
+      "unavailable",
+    ),
+    timeoutMs: 2_000,
+  });
+}
+
+const RUNNER_HEALTH_MARKER = "reproforge-runner-ready\n";
+
+type SandboxRunnerHealthProbeOptions = Readonly<{
+  cacheTtlMs?: number;
+  clock?: { now(): number };
+  provider: IsolatedSandboxProvider;
+}>;
+
+export function createSandboxRunnerHealthProbe(
+  options: SandboxRunnerHealthProbeOptions,
+): HealthProbe {
+  const cacheTtlMs = options.cacheTtlMs ?? 60_000;
+  if (
+    !Number.isInteger(cacheTtlMs) ||
+    cacheTtlMs < 0 ||
+    cacheTtlMs > 300_000
+  ) {
+    throw new TypeError("Runner health cache TTL must be between 0 and 300000ms");
+  }
+  const clock = options.clock ?? { now: () => Date.now() };
+  let cached:
+    | Readonly<{ expiresAt: number; result: HealthProbeResult }>
+    | undefined;
+  let inFlight: Promise<HealthProbeResult> | undefined;
+
+  const checkCapability = async (): Promise<HealthProbeResult> => {
+    let result: HealthProbeResult = {
+      code: "RUNNER_UNAVAILABLE",
+      status: "unavailable",
+    };
+    let session: Awaited<ReturnType<IsolatedSandboxProvider["create"]>> | undefined;
+    try {
+      session = await options.provider.create({
+        networkPolicy: "deny-all",
+        runtime: "node24",
+        timeoutMs: 30_000,
+        vcpus: 2,
+      });
+      await session.makeDirectory("/vercel/sandbox/workspaces");
+      await session.makeDirectory("/vercel/sandbox/workspaces/health");
+      const execution = await session.run({
+        args: ["-e", 'process.stdout.write("reproforge-runner-ready\\n")'],
+        cwd: "/vercel/sandbox/workspaces/health",
+        executable: "node",
+        phase: "control",
+        timeoutMs: 5_000,
+      });
+      if (
+        execution.exitCode === 0 &&
+        new TextDecoder().decode(execution.stdout) === RUNNER_HEALTH_MARKER
+      ) {
+        result = { code: "RUNNER_READY", status: "ready" };
+      }
+    } catch {
+      // The public health contract exposes only stable, non-sensitive codes.
+    } finally {
+      if (session) {
+        try {
+          await session.stop();
+        } catch {
+          result = { code: "RUNNER_UNAVAILABLE", status: "unavailable" };
+        }
+      }
+    }
+    return result;
+  };
+
+  return {
+    component: "runner",
+    check: async () => {
+      const now = clock.now();
+      if (cached && now < cached.expiresAt) return cached.result;
+      inFlight ??= checkCapability()
+        .then((result) => {
+          cached = { expiresAt: clock.now() + cacheTtlMs, result };
+          return result;
+        })
+        .finally(() => {
+          inFlight = undefined;
+        });
+      return inFlight;
+    },
+  };
+}
+
 export function createRuntimeHealthService(
   options: RuntimeHealthOptions,
 ): HealthService {
@@ -42,24 +153,7 @@ export function createRuntimeHealthService(
   try {
     config = parseRuntimeConfig(options.environment);
   } catch {
-    return new HealthService({
-      clock: options.clock,
-      logger: options.logger,
-      metrics: options.metrics,
-      readinessProbes: [
-        fixedProbe(
-          "configuration",
-          "INVALID_RUNTIME_CONFIGURATION",
-          "unavailable",
-        ),
-      ],
-      runnerProbe: fixedProbe(
-        "runner",
-        "RUNNER_NOT_CONFIGURED",
-        "unavailable",
-      ),
-      timeoutMs: 2_000,
-    });
+    return configurationFailure(options, "INVALID_RUNTIME_CONFIGURATION");
   }
 
   if (!("credentials" in config)) {
@@ -80,6 +174,34 @@ export function createRuntimeHealthService(
   }
 
   const hostedConfig = config;
+  let webAuthentication: ReturnType<typeof parseWebAuthenticationConfig>;
+  try {
+    webAuthentication = parseWebAuthenticationConfig(options.environment);
+  } catch {
+    return configurationFailure(
+      options,
+      "INVALID_WEB_AUTHENTICATION_CONFIGURATION",
+    );
+  }
+  let oauth: ReturnType<typeof parseOAuthResourceConfig>;
+  try {
+    oauth = parseOAuthResourceConfig(options.environment);
+  } catch {
+    return configurationFailure(options, "INVALID_OAUTH_CONFIGURATION");
+  }
+  let github: ReturnType<typeof parseGitHubConfig>;
+  try {
+    github = parseGitHubConfig(options.environment);
+  } catch {
+    return configurationFailure(options, "INVALID_GITHUB_CONFIGURATION");
+  }
+  if (
+    webAuthentication.appBaseUrl !== hostedConfig.baseUrl ||
+    oauth.baseUrl !== hostedConfig.baseUrl ||
+    github.baseUrl !== hostedConfig.baseUrl
+  ) {
+    return configurationFailure(options, "HOSTED_ORIGIN_MISMATCH");
+  }
 
   const databaseProbe: HealthProbe =
     options.hostedProbes?.database ?? {
@@ -131,7 +253,10 @@ export function createRuntimeHealthService(
     readinessProbes: [databaseProbe, artifactProbe, queueProbe],
     runnerProbe:
       options.hostedProbes?.runner ??
-      fixedProbe("runner", "RUNNER_NOT_CONFIGURED", "unavailable"),
+      createSandboxRunnerHealthProbe({
+        provider: new VercelSandboxProvider(),
+      }),
+    runnerTimeoutMs: 30_000,
     timeoutMs: 2_000,
   });
 }

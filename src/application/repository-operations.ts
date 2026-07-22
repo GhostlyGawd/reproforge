@@ -1,7 +1,7 @@
 import { z } from "zod";
 
-import type { AuthorizedPrincipal } from "@/application/authorization";
 import type { CancellationRequestResult } from "@/application/ports/production";
+import type { RepositoryPrincipal } from "@/application/ports/repository-source";
 import type {
   ExportResult,
   ReproductionSnapshot,
@@ -9,6 +9,7 @@ import type {
 } from "@/application/reproduction-contracts";
 import { failureOracleSchema } from "@/domain/oracle";
 import {
+  type ImmutableRepositorySource,
   nodeRepositoryProfileSchema,
   repositoryIssueEvidenceSchema,
 } from "@/execution/contracts";
@@ -48,6 +49,14 @@ export const repositoryStartSourceSchema = z
 
 export type RepositorySource = z.infer<typeof repositoryStartSourceSchema>;
 
+export interface RepositoryStartAdmission {
+  assertAllowed(
+    principal: RepositoryPrincipal,
+    source: RepositorySource,
+    resolvedSource: ImmutableRepositorySource,
+  ): Promise<void>;
+}
+
 export const startRepositoryReproductionInputSchema = z
   .object({
     budget: z
@@ -68,23 +77,23 @@ export type StartRepositoryReproductionInput = z.input<
 
 export interface RepositoryOperations {
   cancelReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { jobId: string },
   ): Promise<CancellationRequestResult>;
   exportReproBundle(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ): Promise<ExportResult>;
   getReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: { caseId: string },
   ): Promise<ReproductionSnapshot>;
   listAuthorizedRepositories(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: ListAuthorizedRepositoriesInput,
   ): Promise<ListAuthorizedRepositoriesResult>;
   startRepositoryReproduction(
-    principal: AuthorizedPrincipal,
+    principal: RepositoryPrincipal,
     input: StartRepositoryReproductionInput,
   ): Promise<StartResult>;
 }

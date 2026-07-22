@@ -17,6 +17,7 @@ import {
 } from "@/github/installation-state";
 import { PostgresGitHubAuthorizationStore } from "@/infrastructure/github/postgres-github-authorization-store";
 import { applyPostgresMigrations } from "@/infrastructure/postgres/migrations";
+import { gitHubWebhookInstallationId } from "@/github/webhook";
 
 import { pgliteMigrationClient } from "./helpers/pglite-migration-client";
 import { pglitePostgresDatabase } from "./helpers/pglite-postgres-database";
@@ -25,6 +26,39 @@ const actor = { principalId: "principal-alpha", tenantId: "tenant-alpha" };
 const now = new Date("2026-07-20T00:00:00.000Z");
 
 describe("GitHub authorization properties", () => {
+  it("extracts only safe positive repository-event installation IDs over 300 payloads", () => {
+    const candidate = fc.oneof(
+      fc.integer({ min: -100, max: 1_000_000 }),
+      fc.double({ noDefaultInfinity: true, noNaN: true }),
+      fc.string(),
+      fc.constant(null),
+      fc.constant(undefined),
+    );
+    fc.assert(
+      fc.property(
+        candidate,
+        fc.constantFrom("installation", "installation_repositories" as const),
+        (installationId, event) => {
+          const expected =
+            event === "installation_repositories" &&
+            typeof installationId === "number" &&
+            Number.isSafeInteger(installationId) &&
+            installationId > 0
+              ? installationId
+              : null;
+          expect(
+            gitHubWebhookInstallationId({
+              deliveryId: "delivery-property",
+              event,
+              payload: { installation: { id: installationId } },
+            }),
+          ).toBe(expected);
+        },
+      ),
+      { numRuns: 300 },
+    );
+  });
+
   it("makes webhook duplication and reordering converge over 300 generated event sets", () => {
     const event = fc.record({
       at: fc.integer({ min: 0, max: 10_000 }).map((offset) =>

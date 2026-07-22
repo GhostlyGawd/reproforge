@@ -69,7 +69,11 @@ export async function getWebSessionState(): Promise<WebSessionState> {
     const resolved = resolveClient();
     const session = await resolved.client.getSession();
     if (!session) return { status: "signed_out" };
-    const identity = resolveWebIdentity(session, resolved.config.tenantClaim);
+    const identity = resolveWebIdentity(
+      session,
+      resolved.config.tenantClaim,
+      `https://${resolved.config.domain}/`,
+    );
     return {
       account: projectWebAccount(identity),
       identity,

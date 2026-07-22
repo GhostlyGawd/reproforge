@@ -10,6 +10,8 @@ import {
   REPROFORGE_WIDGET_URI,
 } from "@/mcp/server";
 
+const EXPECTED_WIDGET_DOMAIN = "https://reproforge.vercel.app";
+
 function createService() {
   let caseSequence = 0;
   let jobSequence = 0;
@@ -128,6 +130,12 @@ describe("ReproForge MCP app contract", () => {
         expect.objectContaining({
           mimeType: "text/html;profile=mcp-app",
           uri: REPROFORGE_WIDGET_URI,
+          _meta: expect.objectContaining({
+            "openai/widgetDomain": EXPECTED_WIDGET_DOMAIN,
+            ui: expect.objectContaining({
+              domain: EXPECTED_WIDGET_DOMAIN,
+            }),
+          }),
         }),
       ]);
 
@@ -148,8 +156,10 @@ describe("ReproForge MCP app contract", () => {
             connectDomains: [],
             resourceDomains: [],
           },
+          domain: EXPECTED_WIDGET_DOMAIN,
           prefersBorder: true,
         },
+        "openai/widgetDomain": EXPECTED_WIDGET_DOMAIN,
       });
     } finally {
       await connection.close();
@@ -182,6 +192,12 @@ describe("ReproForge MCP app contract", () => {
         caseState: "VERIFIED",
         jobState: "SUCCEEDED",
         kind: "reproduction",
+        progress: {
+          cancellable: false,
+          phase: "VERIFIED",
+          state: "SUCCEEDED",
+          terminal: true,
+        },
         proof: {
           bundleReady: true,
           candidateMatches: 3,
@@ -191,6 +207,7 @@ describe("ReproForge MCP app contract", () => {
         },
         sampleId: "cli-spaces",
         schemaVersion: "1.0",
+        webPath: "/cases/mcp-case-1",
       });
       expect(secondView.caseId).toBe(firstView.caseId);
       expect(secondView.jobId).toBe(firstView.jobId);

@@ -1,0 +1,26 @@
+{
+  "schemaVersion": "1.0",
+  "applicationVersion": "0.2.0",
+  "database": {
+    "currentMigration": "0009_github_event_ordering",
+    "previousMigration": "0008_github_revocation_audit",
+    "currentApplicationMigratesPreviousSchema": true,
+    "previousApplicationReadsCurrentSchema": true,
+    "destructiveRollbackAllowed": false,
+    "rollbackStrategy": "application-rollback-with-forward-database"
+  },
+  "killSwitches": [
+    "REPROFORGE_DISABLE_REPOSITORY_STARTS",
+    "REPROFORGE_DISABLE_PRIVATE_REPOSITORIES",
+    "REPROFORGE_DISABLED_EXECUTION_PROFILES"
+  ],
+  "requiredGates": [
+    "backup-verified",
+    "migrations-applied",
+    "readiness-ready",
+    "runner-ready",
+    "dashboard-no-critical-alerts",
+    "public-canary-passed",
+    "early-runtime-error-scan-clean"
+  ]
+}

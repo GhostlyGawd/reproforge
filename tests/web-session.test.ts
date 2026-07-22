@@ -1,3 +1,5 @@
+import { createHash } from "node:crypto";
+
 import { describe, expect, it } from "vitest";
 
 import {
@@ -126,10 +128,54 @@ describe("server-side web session projection", () => {
     }
   });
 
+  it("derives the same stable tenant as the Auth0 Action when the ID token omits the custom claim", () => {
+    const user = { ...session.user } as Record<string, unknown>;
+    delete user["https://reproforge.dev/tenant_id"];
+    const identity = resolveWebIdentity(
+      { ...session, user },
+      "https://reproforge.dev/tenant_id",
+    );
+
+    expect(identity.tenantId).toBe(
+      `tenant_${createHash("sha256").update(session.user.sub, "utf8").digest("hex")}`,
+    );
+  });
+
+  it("uses the configured issuer after SDK validation when the persisted profile omits iss", () => {
+    const user = { ...session.user } as Record<string, unknown>;
+    delete user.iss;
+
+    expect(
+      resolveWebIdentity(
+        { ...session, user },
+        "https://reproforge.dev/tenant_id",
+        "https://tenant.us.auth0.com/",
+      ).issuer,
+    ).toBe("https://tenant.us.auth0.com/");
+  });
+
+  it("rejects a persisted issuer that conflicts with the configured issuer", () => {
+    expect(() =>
+      resolveWebIdentity(
+        session,
+        "https://reproforge.dev/tenant_id",
+        "https://other-tenant.us.auth0.com/",
+      ),
+    ).toThrowError(WebSessionError);
+  });
+
   it.each([
-    ["missing session", null],
-    ["missing issuer", { ...session, user: { ...session.user, iss: "" } }],
-    ["missing subject", { ...session, user: { ...session.user, sub: "" } }],
+    ["missing session", null, "invalid_session"],
+    [
+      "missing issuer",
+      { ...session, user: { ...session.user, iss: "" } },
+      "invalid_issuer",
+    ],
+    [
+      "missing subject",
+      { ...session, user: { ...session.user, sub: "" } },
+      "invalid_subject",
+    ],
     [
       "missing tenant",
       {
@@ -139,10 +185,15 @@ describe("server-side web session projection", () => {
           "https://reproforge.dev/tenant_id": "",
         },
       },
+      "invalid_tenant",
     ],
-  ])("fails closed for %s", (_label, candidate) => {
-    expect(() =>
-      resolveWebIdentity(candidate, "https://reproforge.dev/tenant_id"),
-    ).toThrowError(WebSessionError);
+  ])("fails closed for %s", (_label, candidate, reason) => {
+    try {
+      resolveWebIdentity(candidate, "https://reproforge.dev/tenant_id");
+      throw new Error("expected the session to fail closed");
+    } catch (error) {
+      expect(error).toBeInstanceOf(WebSessionError);
+      expect(error).toMatchObject({ reason });
+    }
   });
 });

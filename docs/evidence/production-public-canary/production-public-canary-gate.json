@@ -1,0 +1,48 @@
+{
+  "schemaVersion": 1,
+  "checkedAt": "2026-07-22T00:37:35.4321613Z",
+  "sourceCommit": "f5f861c06a1f6aa9e9a6a5d26e16071b3118fc5e",
+  "deploymentId": "dpl_5QLKJp6RjeXhagkwzcxqbe6nLswU",
+  "productionOrigin": "https://reproforge.vercel.app",
+  "catalog": {
+    "connectedRepositories": 2,
+    "selectedPublicCanary": "GhostlyGawd/reproforge-canary",
+    "defaultBranch": "main",
+    "authorization": "read-only-selected-repositories"
+  },
+  "source": {
+    "repository": "GhostlyGawd/reproforge-canary",
+    "commitSha": "d3d69d4c5222bb7f4e6cded27a965258247942b2",
+    "visibility": "public",
+    "fileCount": 5,
+    "dependencyCount": 0
+  },
+  "execution": {
+    "caseId": "case_7fef12e5-e231-4880-a0f4-fc273f3b1df5",
+    "jobId": "job_53c3c17e-c27d-47eb-acd6-fafea137c266",
+    "attempt": 1,
+    "caseState": "VERIFIED",
+    "jobState": "SUCCEEDED",
+    "progressPhase": "VERIFIED",
+    "verifiedAt": "2026-07-22T00:35:39.773Z"
+  },
+  "proof": {
+    "status": "VERIFIED",
+    "requiredRuns": 3,
+    "candidateMatches": 3,
+    "totalCandidateRuns": 3,
+    "controlMatched": false,
+    "repeatability": 1,
+    "networkPolicy": "deny-all",
+    "cleanupStatus": "clean"
+  },
+  "bundle": {
+    "count": 1,
+    "bundleHash": "b27bb01ff75c88e2f9d6b8ccfdf25ccb140b45b2877882b99c90f21e7f7101b6",
+    "artifactSha256": "4c3e2fdddc04aae7e3a352bb931952783f9cbbc3cc21376a8452cfd0967d7e39",
+    "artifactBytes": 11327,
+    "access": "private-content-addressed"
+  },
+  "result": "passed",
+  "scope": "signed-in production web and provider path; not ChatGPT-host evidence"
+}

@@ -87,3 +87,4 @@ Feature: Evidence-backed reproduction outcomes
     When ChatGPT reads the proof widget resource
     Then the widget uses the MCP App HTML media type
     And the widget declares no external network domains
+    And the widget declares its unique production origin

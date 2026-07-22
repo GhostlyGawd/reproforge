@@ -802,6 +802,33 @@ Then(
 );
 
 Then(
+  "exactly one sanitized lease recovery audit is durable",
+  async function (this: ReproForgeWorld) {
+    assert(this.durableDatabase);
+    assert(this.durableRecord);
+    const audits = await this.durableDatabase.query<{
+      action: string;
+      metadata: unknown;
+      outcome: string;
+      target_id: string;
+    }>(
+      `SELECT action, metadata, outcome, target_id
+         FROM audit_events
+        WHERE tenant_id = $1 AND action = 'job.lease-recovered'`,
+      [this.durableRecord.tenantId],
+    );
+    assert.deepEqual(audits.rows, [
+      {
+        action: "job.lease-recovered",
+        metadata: { attempt: 1, disposition: "requeued" },
+        outcome: "success",
+        target_id: this.durableRecord.jobId,
+      },
+    ]);
+  },
+);
+
+Then(
   "exactly one durable case and job exist",
   async function (this: ReproForgeWorld) {
     assert(this.durableDatabase);

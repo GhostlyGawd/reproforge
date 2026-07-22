@@ -308,6 +308,7 @@ export class PostgresGitHubAuthorizationStore
 
   async processWebhook(
     rawEnvelope: GitHubWebhookEnvelope,
+    rawOptions: { installation?: VerifiedGitHubInstallation } = {},
   ): Promise<"accepted" | "duplicate"> {
     const envelope = z
       .object({
@@ -317,6 +318,12 @@ export class PostgresGitHubAuthorizationStore
       })
       .strict()
       .parse(rawEnvelope);
+    const installation = rawOptions.installation
+      ? installationSchema.parse({
+          ...rawOptions.installation,
+          repositories: rawOptions.installation.repositories ?? [],
+        })
+      : undefined;
     const receivedAt = this.clock.now().toISOString();
     const expiresAt = new Date(
       Date.parse(receivedAt) + 30 * 24 * 60 * 60_000,
@@ -363,7 +370,27 @@ export class PostgresGitHubAuthorizationStore
           expiresAt,
         ],
       );
-      if (!inserted.rows[0]) return "duplicate";
+      if (!inserted.rows[0]) {
+        if (repositoryPayload?.success && installation) {
+          const owner = await executor.query<{ tenant_id: string }>(
+            `SELECT tenant_id FROM github_installations
+              WHERE installation_id = $1
+              LIMIT 1`,
+            [repositoryPayload.data.installation.id],
+          );
+          const tenantId = owner.rows[0]?.tenant_id;
+          if (tenantId) {
+            await this.applyRepositoryWebhook(
+              executor,
+              tenantId,
+              repositoryPayload.data,
+              receivedAt,
+              installation,
+            );
+          }
+        }
+        return "duplicate";
+      }
       if (!validPayload || installationId === null) {
         await this.completeDelivery(executor, envelope.deliveryId, receivedAt, null, "IGNORED");
         return "accepted";
@@ -393,6 +420,7 @@ export class PostgresGitHubAuthorizationStore
               tenantId,
               repositoryPayload.data,
               receivedAt,
+              installation,
             )
           : null;
       await this.completeDelivery(
@@ -459,6 +487,7 @@ export class PostgresGitHubAuthorizationStore
     tenantId: string,
     installationId: number,
     repository: z.infer<typeof repositorySchema>,
+    providerUpdatedAt?: string,
   ): Promise<void> {
     const existing = await executor.query<{ repository_id: string }>(
       `SELECT repository_id
@@ -473,14 +502,18 @@ export class PostgresGitHubAuthorizationStore
     await executor.query(
       `INSERT INTO github_repositories (
          tenant_id, repository_id, installation_id, provider_repository_id,
-         full_name, default_branch, is_private, status
-       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE')
+         full_name, default_branch, is_private, status, provider_updated_at
+       ) VALUES ($1, $2, $3, $4, $5, $6, $7, 'ACTIVE', $8)
        ON CONFLICT (tenant_id, installation_id, provider_repository_id)
        DO UPDATE SET
          full_name = EXCLUDED.full_name,
          default_branch = EXCLUDED.default_branch,
          is_private = EXCLUDED.is_private,
          status = 'ACTIVE', removed_at = NULL,
+         provider_updated_at = COALESCE(
+           EXCLUDED.provider_updated_at,
+           github_repositories.provider_updated_at
+         ),
          updated_at = CURRENT_TIMESTAMP`,
       [
         tenantId,
@@ -490,6 +523,7 @@ export class PostgresGitHubAuthorizationStore
         repository.fullName,
         repository.defaultBranch,
         repository.private,
+        providerUpdatedAt ?? null,
       ],
     );
   }
@@ -593,7 +627,50 @@ export class PostgresGitHubAuthorizationStore
     tenantId: string,
     payload: z.infer<typeof webhookRepositorySchema>,
     at: string,
+    installation?: z.infer<typeof installationSchema>,
   ): Promise<AuditEvent> {
+    if (installation) {
+      if (installation.installationId !== payload.installation.id) {
+        throw new Error("GitHub installation snapshot does not match webhook");
+      }
+      await executor.query(
+        `UPDATE github_installations
+            SET account_id = $3,
+                account_login = $4,
+                repository_selection = $5,
+                permissions = $6::jsonb,
+                provider_updated_at = COALESCE($7::timestamptz, provider_updated_at),
+                updated_at = $8::timestamptz
+          WHERE tenant_id = $1 AND installation_id = $2`,
+        [
+          tenantId,
+          installation.installationId,
+          installation.accountId,
+          installation.accountLogin,
+          installation.repositorySelection,
+          JSON.stringify(installation.permissions),
+          installation.providerUpdatedAt ?? null,
+          at,
+        ],
+      );
+      await executor.query(
+        `UPDATE github_repositories
+            SET status = 'REMOVED', removed_at = $3::timestamptz,
+                updated_at = $3::timestamptz
+          WHERE tenant_id = $1 AND installation_id = $2
+            AND status = 'ACTIVE'`,
+        [tenantId, installation.installationId, at],
+      );
+      for (const repository of installation.repositories) {
+        await this.upsertRepository(
+          executor,
+          tenantId,
+          installation.installationId,
+          repository,
+          installation.providerUpdatedAt,
+        );
+      }
+    } else {
     for (const repository of payload.repositories_removed) {
       await this.applyRepositoryTransition(executor, {
         at,
@@ -629,6 +706,7 @@ export class PostgresGitHubAuthorizationStore
         );
       }
     }
+    }
     return {
       action: "github.repositories-updated",
       actorId: "github-webhook",
@@ -636,6 +714,7 @@ export class PostgresGitHubAuthorizationStore
       metadata: {
         added: payload.repositories_added.length,
         provider: "github",
+        reconciled: installation !== undefined,
         removed: payload.repositories_removed.length,
       },
       occurredAt: at,

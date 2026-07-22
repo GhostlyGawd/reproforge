@@ -1,14 +1,26 @@
-import { getDefaultGitHubServices } from "@/github/default-services";
-import { createGitHubWebhookHandler } from "@/github/webhook";
+import { getDefaultGitHubAuthorizationServices } from "@/github/default-services";
+import {
+  createGitHubWebhookHandler,
+  gitHubWebhookInstallationId,
+} from "@/github/webhook";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 export async function POST(request: Request): Promise<Response> {
   try {
-    const services = await getDefaultGitHubServices();
+    const services = await getDefaultGitHubAuthorizationServices();
     return createGitHubWebhookHandler({
-      process: (envelope) => services.store.processWebhook(envelope),
+      process: async (envelope) => {
+        const installationId = gitHubWebhookInstallationId(envelope);
+        const installation = installationId
+          ? await services.client.readInstallation(installationId)
+          : undefined;
+        return services.store.processWebhook(
+          envelope,
+          installation ? { installation } : undefined,
+        );
+      },
       secret: services.config.credentials.webhookSecret,
     })(request);
   } catch {
